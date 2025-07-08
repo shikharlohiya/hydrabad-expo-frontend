@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -13,10 +13,12 @@ import Dashboard from "./page/Dashboard/Dashboard";
 
 function App() {
   const { isAuthenticated } = useContext(AuthContext);
+
   return (
     <>
       <div>
         <Routes>
+          {/* Public Routes */}
           <Route
             path="/"
             element={
@@ -25,18 +27,37 @@ function App() {
               </PublicRoute>
             }
           />
+
+          {/* Redirect /login to / for consistency */}
           <Route
-            path="/dashboard"
+            path="/login"
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated}>
+                <Login />
+              </PublicRoute>
+            }
+          />
+
+          {/* Protected Dashboard Routes */}
+          <Route
+            path="/dashboard/*"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <Dashboard />
               </ProtectedRoute>
             }
           />
+
+          {/* Redirect authenticated users from root to dashboard */}
+          {isAuthenticated && (
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          )}
+
+          {/* Catch all route - 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
 
-        {/* Toast Container - Add this at the end */}
+        {/* Toast Container */}
         <ToastContainer
           position="top-right"
           autoClose={3000}
