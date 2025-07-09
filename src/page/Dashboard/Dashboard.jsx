@@ -4,6 +4,10 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import DashboardPage from "./DashboardPage/DashboardPage";
 import IncomingCallPage from "./IncomingCall/IncomingCallPage";
 import NotFound from "../NotFound";
+import OutgoingCallPage from "./OutgoingCall/OutgoingCallPage";
+import ContactsPage from "./Contacts/ContactsPage";
+import CallHistoryPage from "./CallHistory/CallHistoryPage";
+import ProfilePage from "./Profile/ProfilePage";
 
 const Dashboard = () => {
     return (
@@ -15,6 +19,10 @@ const Dashboard = () => {
                 {/* Dashboard sub-routes */}
                 <Route path="home" element={<DashboardPage />} />
                 <Route path="incoming-call" element={<IncomingCallPage />} />
+                <Route path="outgoing-call" element={<OutgoingCallPage />} />
+                <Route path="contacts" element={<ContactsPage />} />
+                <Route path="call-history" element={<CallHistoryPage />} />
+                <Route path="profile" element={<ProfilePage />} />
 
                 {/* Add more dashboard routes here as needed */}
                 {/* Example additional routes:

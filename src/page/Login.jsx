@@ -5,6 +5,7 @@ import axiosInstance from '../library/axios';
 import { useNavigate } from 'react-router-dom';
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import { UserContext } from '../context/UserContext';
 
 export default function Login() {
     const [username, setUsername] = useState('');
@@ -15,6 +16,7 @@ export default function Login() {
 
     const navigate = useNavigate();
     const { login } = useContext(AuthContext);
+    const { setUser } = useContext(UserContext);
 
     useEffect(() => {
         inputRef.current?.focus();
@@ -48,6 +50,7 @@ export default function Login() {
                 localStorage.setItem('authToken', response.data.token);
                 localStorage.setItem('userData', JSON.stringify(response.data.employee));
                 login(response.data.token); // Update context state
+                setUser(response.data.employee); // Update user context
 
                 // Show success toast with custom styling
                 toast.success(`🎉 Welcome back, ${response.data.employee.EmployeeName}!`, {

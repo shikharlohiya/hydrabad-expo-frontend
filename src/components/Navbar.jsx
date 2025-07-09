@@ -5,6 +5,9 @@ import { SlCallIn, SlCallOut } from "react-icons/sl";
 import { GiHamburgerMenu } from "react-icons/gi";
 import { MdHistory } from "react-icons/md";
 import { LuContactRound } from "react-icons/lu";
+import { CgProfile } from "react-icons/cg";
+
+
 
 const navItems = [
     {
@@ -13,9 +16,14 @@ const navItems = [
         icon: <IoHomeOutline className="w-5 h-5" />
     },
     {
-        to: '/dashboard/contact',
+        to: '/dashboard/contacts',
         label: 'Contacts',
         icon: <LuContactRound className="w-5 h-5" />
+    },
+    {
+        to: '/dashboard/call-history',
+        label: 'Call History',
+        icon: <MdHistory className="w-5 h-5" />
     },
     {
         to: '/dashboard/incoming-call',
@@ -27,20 +35,10 @@ const navItems = [
         label: 'Outgoing Calls',
         icon: <SlCallOut className="w-5 h-5" />
     },
-    {
-        to: '/dashboard/history',
-        label: 'Call History',
-        icon: <MdHistory className="w-5 h-5" />
-    },
-    {
-        to: '/dashboard/settings',
-        label: 'Settings',
-        icon: <IoSettingsOutline className="w-5 h-5" />
-    },
-
 ];
 
 const Navbar = ({ collapsed, setCollapsed }) => {
+
     return (
         <nav
             className={`bg-cyan-500 flex flex-col shadow-2xl transition-all duration-300 ease-in-out relative border-r border-cyan-400/30
@@ -58,7 +56,7 @@ const Navbar = ({ collapsed, setCollapsed }) => {
 
                     {/* Collapse/Expand Button */}
                     <button
-                        className={`flex items-center justify-center p-2 rounded-full text-white/80 hover:text-white hover:bg-white/30 transition-all duration-200 group ${collapsed ? 'w-full' : 'ml-2'}`}
+                        className={`flex items-center justify-center p-1 rounded-xl text-white/95 hover:text-white hover:bg-white/20 transition-all duration-200 group ${collapsed ? 'w-full' : 'ml-2'}`}
                         onClick={() => setCollapsed(!collapsed)}
                         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
@@ -76,7 +74,7 @@ const Navbar = ({ collapsed, setCollapsed }) => {
                             to={item.to}
                             className={({ isActive }) =>
                                 `group flex items-center transition-all duration-200 rounded-xl mx-1 relative overflow-hidden ${isActive
-                                    ? 'bg-white/30 text-white shadow-lg shadow-cyan-600/25'
+                                    ? 'bg-white/30 text-white shadow-sm shadow-cyan-600/25'
                                     : 'text-white/80 hover:bg-cyan-600/40 hover:text-white'
                                 } ${collapsed ? 'px-3 py-2 justify-center' : 'px-4 py-3'}`
                             }
