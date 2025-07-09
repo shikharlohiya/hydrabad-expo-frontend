@@ -4,8 +4,8 @@ import { toast } from 'react-toastify';
 import axiosInstance from '../library/axios';
 import { useNavigate } from 'react-router-dom';
 import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { UserContext } from '../context/UserContext';
+import AuthContext from '../context/AuthContext';
+import UserContext from '../context/UserContext';
 
 export default function Login() {
     const [username, setUsername] = useState('');

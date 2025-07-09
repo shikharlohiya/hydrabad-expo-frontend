@@ -1,4 +1,17 @@
-import { createContext } from "react";
+import AuthProvider from "./Providers/AuthProvider";
+import UserProvider from "./Providers/UserProvider";
+import DialerProvider from "./Providers/DialerProvider";
 
-export const AuthContext = createContext();
-export const UserContext = createContext();
+const Contexts = ({ children }) => {
+    return (
+        <AuthProvider>
+            <UserProvider>
+                <DialerProvider>
+                    {children}
+                </DialerProvider>
+            </UserProvider>
+        </AuthProvider>
+    );
+};
+
+export default Contexts;

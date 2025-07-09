@@ -2,8 +2,8 @@ import { useContext, useState, useRef, useEffect } from 'react';
 import { FaSignOutAlt, FaUserCircle } from "react-icons/fa";
 import { IoIosArrowDown } from "react-icons/io";
 import { useNavigate } from 'react-router-dom';
-import { UserContext } from '../context/UserContext';
-import { AuthContext } from '../context/Contexts';
+import UserContext from '../context/UserContext';
+import AuthContext from '../context/AuthContext';
 
 const Header = ({ collapsed, setCollapsed }) => {
     const { userData, clearUser } = useContext(UserContext);

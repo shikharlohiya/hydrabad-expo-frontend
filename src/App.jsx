@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import ProtectedRoute from "./utils/ProtectedRoute";
 import PublicRoute from "./utils/PublicRoute";
-import { AuthContext } from "./context/AuthContext";
+import AuthContext from "./context/AuthContext";
 
 import Login from "./page/Login";
 import NotFound from "./page/NotFound";

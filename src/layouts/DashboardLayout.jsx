@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Navbar from '../components/Navbar';
 import { Outlet } from 'react-router-dom';
+import Dialer from '../components/Dialer/Dialer';
+import useDialer from '../hooks/useDailer';
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const { isCallActive } = useDialer();
+  const [isDialerMinimized, setIsDialerMinimized] = useState(false);
 
   // Handle mobile detection
   useEffect(() => {
@@ -61,6 +66,14 @@ const DashboardLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating Dialer */}
+      {isCallActive && (
+        <Dialer
+          isMinimized={isDialerMinimized}
+          onToggleMinimize={() => setIsDialerMinimized(!isDialerMinimized)}
+        />
+      )}
     </div>
   );
 };
