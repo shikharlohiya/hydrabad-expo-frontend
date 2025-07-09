@@ -38,7 +38,7 @@ const Navbar = ({ collapsed, setCollapsed }) => {
 
     return (
         <nav
-            className={`bg-cyan-500 flex flex-col shadow-2xl transition-all duration-300 ease-in-out relative border-r border-cyan-400/30
+            className={`bg-[#538FC2] flex flex-col shadow-2xl transition-all duration-300 ease-in-out relative border-r border-[#538FC2]/30
                 ${collapsed ? 'w-16' : 'w-64'}
                 h-full
                 lg:h-[calc(100vh-4rem)]
@@ -71,8 +71,8 @@ const Navbar = ({ collapsed, setCollapsed }) => {
                             to={item.to}
                             className={({ isActive }) =>
                                 `group flex items-center transition-all duration-200 rounded-xl mx-1 relative overflow-hidden ${isActive
-                                    ? 'bg-white/30 text-white shadow-sm shadow-cyan-600/25'
-                                    : 'text-white/80 hover:bg-cyan-600/40 hover:text-white'
+                                    ? 'bg-white/30 text-white shadow-sm shadow-[#538FC2]/25'
+                                    : 'text-white/80 hover:bg-[#538FC2]/40 hover:text-white'
                                 } ${collapsed ? 'px-3 py-2 justify-center' : 'px-4 py-3'}`
                             }
                             end={item.to === '/dashboard'}

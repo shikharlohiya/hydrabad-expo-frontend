@@ -2,10 +2,19 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Navbar from '../components/Navbar';
 import { Outlet } from 'react-router-dom';
+import CallRemarksPage from '../components/Dialer/CallRemarksPage';
+import useDialer from '../hooks/useDialer';
+import { CALL_STATUS } from '../context/Providers/DialerProvider';
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Get dialer state
+  const { callStatus, isRemarksFormOpen } = useDialer();
+
+  // Show form when call is connected OR when form is open (even if call disconnects)
+  const showCallRemarksForm = callStatus === CALL_STATUS.CONNECTED || isRemarksFormOpen;
 
   // Handle mobile detection
   useEffect(() => {
@@ -41,24 +50,31 @@ const DashboardLayout = () => {
 
       {/* Layout Container */}
       <div className="flex">
-        {/* Desktop: Fixed Navbar, Mobile: Absolute Navbar */}
-        <div className={`
-          ${isMobile ? 'fixed' : 'fixed'} 
-          ${isMobile ? 'top-16 left-0 bottom-0' : 'top-16 left-0 bottom-0'}
-          ${isMobile && collapsed ? '-translate-x-full' : 'translate-x-0'}
-          transition-transform duration-300 ease-in-out z-40
-        `}>
-          <Navbar collapsed={collapsed} setCollapsed={setCollapsed} />
-        </div>
+        {/* Desktop: Fixed Navbar, Mobile: Absolute Navbar - Hidden when form is open */}
+        {!showCallRemarksForm && (
+          <div className={`
+            ${isMobile ? 'fixed' : 'fixed'} 
+            ${isMobile ? 'top-16 left-0 bottom-0' : 'top-16 left-0 bottom-0'}
+            ${isMobile && collapsed ? '-translate-x-full' : 'translate-x-0'}
+            transition-transform duration-300 ease-in-out z-40
+          `}>
+            <Navbar collapsed={collapsed} setCollapsed={setCollapsed} />
+          </div>
+        )}
 
         {/* Main Content */}
         <main className={`
           flex-1 transition-all duration-300 relative
-          ${isMobile ? 'ml-0' : collapsed ? 'ml-16' : 'ml-64'}
-          pt-20 sm:pt-24 lg:pt-20
-          p-4 lg:p-6
+          ${showCallRemarksForm ? 'ml-0' : (isMobile ? 'ml-0' : collapsed ? 'ml-16' : 'ml-64')}
+          ${showCallRemarksForm ? 'pt-16' : 'pt-20 sm:pt-24 lg:pt-20'}
+          ${showCallRemarksForm ? '' : 'p-4 lg:p-6'}
         `}>
-          <Outlet />
+          {/* Conditional Content */}
+          {showCallRemarksForm ? (
+            <CallRemarksPage />
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

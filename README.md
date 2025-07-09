@@ -2,6 +2,7 @@
 - application developed for abis traders to manage.
 
 
+
 ```
 Traders-Frontend
 ├─ eslint.config.js
@@ -16,7 +17,8 @@ Traders-Frontend
 │  ├─ assets
 │  ├─ components
 │  │  ├─ Dialer
-│  │  │  └─ Dialer.jsx
+│  │  │  ├─ Dialer.jsx
+│  │  │  └─ DialerPanel.jsx
 │  │  ├─ Header.jsx
 │  │  └─ Navbar.jsx
 │  ├─ constants

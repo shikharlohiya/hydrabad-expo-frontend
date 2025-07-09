@@ -24,6 +24,12 @@ const DialerProvider = ({ children }) => {
     const [contactName, setContactName] = useState(null);
     const [contactAvatar, setContactAvatar] = useState(null);
 
+    // New state for call remarks form
+    const [isRemarksFormOpen, setIsRemarksFormOpen] = useState(false);
+    const [currentCallDetails, setCurrentCallDetails] = useState(null);
+    const [pendingCallEnd, setPendingCallEnd] = useState(false);
+    const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+
     // Timer effect for call duration
     useEffect(() => {
         let interval;
@@ -35,6 +41,18 @@ const DialerProvider = ({ children }) => {
         }
         return () => clearInterval(interval);
     }, [callStatus, callStartTime]);
+
+    // Auto-open remarks form when call connects - REMOVED since we're using page replacement
+    // useEffect(() => {
+    //     if (callStatus === CALL_STATUS.CONNECTED && !isRemarksFormOpen) {
+    //         setCurrentCallDetails({
+    //             phoneNumber: currentNumber,
+    //             startTime: callStartTime,
+    //             duration: callDuration
+    //         });
+    //         setIsRemarksFormOpen(true);
+    //     }
+    // }, [callStatus, currentNumber, callStartTime, callDuration, isRemarksFormOpen]);
 
     // Actions
     const initiateCall = (number, contactInfo = null) => {
@@ -52,9 +70,16 @@ const DialerProvider = ({ children }) => {
     const answerCall = () => {
         setCallStatus(CALL_STATUS.CONNECTED);
         setCallStartTime(Date.now());
+        setIsRemarksFormOpen(true);
+        setIsFormSubmitted(false);
     };
 
     const endCall = () => {
+        // Proceed with ending call
+        finishCall();
+    };
+
+    const finishCall = (remarksData = null) => {
         // Add to call history
         if (currentNumber) {
             const callRecord = {
@@ -63,17 +88,29 @@ const DialerProvider = ({ children }) => {
                 contactName,
                 duration: callDuration,
                 timestamp: new Date(),
-                type: 'outgoing', // or 'incoming'
-                status: callStatus === CALL_STATUS.CONNECTED ? 'completed' : 'missed'
+                type: 'outgoing',
+                status: callStatus === CALL_STATUS.CONNECTED ? 'completed' : 'missed',
+                remarks: remarksData || null
             };
             setCallHistory(prev => [callRecord, ...prev]);
         }
 
         setCallStatus(CALL_STATUS.ENDED);
 
-        // Reset to idle after a short delay
+        // Reset call-related state but keep form open if not submitted
         setTimeout(() => {
-            resetDialer();
+            setCallStatus(CALL_STATUS.IDLE);
+            setCurrentNumber('');
+            setCallDuration(0);
+            setCallStartTime(null);
+            setIsMuted(false);
+            setIsOnHold(false);
+            setActiveCallId(null);
+            setContactName(null);
+            setContactAvatar(null);
+            // DON'T reset these - let form persist:
+            // setIsRemarksFormOpen(false);
+            // setIsFormSubmitted(false);
         }, 1000);
     };
 
@@ -101,6 +138,30 @@ const DialerProvider = ({ children }) => {
         setActiveCallId(null);
         setContactName(null);
         setContactAvatar(null);
+        setIsRemarksFormOpen(false);
+        setCurrentCallDetails(null);
+        setPendingCallEnd(false);
+        setIsFormSubmitted(false);
+    };
+
+    // Handle remarks form submission
+    const handleRemarksSubmit = (remarksData) => {
+        // Mark form as submitted
+        setIsFormSubmitted(true);
+        setIsRemarksFormOpen(false);
+
+        // Save the remarks data
+        setCurrentCallDetails(prev => ({
+            ...prev,
+            remarks: remarksData
+        }));
+
+        console.log('Remarks saved:', remarksData);
+    };
+
+    const handleRemarksCancel = () => {
+        // Just close the form without saving, but keep form available
+        setIsRemarksFormOpen(false);
     };
 
     // Helper functions
@@ -162,16 +223,23 @@ const DialerProvider = ({ children }) => {
         activeCallId,
         contactName,
         contactAvatar,
+        isRemarksFormOpen,
+        currentCallDetails,
+        pendingCallEnd,
+        isFormSubmitted,
 
         // Actions
         initiateCall,
         answerCall,
         endCall,
+        finishCall,
         toggleMute,
         toggleHold,
         setCurrentNumber,
         clearCurrentNumber,
         resetDialer,
+        handleRemarksSubmit,
+        handleRemarksCancel,
 
         // Helpers
         isCallActive,

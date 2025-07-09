@@ -1,7 +1,8 @@
 import { useContext, useState, useRef, useEffect } from 'react';
 import { FaSignOutAlt, FaUserCircle } from "react-icons/fa";
 import { IoIosArrowDown } from "react-icons/io";
-import { PhoneIcon } from '@heroicons/react/24/outline';
+import { MdDialpad } from "react-icons/md";
+import { PhoneXMarkIcon, MicrophoneIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import UserContext from '../context/UserContext';
 import AuthContext from '../context/AuthContext';
@@ -19,7 +20,12 @@ const Header = ({ collapsed, setCollapsed }) => {
         isCallActive,
         formatDuration,
         getStatusColor,
-        getStatusBgColor
+        getStatusBgColor,
+        endCall,
+        toggleMute,
+        toggleHold,
+        isMuted,
+        isOnHold
     } = useDialer();
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -135,29 +141,89 @@ const Header = ({ collapsed, setCollapsed }) => {
                     </button>
 
                     <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center text-white font-bold">
+                        <div className="w-8 h-8 bg-[#F68A1F] rounded-lg flex items-center justify-center text-white font-bold">
                             IB
                         </div>
-                        <h1 className="text-xl font-semibold text-gray-800">Traders Dashboard</h1>
+                        <h1 className="text-xl font-semibold text-gray-800">Trader Help Desk</h1>
                     </div>
                 </div>
 
-                {/* Right side - Dialer, User menu, notifications, etc. */}
+                {/* Right side - Call Status, Dialer, User menu */}
                 <div className="flex items-center space-x-4">
+                    {/* Call Status Display - Shows when call is active */}
+                    {isCallActive() && (
+                        <div className="flex items-center space-x-6">
+                            <div className="flex items-center space-x-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className={`w-2 h-2 rounded-full ${getStatusBgColor()}`}></div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-gray-800">
+                                        {currentNumber}
+                                    </span>
+                                    <div className="flex items-center space-x-2">
+                                        <span className={`text-xs font-medium capitalize ${getStatusColor()}`}>
+                                            {callStatus}
+                                        </span>
+                                        {callStatus === CALL_STATUS.CONNECTED && (
+                                            <span className="text-xs text-gray-500">
+                                                {formatDuration(callDuration)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Call Controls */}
+                            {!isDialerOpen && (
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={toggleMute}
+                                        className={`p-2 rounded-full transition-colors ${isMuted
+                                            ? 'bg-red-500 text-white'
+                                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                            }`}
+                                        title={isMuted ? 'Unmute' : 'Mute'}
+                                    >
+                                        <MicrophoneIcon className="w-4 h-4" />
+                                    </button>
+
+                                    <button
+                                        onClick={toggleHold}
+                                        className={`p-2 rounded-full transition-colors ${isOnHold
+                                            ? 'bg-orange-500 text-white'
+                                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                            }`}
+                                        title={isOnHold ? 'Resume' : 'Hold'}
+                                    >
+                                        {isOnHold ? <PlayIcon className="w-4 h-4" /> : <PauseIcon className="w-4 h-4" />}
+                                    </button>
+
+                                    <button
+                                        onClick={endCall}
+                                        className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-1 text-sm"
+                                        title="End Call"
+                                    >
+                                        <PhoneXMarkIcon className="w-4 h-4" />
+                                        <span>End Call</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Dialer Button */}
                     <div className="relative" ref={dialerContainerRef}>
                         <button
                             onClick={toggleDialer}
                             className={`
-                                relative p-2 rounded-lg transition-all duration-200
+                                relative p-2 rounded-full transition-all duration-200
                                 ${isCallActive()
                                     ? `${getStatusBgColor().replace('bg-', 'bg-')} text-white shadow-md`
-                                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                    : 'bg-[#F68A1F] hover:bg-[#e5791c] text-white shadow-md'
                                 }
                             `}
                             title={isCallActive() ? `Call ${callStatus}` : 'Open Dialer'}
                         >
-                            <PhoneIcon className="w-5 h-5" />
+                            <MdDialpad className="w-5 h-5" />
 
                             {/* Active call indicator dot */}
                             {isCallActive() && (
@@ -168,22 +234,9 @@ const Header = ({ collapsed, setCollapsed }) => {
                             )}
                         </button>
 
-                        {/* Call Status Tooltip - Shows when call is active */}
-                        {isCallActive() && !isDialerOpen && (
-                            <div className="absolute right-0 top-full mt-2 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-50">
-                                <div className="flex items-center space-x-2">
-                                    <span className="capitalize">{callStatus}</span>
-                                    {callStatus === CALL_STATUS.CONNECTED && (
-                                        <span>{formatDuration(callDuration)}</span>
-                                    )}
-                                </div>
-                                <div className="absolute -top-1 right-3 w-2 h-2 bg-gray-900 transform rotate-45"></div>
-                            </div>
-                        )}
-
-                        {/* Dialer Panel */}
+                        {/* Dialer Panel - Positioned to align with right edge of screen */}
                         {isDialerOpen && (
-                            <div className="absolute top-full right-0 mt-2 z-50">
+                            <div className="absolute top-full -right-56 mt-2 z-50">
                                 <div className="bg-white rounded-lg shadow-2xl border border-gray-200">
                                     <DialerPanel onClose={closeDialer} />
                                 </div>
@@ -197,7 +250,7 @@ const Header = ({ collapsed, setCollapsed }) => {
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                             className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                         >
-                            <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center shadow-md">
+                            <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center shadow-md">
                                 <span className="text-sm font-semibold text-white">
                                     {getInitials(userData?.EmployeeName)}
                                 </span>
@@ -220,7 +273,7 @@ const Header = ({ collapsed, setCollapsed }) => {
                                 {/* User Info Section */}
                                 <div className="px-4 py-3 border-b border-gray-100">
                                     <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center shadow-md">
+                                        <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center shadow-md">
                                             <span className="text-sm font-semibold text-white">
                                                 {getInitials(userData?.EmployeeName)}
                                             </span>
@@ -232,7 +285,7 @@ const Header = ({ collapsed, setCollapsed }) => {
                                             <p className="text-xs text-gray-500">
                                                 {userData?.EmployeeMailId}
                                             </p>
-                                            <p className="text-xs text-cyan-600 font-medium">
+                                            <p className="text-xs text-gray-800 font-medium">
                                                 ID: {userData?.EmployeeId}
                                             </p>
                                         </div>
