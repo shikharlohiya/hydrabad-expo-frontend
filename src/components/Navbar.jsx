@@ -3,11 +3,8 @@ import { NavLink } from 'react-router-dom';
 import { IoHomeOutline, IoSettingsOutline } from "react-icons/io5";
 import { SlCallIn, SlCallOut } from "react-icons/sl";
 import { GiHamburgerMenu } from "react-icons/gi";
-import { MdHistory } from "react-icons/md";
 import { LuContactRound } from "react-icons/lu";
-import { CgProfile } from "react-icons/cg";
-
-
+import { RiHistoryLine } from "react-icons/ri";
 
 const navItems = [
     {
@@ -23,7 +20,7 @@ const navItems = [
     {
         to: '/dashboard/call-history',
         label: 'Call History',
-        icon: <MdHistory className="w-5 h-5" />
+        icon: <RiHistoryLine className="w-5 h-5" />
     },
     {
         to: '/dashboard/incoming-call',
