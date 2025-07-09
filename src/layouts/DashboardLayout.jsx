@@ -2,15 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Navbar from '../components/Navbar';
 import { Outlet } from 'react-router-dom';
-import Dialer from '../components/Dialer/Dialer';
-import useDialer from '../hooks/useDailer';
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  const { isCallActive } = useDialer();
-  const [isDialerMinimized, setIsDialerMinimized] = useState(false);
 
   // Handle mobile detection
   useEffect(() => {
@@ -33,7 +28,7 @@ const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Fixed Header */}
+      {/* Fixed Header with integrated dialer */}
       <Header collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Mobile Overlay */}
@@ -58,7 +53,7 @@ const DashboardLayout = () => {
 
         {/* Main Content */}
         <main className={`
-          flex-1 transition-all duration-300
+          flex-1 transition-all duration-300 relative
           ${isMobile ? 'ml-0' : collapsed ? 'ml-16' : 'ml-64'}
           pt-20 sm:pt-24 lg:pt-20
           p-4 lg:p-6
@@ -66,14 +61,6 @@ const DashboardLayout = () => {
           <Outlet />
         </main>
       </div>
-
-      {/* Floating Dialer */}
-      {isCallActive && (
-        <Dialer
-          isMinimized={isDialerMinimized}
-          onToggleMinimize={() => setIsDialerMinimized(!isDialerMinimized)}
-        />
-      )}
     </div>
   );
 };

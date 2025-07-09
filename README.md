@@ -1,6 +1,7 @@
 # IVR and CRM for ABIS Traders
 - application developed for abis traders to manage.
 
+
 ```
 Traders-Frontend
 ├─ eslint.config.js
@@ -14,14 +15,22 @@ Traders-Frontend
 │  ├─ App.jsx
 │  ├─ assets
 │  ├─ components
+│  │  ├─ Dialer
+│  │  │  └─ Dialer.jsx
 │  │  ├─ Header.jsx
 │  │  └─ Navbar.jsx
 │  ├─ constants
 │  ├─ context
 │  │  ├─ AuthContext.jsx
 │  │  ├─ Contexts.jsx
+│  │  ├─ DialerContext.jsx
+│  │  ├─ Providers
+│  │  │  ├─ AuthProvider.jsx
+│  │  │  ├─ DialerProvider.jsx
+│  │  │  └─ UserProvider.jsx
 │  │  └─ UserContext.jsx
 │  ├─ hooks
+│  │  └─ useDialer.jsx
 │  ├─ index.css
 │  ├─ layouts
 │  │  └─ DashboardLayout.jsx
