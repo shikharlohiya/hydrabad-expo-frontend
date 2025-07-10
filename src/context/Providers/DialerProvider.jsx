@@ -132,24 +132,57 @@ const DialerProvider = ({ children }) => {
         setIsFormSubmitted(false);
     };
 
-    // Handle remarks form submission
-    const handleRemarksSubmit = (remarksData) => {
-        // Mark form as submitted
-        setIsFormSubmitted(true);
-        setIsRemarksFormOpen(false);
+    // Handle remarks form submission - FIXED VERSION
+    const handleRemarksSubmit = async (remarksData) => {
+        try {
+            // Mark form as submitted
+            setIsFormSubmitted(true);
 
-        // Save the remarks data
-        setCurrentCallDetails(prev => ({
-            ...prev,
-            remarks: remarksData
-        }));
+            // Save the remarks data
+            setCurrentCallDetails(prev => ({
+                ...prev,
+                remarks: remarksData
+            }));
 
-        console.log('Remarks saved:', remarksData);
+            console.log('Remarks saved:', remarksData);
+
+            // Add to call history with remarks
+            if (currentNumber) {
+                const callRecord = {
+                    id: Date.now(),
+                    number: currentNumber,
+                    contactName,
+                    duration: callDuration,
+                    timestamp: new Date(),
+                    type: 'outgoing',
+                    status: 'completed',
+                    remarks: remarksData
+                };
+                setCallHistory(prev => [callRecord, ...prev]);
+            }
+
+            // Close the form after successful submission
+            // We can do this immediately or with a delay
+            setTimeout(() => {
+                setIsRemarksFormOpen(false);
+                setIsFormSubmitted(false);
+                setCurrentCallDetails(null);
+            }, 2000); // 2 second delay to show success message
+
+            return Promise.resolve(); // Indicate successful submission
+
+        } catch (error) {
+            console.error('Error saving remarks:', error);
+            setIsFormSubmitted(false); // Reset if there's an error
+            return Promise.reject(error);
+        }
     };
 
     const handleRemarksCancel = () => {
-        // Just close the form without saving, but keep form available
+        // Close the form and reset states
         setIsRemarksFormOpen(false);
+        setIsFormSubmitted(false);
+        setCurrentCallDetails(null);
     };
 
     // Helper functions

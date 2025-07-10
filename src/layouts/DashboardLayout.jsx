@@ -11,10 +11,13 @@ const DashboardLayout = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   // Get dialer state
-  const { callStatus, isRemarksFormOpen } = useDialer();
+  const { callStatus, isRemarksFormOpen, isFormSubmitted } = useDialer();
 
-  // Show form when call is connected OR when form is open (even if call disconnects)
-  const showCallRemarksForm = callStatus === CALL_STATUS.CONNECTED || isRemarksFormOpen;
+  // Show form when:
+  // 1. Call is connected OR 
+  // 2. Form is explicitly open (even if call disconnects) AND not yet submitted
+  const showCallRemarksForm = callStatus === CALL_STATUS.CONNECTED ||
+    (isRemarksFormOpen && !isFormSubmitted);
 
   // Handle mobile detection
   useEffect(() => {

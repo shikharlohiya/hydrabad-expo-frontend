@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { User, Phone, Tag, MessageSquare, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 
 const CallRemarksForm = ({
     currentNumber,
@@ -6,7 +7,8 @@ const CallRemarksForm = ({
     onSubmit,
     onCancel,
     isSubmitting,
-    isCallEnded
+    isCallEnded,
+    submissionError
 }) => {
     const [formData, setFormData] = useState({
         customerName: '',
@@ -14,10 +16,9 @@ const CallRemarksForm = ({
         callType: 'support',
         priority: 'medium',
         category: '',
-        subCategory: '',
         description: '',
         resolution: '',
-        followUpRequired: false,
+        status: 'closed', // New status field
         followUpDate: '',
         customerSatisfaction: '',
         additionalNotes: ''
@@ -36,19 +37,19 @@ const CallRemarksForm = ({
     }, [currentNumber]);
 
     const callTypes = [
-        { value: 'support', label: 'Technical Support' },
-        { value: 'sales', label: 'Sales Inquiry' },
-        { value: 'complaint', label: 'Complaint' },
-        { value: 'information', label: 'Information Request' },
-        { value: 'billing', label: 'Billing Issue' },
-        { value: 'other', label: 'Other' }
+        { value: 'support', label: 'Technical Support', icon: '🔧' },
+        { value: 'sales', label: 'Sales Inquiry', icon: '💼' },
+        { value: 'complaint', label: 'Complaint', icon: '⚠️' },
+        { value: 'information', label: 'Information Request', icon: 'ℹ️' },
+        { value: 'billing', label: 'Billing Issue', icon: '💳' },
+        { value: 'other', label: 'Other', icon: '📝' }
     ];
 
     const priorities = [
-        { value: 'low', label: 'Low' },
-        { value: 'medium', label: 'Medium' },
-        { value: 'high', label: 'High' },
-        { value: 'urgent', label: 'Urgent' }
+        { value: 'low', label: 'Low', color: 'text-green-600', bg: 'bg-green-50' },
+        { value: 'medium', label: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+        { value: 'high', label: 'High', color: 'text-orange-600', bg: 'bg-orange-50' },
+        { value: 'urgent', label: 'Urgent', color: 'text-red-600', bg: 'bg-red-50' }
     ];
 
     const categories = [
@@ -61,11 +62,16 @@ const CallRemarksForm = ({
     ];
 
     const satisfactionRatings = [
-        { value: 'very_satisfied', label: 'Very Satisfied' },
-        { value: 'satisfied', label: 'Satisfied' },
-        { value: 'neutral', label: 'Neutral' },
-        { value: 'dissatisfied', label: 'Dissatisfied' },
-        { value: 'very_dissatisfied', label: 'Very Dissatisfied' }
+        { value: 'very_satisfied', label: 'Very Satisfied', emoji: '😊', color: 'text-green-600' },
+        { value: 'satisfied', label: 'Satisfied', emoji: '🙂', color: 'text-green-500' },
+        { value: 'neutral', label: 'Neutral', emoji: '😐', color: 'text-yellow-600' },
+        { value: 'dissatisfied', label: 'Dissatisfied', emoji: '🙁', color: 'text-orange-600' },
+        { value: 'very_dissatisfied', label: 'Very Dissatisfied', emoji: '😞', color: 'text-red-600' }
+    ];
+
+    const statusOptions = [
+        { value: 'closed', label: 'Closed', icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
+        { value: 'open', label: 'Open', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' }
     ];
 
     const handleInputChange = (e) => {
@@ -74,6 +80,14 @@ const CallRemarksForm = ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
+
+        // Clear follow-up date if status is changed to closed
+        if (name === 'status' && value === 'closed') {
+            setFormData(prev => ({
+                ...prev,
+                followUpDate: ''
+            }));
+        }
 
         // Clear error when user starts typing
         if (errors[name]) {
@@ -99,8 +113,8 @@ const CallRemarksForm = ({
             newErrors.description = 'Call description is required';
         }
 
-        if (formData.followUpRequired && !formData.followUpDate) {
-            newErrors.followUpDate = 'Follow-up date is required when follow-up is needed';
+        if (formData.status === 'open' && !formData.followUpDate) {
+            newErrors.followUpDate = 'Follow-up date is required for open tickets';
         }
 
         setErrors(newErrors);
@@ -109,6 +123,11 @@ const CallRemarksForm = ({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (isSubmitting) {
+            return;
+        }
+
         if (validateForm()) {
             await onSubmit(formData);
         }
@@ -116,234 +135,271 @@ const CallRemarksForm = ({
 
     const handleCancel = () => {
         const hasFormData = Object.values(formData).some(value =>
-            value !== '' && value !== false && value !== 'support' && value !== 'medium'
+            value !== '' && value !== false && value !== 'support' && value !== 'medium' && value !== 'closed'
         );
         onCancel(hasFormData);
     };
 
+    const selectedPriority = priorities.find(p => p.value === formData.priority);
+    const selectedStatus = statusOptions.find(s => s.value === formData.status);
+
     return (
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Call Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Customer Name *
-                    </label>
-                    <input
-                        type="text"
-                        name="customerName"
-                        value={formData.customerName}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.customerName ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                        placeholder="Enter customer name"
-                    />
-                    {errors.customerName && (
-                        <p className="text-red-500 text-xs mt-1">{errors.customerName}</p>
+        <div className="relative">
+            {/* Loading overlay */}
+            {isSubmitting && (
+                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F68A1F] mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-600 font-medium">Submitting form...</p>
+                    </div>
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                {/* Submission Error */}
+                {submissionError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+                        <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                        <p className="text-sm text-red-800">{submissionError}</p>
+                    </div>
+                )}
+
+                {/* Customer Info Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                            <User className="w-4 h-4 mr-1" />
+                            Customer Name *
+                        </label>
+                        <input
+                            type="text"
+                            name="customerName"
+                            value={formData.customerName}
+                            onChange={handleInputChange}
+                            className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${errors.customerName ? 'border-red-500' : 'border-gray-300'
+                                }`}
+                            placeholder="Enter customer name"
+                        />
+                        {errors.customerName && (
+                            <p className="text-red-500 text-xs mt-1">{errors.customerName}</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                            <Phone className="w-4 h-4 mr-1" />
+                            Phone Number
+                        </label>
+                        <input
+                            type="text"
+                            name="phoneNumber"
+                            value={formData.phoneNumber}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                            disabled
+                        />
+                    </div>
+                </div>
+
+                {/* Call Details Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Call Type</label>
+                        <select
+                            name="callType"
+                            value={formData.callType}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
+                        >
+                            {callTypes.map(type => (
+                                <option key={type.value} value={type.value}>
+                                    {type.icon} {type.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                            <Tag className="w-4 h-4 mr-1" />
+                            Category *
+                        </label>
+                        <select
+                            name="category"
+                            value={formData.category}
+                            onChange={handleInputChange}
+                            className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.category ? 'border-red-500' : 'border-gray-300'
+                                }`}
+                        >
+                            <option value="">Select a category</option>
+                            {categories.map(category => (
+                                <option key={category.value} value={category.value}>
+                                    {category.label}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.category && (
+                            <p className="text-red-500 text-xs mt-1">{errors.category}</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                        <div className="relative">
+                            <select
+                                name="priority"
+                                value={formData.priority}
+                                onChange={handleInputChange}
+                                className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${selectedPriority?.color} ${selectedPriority?.bg}`}
+                            >
+                                {priorities.map(priority => (
+                                    <option key={priority.value} value={priority.value}>
+                                        {priority.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                {/* Status and Follow-up Date Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                        <div className="relative">
+                            <select
+                                name="status"
+                                value={formData.status}
+                                onChange={handleInputChange}
+                                className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${selectedStatus?.color} ${selectedStatus?.bg}`}
+                            >
+                                {statusOptions.map(status => {
+                                    const IconComponent = status.icon;
+                                    return (
+                                        <option key={status.value} value={status.value}>
+                                            {status.label}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                    </div>
+                    {/* Follow-up Date - Only show if status is open */}
+                    {formData.status === 'open' && (
+                        <div className=" rounded-md">
+                            <label className="flex items-center text-sm font-medium text-blue-800 mb-1">
+                                <Clock className="w-4 h-4 mr-1" />
+                                Follow-up Date * (Required for open tickets)
+                            </label>
+                            <input
+                                type="date"
+                                name="followUpDate"
+                                value={formData.followUpDate}
+                                onChange={handleInputChange}
+                                min={new Date().toISOString().split('T')[0]}
+                                className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.followUpDate ? 'border-red-500' : 'border-blue-300'
+                                    }`}
+                            />
+                            {errors.followUpDate && (
+                                <p className="text-red-500 text-xs mt-1">{errors.followUpDate}</p>
+                            )}
+                        </div>
                     )}
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone Number
-                    </label>
-                    <input
-                        type="text"
-                        name="phoneNumber"
-                        value={formData.phoneNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                        placeholder="Phone number"
-                        disabled
-                    />
-                </div>
-            </div>
-
-            {/* Call Type and Priority */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Call Type
-                    </label>
-                    <select
-                        name="callType"
-                        value={formData.callType}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                    >
-                        {callTypes.map(type => (
-                            <option key={type.value} value={type.value}>
-                                {type.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Priority
-                    </label>
-                    <select
-                        name="priority"
-                        value={formData.priority}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                    >
-                        {priorities.map(priority => (
-                            <option key={priority.value} value={priority.value}>
-                                {priority.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {/* Category */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category *
-                </label>
-                <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.category ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                >
-                    <option value="">Select a category</option>
-                    {categories.map(category => (
-                        <option key={category.value} value={category.value}>
-                            {category.label}
-                        </option>
-                    ))}
-                </select>
-                {errors.category && (
-                    <p className="text-red-500 text-xs mt-1">{errors.category}</p>
-                )}
-            </div>
-
-            {/* Description */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Call Description *
-                </label>
-                <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.description ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                    placeholder="Describe the customer's inquiry or issue..."
-                />
-                {errors.description && (
-                    <p className="text-red-500 text-xs mt-1">{errors.description}</p>
-                )}
-            </div>
-
-            {/* Resolution */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Resolution / Action Taken
-                </label>
-                <textarea
-                    name="resolution"
-                    value={formData.resolution}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                    placeholder="Describe what was done to resolve the issue..."
-                />
-            </div>
-
-            {/* Follow-up */}
-            <div className="space-y-3">
-                <div className="flex items-center">
-                    <input
-                        type="checkbox"
-                        name="followUpRequired"
-                        checked={formData.followUpRequired}
-                        onChange={handleInputChange}
-                        className="h-4 w-4 text-[#F68A1F] focus:ring-[#F68A1F] border-gray-300 rounded"
-                    />
-                    <label className="ml-2 block text-sm text-gray-700">
-                        Follow-up required
-                    </label>
-                </div>
-
-                {formData.followUpRequired && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Description */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Follow-up Date *
+                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                            <MessageSquare className="w-4 h-4 mr-1" />
+                            Call Description *
                         </label>
-                        <input
-                            type="date"
-                            name="followUpDate"
-                            value={formData.followUpDate}
+                        <textarea
+                            name="description"
+                            value={formData.description}
                             onChange={handleInputChange}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.followUpDate ? 'border-red-500' : 'border-gray-300'
+                            rows={2}
+                            className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.description ? 'border-red-500' : 'border-gray-300'
                                 }`}
+                            placeholder="Describe the customer's inquiry or issue..."
                         />
-                        {errors.followUpDate && (
-                            <p className="text-red-500 text-xs mt-1">{errors.followUpDate}</p>
+                        {errors.description && (
+                            <p className="text-red-500 text-xs mt-1">{errors.description}</p>
                         )}
                     </div>
-                )}
-            </div>
 
-            {/* Customer Satisfaction */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Satisfaction
-                </label>
-                <select
-                    name="customerSatisfaction"
-                    value={formData.customerSatisfaction}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                >
-                    <option value="">Select satisfaction level</option>
-                    {satisfactionRatings.map(rating => (
-                        <option key={rating.value} value={rating.value}>
-                            {rating.label}
-                        </option>
-                    ))}
-                </select>
-            </div>
+                    {/* Resolution */}
+                    <div>
+                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Resolution / Action Taken
+                        </label>
+                        <textarea
+                            name="resolution"
+                            value={formData.resolution}
+                            onChange={handleInputChange}
+                            rows={2}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
+                            placeholder="Describe what was done to resolve the issue..."
+                        />
+                    </div>
+                </div>
 
-            {/* Additional Notes */}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Additional Notes
-                </label>
-                <textarea
-                    name="additionalNotes"
-                    value={formData.additionalNotes}
-                    onChange={handleInputChange}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                    placeholder="Any additional notes or observations..."
-                />
-            </div>
+                {/* Customer Satisfaction and Additional Notes Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Customer Satisfaction</label>
+                        <select
+                            name="customerSatisfaction"
+                            value={formData.customerSatisfaction}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
+                        >
+                            <option value="">Select satisfaction level</option>
+                            {satisfactionRatings.map(rating => (
+                                <option key={rating.value} value={rating.value}>
+                                    {rating.emoji} {rating.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-            {/* Form Actions */}
-            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                >
-                    Cancel
-                </button>
-                <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-6 py-2 bg-[#F68A1F] hover:bg-[#e5791c] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isSubmitting ? 'Saving...' : (isCallEnded ? 'Save Remarks & Return to Dashboard' : 'Save Remarks')}
-                </button>
-            </div>
-        </form>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
+                        <textarea
+                            name="additionalNotes"
+                            value={formData.additionalNotes}
+                            onChange={handleInputChange}
+                            rows={1}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] resize-none"
+                            placeholder="Any additional notes..."
+                        />
+                    </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <button
+                        type="button"
+                        onClick={handleCancel}
+                        disabled={isSubmitting}
+                        className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="px-6 py-2 text-sm bg-[#F68A1F] hover:bg-[#e5791c] text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
+                    >
+                        {isSubmitting && (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        <span>
+                            {isSubmitting ? 'Submitting...' : (isCallEnded ? 'Save & Return to Dashboard' : 'Save Remarks')}
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
     );
 };
 
