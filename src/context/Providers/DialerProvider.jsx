@@ -42,18 +42,6 @@ const DialerProvider = ({ children }) => {
         return () => clearInterval(interval);
     }, [callStatus, callStartTime]);
 
-    // Auto-open remarks form when call connects - REMOVED since we're using page replacement
-    // useEffect(() => {
-    //     if (callStatus === CALL_STATUS.CONNECTED && !isRemarksFormOpen) {
-    //         setCurrentCallDetails({
-    //             phoneNumber: currentNumber,
-    //             startTime: callStartTime,
-    //             duration: callDuration
-    //         });
-    //         setIsRemarksFormOpen(true);
-    //     }
-    // }, [callStatus, currentNumber, callStartTime, callDuration, isRemarksFormOpen]);
-
     // Actions
     const initiateCall = (number, contactInfo = null) => {
         setCurrentNumber(number);

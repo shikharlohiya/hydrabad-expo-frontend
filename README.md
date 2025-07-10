@@ -17,6 +17,7 @@ Traders-Frontend
 │  ├─ assets
 │  ├─ components
 │  │  ├─ Dialer
+│  │  │  ├─ CallRemarksPage.jsx
 │  │  │  ├─ Dialer.jsx
 │  │  │  └─ DialerPanel.jsx
 │  │  ├─ Header.jsx

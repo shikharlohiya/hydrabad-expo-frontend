@@ -7,7 +7,7 @@ import useDialer from '../hooks/useDialer';
 import { CALL_STATUS } from '../context/Providers/DialerProvider';
 
 const DashboardLayout = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
   // Get dialer state
