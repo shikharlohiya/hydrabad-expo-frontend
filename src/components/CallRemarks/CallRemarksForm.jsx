@@ -4,6 +4,7 @@ import { User, Phone, Tag, MessageSquare, CheckCircle, Clock, AlertTriangle } fr
 const CallRemarksForm = ({
     currentNumber,
     currentCallDetails,
+    customerData, // New prop for customer data
     onSubmit,
     onCancel,
     isSubmitting,
@@ -18,7 +19,7 @@ const CallRemarksForm = ({
         category: '',
         description: '',
         resolution: '',
-        status: 'closed', // New status field
+        status: 'closed',
         followUpDate: '',
         customerSatisfaction: '',
         additionalNotes: ''
@@ -35,6 +36,17 @@ const CallRemarksForm = ({
             }));
         }
     }, [currentNumber]);
+
+    // Auto-fill customer name when customer data is available
+    useEffect(() => {
+        if (customerData && customerData.name) {
+            setFormData(prev => ({
+                ...prev,
+                customerName: customerData.name,
+                phoneNumber: customerData.phoneNumber || currentNumber || prev.phoneNumber
+            }));
+        }
+    }, [customerData, currentNumber]);
 
     const callTypes = [
         { value: 'support', label: 'Technical Support', icon: '🔧' },
@@ -219,30 +231,6 @@ const CallRemarksForm = ({
                     </div>
 
                     <div>
-                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                            <Tag className="w-4 h-4 mr-1" />
-                            Category *
-                        </label>
-                        <select
-                            name="category"
-                            value={formData.category}
-                            onChange={handleInputChange}
-                            className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.category ? 'border-red-500' : 'border-gray-300'
-                                }`}
-                        >
-                            <option value="">Select a category</option>
-                            {categories.map(category => (
-                                <option key={category.value} value={category.value}>
-                                    {category.label}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.category && (
-                            <p className="text-red-500 text-xs mt-1">{errors.category}</p>
-                        )}
-                    </div>
-
-                    <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                         <div className="relative">
                             <select
@@ -259,9 +247,7 @@ const CallRemarksForm = ({
                             </select>
                         </div>
                     </div>
-                </div>
-                {/* Status and Follow-up Date Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
                         <div className="relative">
@@ -272,7 +258,6 @@ const CallRemarksForm = ({
                                 className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${selectedStatus?.color} ${selectedStatus?.bg}`}
                             >
                                 {statusOptions.map(status => {
-                                    const IconComponent = status.icon;
                                     return (
                                         <option key={status.value} value={status.value}>
                                             {status.label}
@@ -280,68 +265,95 @@ const CallRemarksForm = ({
                                     );
                                 })}
                             </select>
+                            <div className="absolute right-8 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                {selectedStatus && <selectedStatus.icon className="w-4 h-4" />}
+                            </div>
                         </div>
                     </div>
-                    {/* Follow-up Date - Only show if status is open */}
-                    {formData.status === 'open' && (
-                        <div className=" rounded-md">
-                            <label className="flex items-center text-sm font-medium text-blue-800 mb-1">
-                                <Clock className="w-4 h-4 mr-1" />
-                                Follow-up Date * (Required for open tickets)
-                            </label>
-                            <input
-                                type="date"
-                                name="followUpDate"
-                                value={formData.followUpDate}
-                                onChange={handleInputChange}
-                                min={new Date().toISOString().split('T')[0]}
-                                className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.followUpDate ? 'border-red-500' : 'border-blue-300'
-                                    }`}
-                            />
-                            {errors.followUpDate && (
-                                <p className="text-red-500 text-xs mt-1">{errors.followUpDate}</p>
-                            )}
-                        </div>
+                </div>
+
+                {/* Category */}
+                <div>
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                        <Tag className="w-4 h-4 mr-1" />
+                        Category *
+                    </label>
+                    <select
+                        name="category"
+                        value={formData.category}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.category ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                    >
+                        <option value="">Select a category</option>
+                        {categories.map(category => (
+                            <option key={category.value} value={category.value}>
+                                {category.label}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.category && (
+                        <p className="text-red-500 text-xs mt-1">{errors.category}</p>
                     )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Description */}
-                    <div>
-                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                            <MessageSquare className="w-4 h-4 mr-1" />
-                            Call Description *
+                {/* Description */}
+                <div>
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        Call Description *
+                    </label>
+                    <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.description ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                        placeholder="Describe the customer's inquiry or issue..."
+                    />
+                    {errors.description && (
+                        <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+                    )}
+                </div>
+
+                {/* Resolution */}
+                <div>
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Resolution / Action Taken
+                    </label>
+                    <textarea
+                        name="resolution"
+                        value={formData.resolution}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
+                        placeholder="Describe what was done to resolve the issue..."
+                    />
+                </div>
+
+                {/* Follow-up Date - Only show if status is open */}
+                {formData.status === 'open' && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <label className="flex items-center text-sm font-medium text-blue-800 mb-2">
+                            <Clock className="w-4 h-4 mr-1" />
+                            Follow-up Date * (Required for open tickets)
                         </label>
-                        <textarea
-                            name="description"
-                            value={formData.description}
+                        <input
+                            type="date"
+                            name="followUpDate"
+                            value={formData.followUpDate}
                             onChange={handleInputChange}
-                            rows={2}
-                            className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] ${errors.description ? 'border-red-500' : 'border-gray-300'
+                            min={new Date().toISOString().split('T')[0]}
+                            className={`w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.followUpDate ? 'border-red-500' : 'border-blue-300'
                                 }`}
-                            placeholder="Describe the customer's inquiry or issue..."
                         />
-                        {errors.description && (
-                            <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+                        {errors.followUpDate && (
+                            <p className="text-red-500 text-xs mt-1">{errors.followUpDate}</p>
                         )}
                     </div>
-
-                    {/* Resolution */}
-                    <div>
-                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Resolution / Action Taken
-                        </label>
-                        <textarea
-                            name="resolution"
-                            value={formData.resolution}
-                            onChange={handleInputChange}
-                            rows={2}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                            placeholder="Describe what was done to resolve the issue..."
-                        />
-                    </div>
-                </div>
+                )}
 
                 {/* Customer Satisfaction and Additional Notes Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
