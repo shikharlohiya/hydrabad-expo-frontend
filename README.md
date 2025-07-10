@@ -1,8 +1,6 @@
 # IVR and CRM for ABIS Traders
 - application developed for abis traders to manage.
 
-
-
 ```
 Traders-Frontend
 ├─ eslint.config.js
@@ -10,7 +8,11 @@ Traders-Frontend
 ├─ package-lock.json
 ├─ package.json
 ├─ public
-│  └─ icon-512.png
+│  ├─ icon-512.png
+│  └─ sounds
+│     ├─ button-click.mp3
+│     ├─ dial-tone.mp3
+│     └─ phone-ring.mp3
 ├─ README.md
 ├─ src
 │  ├─ App.jsx
@@ -18,7 +20,6 @@ Traders-Frontend
 │  ├─ components
 │  │  ├─ Dialer
 │  │  │  ├─ CallRemarksPage.jsx
-│  │  │  ├─ Dialer.jsx
 │  │  │  └─ DialerPanel.jsx
 │  │  ├─ Header.jsx
 │  │  └─ Navbar.jsx
@@ -63,3 +64,7 @@ Traders-Frontend
 └─ vite.config.js
 
 ```
+
+
+Notes-
+1. DailerPanel line no- 729  /// Outgoing Call -> Incoming Call
