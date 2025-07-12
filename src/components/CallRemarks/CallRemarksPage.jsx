@@ -33,11 +33,11 @@ const CallRemarksPage = () => {
 
     // Mock customer database - replace with actual API
     const mockCustomerDatabase = {
-        'ACC123456': {
+        '9301196473': {
             name: 'John Doe',
             email: 'john.doe@example.com',
             accountId: 'ACC123456',
-            phoneNumber: '+1234567890',
+            phoneNumber: '9301196473',
             joinDate: '2023-01-15',
             lastActivity: '2024-12-20',
             accountType: 'Premium',
