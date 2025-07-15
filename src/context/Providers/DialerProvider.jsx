@@ -193,12 +193,16 @@ const DialerProvider = ({ children }) => {
         remarks: formData,
         completedAt: new Date(),
         apiResponse: response.data,
+        isSubmitted: true,
       }));
 
-      // Close form and reset form-related state
-      setIsRemarksFormOpen(false);
-      setCurrentCallDetails(null);
-      setCurrentNumber("");
+      // Only close form if call has ended
+      // If call is still active, keep form open to show success message
+      if (callStatus === CALL_STATUS.IDLE || callStatus === CALL_STATUS.ENDED) {
+        setIsRemarksFormOpen(false);
+        setCurrentCallDetails(null);
+        setCurrentNumber("");
+      }
 
       return Promise.resolve(response.data);
     } catch (error) {

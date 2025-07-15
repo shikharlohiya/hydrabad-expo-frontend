@@ -12,8 +12,8 @@ const CallRemarksForm = ({
   submissionError,
 }) => {
   const [formData, setFormData] = useState({
-    CallId: "",
-    EmployeeId: "",
+    CallId: currentCallDetails?.CallId || "",
+    EmployeeId: currentCallDetails?.EmployeeId || "",
     callDateTime: new Date().toISOString().slice(0, 16),
     callType: "InBound",
     supportTypeId: "",
@@ -105,6 +105,17 @@ const CallRemarksForm = ({
 
     fetchDropdownOptions();
   }, []);
+
+  // Update form data when call details change
+  useEffect(() => {
+    if (currentCallDetails) {
+      setFormData((prev) => ({
+        ...prev,
+        CallId: currentCallDetails.CallId || prev.CallId,
+        EmployeeId: currentCallDetails.EmployeeId || prev.EmployeeId,
+      }));
+    }
+  }, [currentCallDetails]);
 
   const callTypes = [
     { value: "InBound", label: "Inbound Call" },
@@ -547,16 +558,6 @@ const CallRemarksForm = ({
               </div>
             )}
           </div>
-
-          {/* Follow-up Notice */}
-          {formData.status === "open" && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> This ticket is marked as open and
-                requires a follow-up date.
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Form Actions */}

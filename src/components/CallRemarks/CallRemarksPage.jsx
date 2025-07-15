@@ -21,6 +21,7 @@ const CallRemarksPage = () => {
   const [showCustomerPanel, setShowCustomerPanel] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionError, setSubmissionError] = useState(null);
 
   // Customer search states
@@ -203,6 +204,7 @@ const CallRemarksPage = () => {
 
       // This will call the DialerProvider's handleRemarksSubmit which makes the API call
       await handleRemarksSubmit(submissionData);
+      setIsSubmitted(true);
 
       // Form submission successful - the provider will handle closing the form
       console.log("Form submitted successfully");
@@ -292,16 +294,55 @@ const CallRemarksPage = () => {
 
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto">
-                <CallRemarksForm
-                  currentNumber={currentNumber}
-                  currentCallDetails={currentCallDetails}
-                  customerData={customerData}
-                  onSubmit={handleSubmit}
-                  onCancel={handleCancel}
-                  isSubmitting={isSubmitting}
-                  isCallEnded={isCallEnded}
-                  submissionError={submissionError}
-                />
+                {isSubmitted ? (
+                  <div className="p-6 text-center justify-center flex items-center h-full">
+                    <div className="max-w-md mx-auto">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg
+                          className="w-8 h-8 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        Form Submitted Successfully!
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Your call remarks have been saved.{" "}
+                        {isCallEnded
+                          ? "You can now return to the dashboard."
+                          : "The call is still active."}
+                      </p>
+                      {isCallEnded && (
+                        <button
+                          onClick={() => handleRemarksCancel()}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          Return to Dashboard
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <CallRemarksForm
+                    currentNumber={currentNumber}
+                    currentCallDetails={currentCallDetails}
+                    customerData={customerData}
+                    onSubmit={handleSubmit}
+                    onCancel={handleCancel}
+                    isSubmitting={isSubmitting}
+                    isCallEnded={isCallEnded}
+                    submissionError={submissionError}
+                  />
+                )}
               </div>
             </div>
           </div>
