@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../../library/axios"; // Adjust path as needed
+import axiosInstance from "../../library/axios";
 
 const CallRemarksForm = ({
   currentNumber,
@@ -12,9 +12,9 @@ const CallRemarksForm = ({
   submissionError,
 }) => {
   const [formData, setFormData] = useState({
-    CallId: currentCallDetails?.CallId || "",
-    EmployeeId: currentCallDetails?.EmployeeId || "",
-    callDateTime: new Date().toISOString().slice(0, 16), // Default to current datetime
+    CallId: "",
+    EmployeeId: "",
+    callDateTime: new Date().toISOString().slice(0, 16),
     callType: "InBound",
     supportTypeId: "",
     inquiryNumber: "",
@@ -40,11 +40,22 @@ const CallRemarksForm = ({
 
   const [errors, setErrors] = useState({});
 
+  // Update form data when call details change
+  useEffect(() => {
+    if (currentCallDetails) {
+      setFormData((prev) => ({
+        ...prev,
+        CallId: currentCallDetails.CallId || prev.CallId,
+        EmployeeId: currentCallDetails.EmployeeId || prev.EmployeeId,
+      }));
+    }
+  }, [currentCallDetails]);
+
   // Fetch dropdown options from APIs
   useEffect(() => {
     const fetchDropdownOptions = async () => {
+      // Fetch support types
       try {
-        // Fetch support types
         setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
         const supportTypesResponse = await axiosInstance.get("/support-types");
         if (supportTypesResponse.data.success) {
@@ -59,8 +70,8 @@ const CallRemarksForm = ({
         setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
       }
 
+      // Fetch process types
       try {
-        // Fetch process types
         setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
         const processTypesResponse = await axiosInstance.get("/process-types");
         if (processTypesResponse.data.success) {
@@ -75,8 +86,8 @@ const CallRemarksForm = ({
         setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
       }
 
+      // Fetch query types
       try {
-        // Fetch query types
         setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
         const queryTypesResponse = await axiosInstance.get("/query-types");
         if (queryTypesResponse.data.success) {
@@ -95,31 +106,14 @@ const CallRemarksForm = ({
     fetchDropdownOptions();
   }, []);
 
-  // Update form data when call details change
-  useEffect(() => {
-    if (currentCallDetails) {
-      setFormData((prev) => ({
-        ...prev,
-        CallId: currentCallDetails.CallId || prev.CallId,
-        EmployeeId: currentCallDetails.EmployeeId || prev.EmployeeId,
-      }));
-    }
-  }, [currentCallDetails]);
-
   const callTypes = [
     { value: "InBound", label: "Inbound Call" },
     { value: "OutBound", label: "Outbound Call" },
   ];
 
   const statusOptions = [
-    {
-      value: "closed",
-      label: "Closed",
-    },
-    {
-      value: "open",
-      label: "Open",
-    },
+    { value: "closed", label: "Closed" },
+    { value: "open", label: "Open" },
   ];
 
   const handleInputChange = (e) => {
@@ -146,6 +140,7 @@ const CallRemarksForm = ({
     }
   };
 
+  // Handle multiple file selection
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setFormData((prev) => ({
@@ -200,61 +195,13 @@ const CallRemarksForm = ({
       return;
     }
 
-    if (validateForm()) {
-      try {
-        // Create FormData for multipart/form-data submission
-        const formDataToSubmit = new FormData();
-
-        // Append all form fields
-        formDataToSubmit.append("CallId", formData.CallId);
-        formDataToSubmit.append("EmployeeId", formData.EmployeeId);
-        formDataToSubmit.append("callDateTime", formData.callDateTime);
-        formDataToSubmit.append("callType", formData.callType);
-        formDataToSubmit.append("supportTypeId", formData.supportTypeId);
-        formDataToSubmit.append("inquiryNumber", formData.inquiryNumber);
-        formDataToSubmit.append("processTypeId", formData.processTypeId);
-        formDataToSubmit.append("queryTypeId", formData.queryTypeId);
-        formDataToSubmit.append("remarks", formData.remarks);
-        formDataToSubmit.append("status", formData.status);
-
-        if (formData.followUpDate) {
-          formDataToSubmit.append("followUpDate", formData.followUpDate);
-        }
-
-        // Append files
-        if (formData.attachments.length > 0) {
-          formData.attachments.forEach((file) => {
-            formDataToSubmit.append("attachments", file);
-          });
-        }
-
-        // Submit the form using axiosInstance
-        const response = await axiosInstance.post(
-          "/form-details",
-          formDataToSubmit,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        if (response.data.success) {
-          // Call the onSubmit callback with success
-          await onSubmit(response.data);
-        } else {
-          throw new Error(response.data.message || "Submission failed");
-        }
-      } catch (error) {
-        console.error("Form submission error:", error);
-        // Handle the error appropriately
-        const errorMessage =
-          error.response?.data?.message ||
-          error.message ||
-          "An error occurred while submitting the form";
-        throw new Error(errorMessage);
-      }
+    if (!validateForm()) {
+      return;
     }
+
+    // Simply pass the form data to the parent component
+    // The API call will be handled in the DialerProvider
+    await onSubmit(formData);
   };
 
   const handleCancel = () => {
@@ -531,6 +478,7 @@ const CallRemarksForm = ({
             )}
           </div>
 
+          {/* Multiple Attachments Support */}
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">
               Attachments
