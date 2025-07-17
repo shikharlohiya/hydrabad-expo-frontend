@@ -10,6 +10,7 @@ import AuthContext from "./context/AuthContext";
 import Login from "./page/Login";
 import NotFound from "./page/NotFound";
 import Dashboard from "./page/Dashboard/Dashboard";
+import CallingPage from "./page/Dashboard/CallingPage/CallingPage";
 
 function App() {
   const { isAuthenticated } = useContext(AuthContext);
@@ -37,6 +38,7 @@ function App() {
               </PublicRoute>
             }
           />
+          <Route path="calling-page" element={<CallingPage />} />
 
           {/* Protected Dashboard Routes */}
           <Route

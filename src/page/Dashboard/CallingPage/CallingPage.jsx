@@ -163,13 +163,6 @@ const IframeComponent = ({
   className = "",
   style = {},
 }) => {
-  const iframeStyles = {
-    border: "none",
-    width,
-    height,
-    ...style,
-  };
-
   return (
     <div
       className={`iframe-container ${className}`}
@@ -178,7 +171,7 @@ const IframeComponent = ({
       <iframe
         src={src}
         title={title}
-        style={iframeStyles}
+        style={{ border: "none", width, height, ...style }}
         allowFullScreen={allowFullScreen}
         sandbox={sandbox}
         loading={loading}
@@ -188,7 +181,7 @@ const IframeComponent = ({
 };
 
 const CallingPage = () => {
-  const iframeUrl = `https://interactions.acefone.in`;
+  const iframeUrl = "https://interactions.acefone.in";
 
   return (
     <div style={{ padding: "20px" }}>
