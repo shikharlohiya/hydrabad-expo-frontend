@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import Navbar from '../components/Navbar';
-import { Outlet } from 'react-router-dom';
-import CallRemarksPage from '../components/CallRemarks/CallRemarksPage';
-import useDialer from '../hooks/useDialer';
-import { CALL_STATUS } from '../context/Providers/DialerProvider';
+import React, { useState, useEffect } from "react";
+import Header from "../components/Header";
+import Navbar from "../components/Navbar";
+import { Outlet } from "react-router-dom";
+import CallRemarksPage from "../components/CallRemarks/CallRemarksPage";
+import useDialer from "../hooks/useDialer";
+import { CALL_STATUS } from "../context/Providers/DialerProvider";
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(true);
@@ -14,10 +14,13 @@ const DashboardLayout = () => {
   const { callStatus, isRemarksFormOpen, isFormSubmitted } = useDialer();
 
   // Show form when:
-  // 1. Call is connected OR 
+  // 1. Call is connected OR
   // 2. Form is explicitly open (even if call disconnects) AND not yet submitted
-  const showCallRemarksForm = callStatus === CALL_STATUS.CONNECTED ||
-    (isRemarksFormOpen && !isFormSubmitted);
+
+  // const showCallRemarksForm = callStatus === CALL_STATUS.CONNECTED ||
+  //   (isRemarksFormOpen && !isFormSubmitted);
+  const showCallRemarksForm =
+    callStatus === CALL_STATUS.IDLE || (isRemarksFormOpen && !isFormSubmitted);
 
   // Handle mobile detection
   useEffect(() => {
@@ -26,9 +29,9 @@ const DashboardLayout = () => {
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
 
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Auto-collapse on mobile
@@ -55,29 +58,37 @@ const DashboardLayout = () => {
       <div className="flex">
         {/* Desktop: Fixed Navbar, Mobile: Absolute Navbar - Hidden when form is open */}
         {!showCallRemarksForm && (
-          <div className={`
-            ${isMobile ? 'fixed' : 'fixed'} 
-            ${isMobile ? 'top-16 left-0 bottom-0' : 'top-16 left-0 bottom-0'}
-            ${isMobile && collapsed ? '-translate-x-full' : 'translate-x-0'}
+          <div
+            className={`
+            ${isMobile ? "fixed" : "fixed"} 
+            ${isMobile ? "top-16 left-0 bottom-0" : "top-16 left-0 bottom-0"}
+            ${isMobile && collapsed ? "-translate-x-full" : "translate-x-0"}
             transition-transform duration-300 ease-in-out z-40
-          `}>
+          `}
+          >
             <Navbar collapsed={collapsed} setCollapsed={setCollapsed} />
           </div>
         )}
 
         {/* Main Content */}
-        <main className={`
+        <main
+          className={`
           flex-1 transition-all duration-300 relative
-          ${showCallRemarksForm ? 'ml-0' : (isMobile ? 'ml-0' : collapsed ? 'ml-16' : 'ml-64')}
-          ${showCallRemarksForm ? 'pt-16' : 'pt-20 sm:pt-24 lg:pt-20'}
-          ${showCallRemarksForm ? '' : 'p-4 lg:p-6'}
-        `}>
+          ${
+            showCallRemarksForm
+              ? "ml-0"
+              : isMobile
+              ? "ml-0"
+              : collapsed
+              ? "ml-16"
+              : "ml-64"
+          }
+          ${showCallRemarksForm ? "pt-16" : "pt-20 sm:pt-24 lg:pt-20"}
+          ${showCallRemarksForm ? "" : "p-4 lg:p-6"}
+        `}
+        >
           {/* Conditional Content */}
-          {showCallRemarksForm ? (
-            <CallRemarksPage />
-          ) : (
-            <Outlet />
-          )}
+          {showCallRemarksForm ? <CallRemarksPage /> : <Outlet />}
         </main>
       </div>
     </div>

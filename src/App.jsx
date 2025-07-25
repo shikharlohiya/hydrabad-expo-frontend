@@ -10,6 +10,7 @@ import AuthContext from "./context/AuthContext";
 import Login from "./page/Login";
 import NotFound from "./page/NotFound";
 import Dashboard from "./page/Dashboard/Dashboard";
+import DialerProvider from "./context/Providers/DialerProvider";
 
 function App() {
   const { isAuthenticated } = useContext(AuthContext);
@@ -43,7 +44,9 @@ function App() {
             path="/dashboard/*"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Dashboard />
+                <DialerProvider>
+                  <Dashboard />
+                </DialerProvider>
               </ProtectedRoute>
             }
           />
