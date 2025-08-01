@@ -171,7 +171,7 @@ const DialerPanel = ({ onClose }) => {
         ringingAudioRef.current.currentTime = 0;
       }
     };
-  }, [callStatus, isRingingSoundEnabled, callDirection]); // ✅ add callDirection
+  }, [callStatus, isRingingSoundEnabled, callDirection]);
 
   // Handle error display
   useEffect(() => {
@@ -297,6 +297,10 @@ const DialerPanel = ({ onClose }) => {
       ringingAudioRef.current.pause();
       ringingAudioRef.current.currentTime = 0;
     }
+    if (dialToneAudioRef.current) {
+      dialToneAudioRef.current.pause();
+      dialToneAudioRef.current.currentTime = 0;
+    }
     endCall();
     setDisplayNumber("");
     setIsConferenceMode(false);
@@ -389,9 +393,7 @@ const DialerPanel = ({ onClose }) => {
       case CALL_STATUS.DIALING:
         return "Dialing...";
       case CALL_STATUS.RINGING:
-        return currentNumber.startsWith("incoming")
-          ? "Incoming Call"
-          : "Ringing...";
+        return callDirection === "incoming" ? "Incoming Call" : "Ringing...";
       case CALL_STATUS.CONNECTED:
         return isOnHold ? "On Hold" : "Connected";
       case CALL_STATUS.ON_HOLD:
@@ -409,7 +411,10 @@ const DialerPanel = ({ onClose }) => {
   const getConnectionIndicator = () => {
     if (connectionStatus === "connected") {
       return <CheckCircleIcon className="w-3 h-3 text-green-500" />;
-    } else if (connectionStatus === "connecting") {
+    } else if (
+      connectionStatus === "connecting" ||
+      connectionStatus === "reconnecting"
+    ) {
       return <ClockIcon className="w-3 h-3 text-yellow-500 animate-spin" />;
     } else {
       return <ExclamationTriangleIcon className="w-3 h-3 text-red-500" />;
@@ -552,11 +557,6 @@ const DialerPanel = ({ onClose }) => {
                     • {formatDuration(callDuration)}
                   </span>
                 )}
-                {/* {activeCallId && (
-                  <span className="text-xs opacity-60">
-                    #{activeCallId.slice(-4)}
-                  </span>
-                )} */}
                 {activeCallId && typeof activeCallId === "string" ? (
                   <span className="text-xs opacity-60">
                     #{activeCallId.slice(-4)}
@@ -740,6 +740,7 @@ const DialerPanel = ({ onClose }) => {
             </div>
           </div>
         )}
+
         {/* Outgoing Call Interface */}
         {callStatus === CALL_STATUS.RINGING && callDirection === "outgoing" && (
           <div className="text-center">
@@ -760,7 +761,8 @@ const DialerPanel = ({ onClose }) => {
           {connectionStatus === "connected" && bearerToken && (
             <span className="text-green-600">● Connected</span>
           )}
-          {connectionStatus === "connecting" && (
+          {(connectionStatus === "connecting" ||
+            connectionStatus === "reconnecting") && (
             <span className="text-yellow-600">● Connecting...</span>
           )}
           {connectionStatus === "error" && (

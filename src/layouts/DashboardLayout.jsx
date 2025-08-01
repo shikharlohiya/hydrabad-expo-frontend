@@ -16,11 +16,9 @@ const DashboardLayout = () => {
   // Show form when:
   // 1. Call is connected OR
   // 2. Form is explicitly open (even if call disconnects) AND not yet submitted
-
-  // const showCallRemarksForm = callStatus === CALL_STATUS.CONNECTED ||
-  //   (isRemarksFormOpen && !isFormSubmitted);
   const showCallRemarksForm =
-    callStatus === CALL_STATUS.IDLE || (isRemarksFormOpen && !isFormSubmitted);
+    callStatus === CALL_STATUS.CONNECTED ||
+    (isRemarksFormOpen && !isFormSubmitted);
 
   // Handle mobile detection
   useEffect(() => {

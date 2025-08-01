@@ -5,17 +5,24 @@ const CallRemarksForm = ({
   currentNumber,
   currentCallDetails,
   customerData,
+  orderData, // Add this prop for order data
   onSubmit,
   onCancel,
   isSubmitting,
   isCallEnded,
   submissionError,
+  // Add these props from your DialerProvider
+  callDirection,
+  callStartTime,
+  callDuration,
+  activeCallId,
+  userData,
 }) => {
   const [formData, setFormData] = useState({
-    CallId: currentCallDetails?.CallId || "",
-    EmployeeId: currentCallDetails?.EmployeeId || "",
-    callDateTime: new Date().toISOString().slice(0, 16),
-    callType: "InBound",
+    CallId: "",
+    EmployeeId: "",
+    callDateTime: "",
+    callType: "",
     supportTypeId: "",
     inquiryNumber: "",
     processTypeId: "",
@@ -40,16 +47,41 @@ const CallRemarksForm = ({
 
   const [errors, setErrors] = useState({});
 
-  // Update form data when call details change
+  // Auto-populate form data with actual call information
   useEffect(() => {
-    if (currentCallDetails) {
+    const populateCallData = () => {
+      // Calculate call date and time
+      const callDateTime = callStartTime
+        ? new Date(callStartTime).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16);
+
+      // Determine call type from direction
+      const callType = callDirection === "incoming" ? "InBound" : "OutBound";
+
+      // Auto-populate inquiry number from order data or customer data
+      const inquiryNumber = orderData?.orderId || customerData?.accountId || "";
+
       setFormData((prev) => ({
         ...prev,
-        CallId: currentCallDetails.CallId || prev.CallId,
-        EmployeeId: currentCallDetails.EmployeeId || prev.EmployeeId,
+        CallId: activeCallId || currentCallDetails?.CallId || "",
+        EmployeeId:
+          userData?.EmployeeId || currentCallDetails?.EmployeeId || "",
+        callDateTime: callDateTime,
+        callType: callType,
+        inquiryNumber: inquiryNumber,
       }));
-    }
-  }, [currentCallDetails]);
+    };
+
+    populateCallData();
+  }, [
+    activeCallId,
+    currentCallDetails,
+    userData,
+    callStartTime,
+    callDirection,
+    orderData,
+    customerData,
+  ]);
 
   // Fetch dropdown options from APIs
   useEffect(() => {
@@ -106,16 +138,20 @@ const CallRemarksForm = ({
     fetchDropdownOptions();
   }, []);
 
-  // Update form data when call details change
-  useEffect(() => {
-    if (currentCallDetails) {
-      setFormData((prev) => ({
-        ...prev,
-        CallId: currentCallDetails.CallId || prev.CallId,
-        EmployeeId: currentCallDetails.EmployeeId || prev.EmployeeId,
-      }));
-    }
-  }, [currentCallDetails]);
+  const formatDuration = (seconds) => {
+    if (!seconds) return "00:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const formatDateTime = (dateTime) => {
+    if (!dateTime) return "";
+    const date = new Date(dateTime);
+    return date.toLocaleString();
+  };
 
   const callTypes = [
     { value: "InBound", label: "Inbound Call" },
@@ -163,9 +199,10 @@ const CallRemarksForm = ({
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.CallId) {
-      newErrors.CallId = "Call ID is required";
-    }
+    // Validate auto-populated fields exist
+    // if (!formData.CallId) {
+    //   newErrors.CallId = "Call ID is required";
+    // }
 
     if (!formData.EmployeeId) {
       newErrors.EmployeeId = "Employee ID is required";
@@ -175,6 +212,7 @@ const CallRemarksForm = ({
       newErrors.callDateTime = "Call date and time is required";
     }
 
+    // Validate user input fields
     if (!formData.supportTypeId) {
       newErrors.supportTypeId = "Support type is required";
     }
@@ -210,20 +248,29 @@ const CallRemarksForm = ({
       return;
     }
 
-    // Simply pass the form data to the parent component
-    // The API call will be handled in the DialerProvider
-    await onSubmit(formData);
+    // Include additional call metadata in submission
+    const enhancedFormData = {
+      ...formData,
+      callDuration: callDuration || 0,
+      customerPhoneNumber: currentNumber,
+      customerData: customerData,
+      orderData: orderData,
+    };
+
+    await onSubmit(enhancedFormData);
   };
 
   const handleCancel = () => {
-    const hasFormData = Object.values(formData).some(
-      (value) =>
-        value !== "" &&
-        value !== false &&
-        value !== "InBound" &&
-        value !== "closed" &&
-        !Array.isArray(value)
-    );
+    // Only check for user-entered data (not auto-populated fields)
+    const hasFormData =
+      formData.supportTypeId ||
+      formData.processTypeId ||
+      formData.queryTypeId ||
+      formData.remarks.trim() ||
+      formData.attachments.length > 0 ||
+      formData.status !== "closed" ||
+      formData.followUpDate;
+
     onCancel(hasFormData);
   };
 
@@ -241,114 +288,13 @@ const CallRemarksForm = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <div className="p-6 space-y-6">
         {/* Submission Error */}
         {submissionError && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800">{submissionError}</p>
           </div>
         )}
-
-        {/* Call Information Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
-            Call Information
-          </h3>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Call ID *
-              </label>
-              <input
-                type="text"
-                name="CallId"
-                value={formData.CallId}
-                onChange={handleInputChange}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.CallId ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter call ID"
-              />
-              {errors.CallId && (
-                <p className="text-red-500 text-xs mt-1">{errors.CallId}</p>
-              )}
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Employee ID *
-              </label>
-              <input
-                type="text"
-                name="EmployeeId"
-                value={formData.EmployeeId}
-                onChange={handleInputChange}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.EmployeeId ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter employee ID"
-              />
-              {errors.EmployeeId && (
-                <p className="text-red-500 text-xs mt-1">{errors.EmployeeId}</p>
-              )}
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Call Date & Time *
-              </label>
-              <input
-                type="datetime-local"
-                name="callDateTime"
-                value={formData.callDateTime}
-                onChange={handleInputChange}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.callDateTime ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              {errors.callDateTime && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.callDateTime}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Call Type
-              </label>
-              <select
-                name="callType"
-                value={formData.callType}
-                onChange={handleInputChange}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors"
-              >
-                {callTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Inquiry Number
-              </label>
-              <input
-                type="text"
-                name="inquiryNumber"
-                value={formData.inquiryNumber}
-                onChange={handleInputChange}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors"
-                placeholder="Enter inquiry number"
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Category Selection Section */}
         <div className="space-y-4">
@@ -464,7 +410,7 @@ const CallRemarksForm = ({
           </div>
         </div>
 
-        {/* Details Section */}
+        {/* Call Details Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
             Call Details
@@ -486,25 +432,6 @@ const CallRemarksForm = ({
             />
             {errors.remarks && (
               <p className="text-red-500 text-xs mt-1">{errors.remarks}</p>
-            )}
-          </div>
-
-          {/* Multiple Attachments Support */}
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-2">
-              Attachments
-            </label>
-            <input
-              type="file"
-              name="attachments"
-              onChange={handleFileChange}
-              multiple
-              className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F68A1F] file:text-white hover:file:bg-[#e5791c] file:cursor-pointer"
-            />
-            {formData.attachments.length > 0 && (
-              <p className="text-xs text-gray-600 mt-1">
-                {formData.attachments.length} file(s) selected
-              </p>
             )}
           </div>
         </div>
@@ -571,7 +498,8 @@ const CallRemarksForm = ({
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={isSubmitting}
             className="px-6 py-2 text-sm bg-[#F68A1F] hover:bg-[#e5791c] text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium order-1 sm:order-2"
           >
@@ -587,7 +515,7 @@ const CallRemarksForm = ({
             </span>
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 };

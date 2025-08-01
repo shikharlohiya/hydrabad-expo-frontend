@@ -44,6 +44,7 @@ function App() {
             path="/dashboard/*"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
+                {/* DialerProvider wraps only the dashboard since it needs Socket and Form contexts */}
                 <DialerProvider>
                   <Dashboard />
                 </DialerProvider>

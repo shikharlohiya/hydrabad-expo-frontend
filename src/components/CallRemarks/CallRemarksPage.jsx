@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import useDialer from "../../hooks/useDialer";
 import { CALL_STATUS } from "../../context/Providers/DialerProvider";
 import CallRemarksForm from "./CallRemarksForm";
@@ -6,6 +6,7 @@ import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
 import { ChevronRight } from "lucide-react";
+import UserContext from "../../context/UserContext";
 
 const CallRemarksPage = () => {
   const {
@@ -15,6 +16,10 @@ const CallRemarksPage = () => {
     handleRemarksCancel,
     currentCallDetails,
     isRemarksFormOpen,
+    callDirection,
+    callStartTime,
+    callDuration,
+    activeCallId,
   } = useDialer();
 
   // UI state
@@ -30,6 +35,8 @@ const CallRemarksPage = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const { userData } = useContext(UserContext);
 
   const isCallEnded =
     callStatus === CALL_STATUS.IDLE || callStatus === CALL_STATUS.ENDED;
@@ -341,6 +348,12 @@ const CallRemarksPage = () => {
                     isSubmitting={isSubmitting}
                     isCallEnded={isCallEnded}
                     submissionError={submissionError}
+                    // Add these props from your DialerProvider
+                    callDirection={callDirection}
+                    callStartTime={callStartTime}
+                    callDuration={callDuration}
+                    activeCallId={activeCallId}
+                    userData={userData}
                   />
                 )}
               </div>

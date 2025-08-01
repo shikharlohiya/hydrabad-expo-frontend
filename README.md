@@ -1,6 +1,13 @@
 # IVR and CRM for ABIS Traders
 - application developed for abis traders to manage.
 
+
+
+
+Notes-
+1. DailerPanel line no- 729  // Outgoing Call -> Incoming Call
+
+
 ```
 Traders-Frontend
 ├─ eslint.config.js
@@ -18,8 +25,13 @@ Traders-Frontend
 │  ├─ App.jsx
 │  ├─ assets
 │  ├─ components
-│  │  ├─ Dialer
+│  │  ├─ CallRemarks
+│  │  │  ├─ CallRemarksForm.jsx
 │  │  │  ├─ CallRemarksPage.jsx
+│  │  │  ├─ CustomerCallHistory.jsx
+│  │  │  ├─ CustomerInfoPanel.jsx
+│  │  │  └─ CustomerSearchBox.jsx
+│  │  ├─ Dialer
 │  │  │  └─ DialerPanel.jsx
 │  │  ├─ Header.jsx
 │  │  └─ Navbar.jsx
@@ -28,13 +40,19 @@ Traders-Frontend
 │  │  ├─ AuthContext.jsx
 │  │  ├─ Contexts.jsx
 │  │  ├─ DialerContext.jsx
+│  │  ├─ FormContext.jsx
 │  │  ├─ Providers
 │  │  │  ├─ AuthProvider.jsx
 │  │  │  ├─ DialerProvider.jsx
+│  │  │  ├─ FormProvider.jsx
+│  │  │  ├─ SocketProvider.jsx
 │  │  │  └─ UserProvider.jsx
+│  │  ├─ SocketContext.jsx
 │  │  └─ UserContext.jsx
 │  ├─ hooks
-│  │  └─ useDialer.jsx
+│  │  ├─ useDialer.jsx
+│  │  ├─ useForm.jsx
+│  │  └─ useSocket.jsx
 │  ├─ index.css
 │  ├─ layouts
 │  │  └─ DashboardLayout.jsx
@@ -64,7 +82,3 @@ Traders-Frontend
 └─ vite.config.js
 
 ```
-
-
-Notes-
-1. DailerPanel line no- 729  /// Outgoing Call -> Incoming Call
