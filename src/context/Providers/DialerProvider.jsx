@@ -50,12 +50,7 @@ const DialerProvider = ({ children }) => {
   );
 
   // CLI number based on role
-  const cliNumber =
-    empRole == 1
-      ? "7610255555"
-      : empRole === "300"
-      ? "9522205500"
-      : "7610233333";
+  const cliNumber = "9522011188";
 
   // Hooks for Socket and Form providers
   const {
