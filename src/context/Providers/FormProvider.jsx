@@ -331,7 +331,101 @@ const FormProvider = ({ children }) => {
   };
 
   // Submit form data
-  // Submit form data
+  // const submitForm = async () => {
+  //   console.log("📝 Submitting form data");
+
+  //   if (!validateForm()) {
+  //     setFormStatus(FORM_STATUS.ERROR);
+  //     return Promise.reject(new Error("Form validation failed"));
+  //   }
+
+  //   try {
+  //     setFormStatus(FORM_STATUS.SUBMITTING);
+  //     setSubmissionError(null);
+
+  //     // Prepare form data for submission
+  //     const enhancedFormData = {
+  //       ...formData,
+  //       // Set inquiryNumber to customerPhoneNumber instead of account ID
+  //       inquiryNumber: currentCallDetails?.number || formData.inquiryNumber,
+  //       // Don't include callDuration and customerPhoneNumber in payload
+  //     };
+
+  //     console.log("📝 Enhanced form data:", enhancedFormData);
+
+  //     // Create FormData for multipart submission
+  //     const submissionData = new FormData();
+
+  //     // List of fields to exclude from the payload
+  //     const excludedFields = [
+  //       "callDuration",
+  //       "customerPhoneNumber",
+  //       "customerData",
+  //       "orderData",
+  //       "submittedAt",
+  //       "attachments", // Handle attachments separately
+  //     ];
+
+  //     Object.keys(enhancedFormData).forEach((key) => {
+  //       if (key === "attachments") {
+  //         if (
+  //           enhancedFormData.attachments &&
+  //           enhancedFormData.attachments.length > 0
+  //         ) {
+  //           enhancedFormData.attachments.forEach((file) => {
+  //             submissionData.append("attachments", file);
+  //           });
+  //         }
+  //       } else if (excludedFields.includes(key)) {
+  //         // Skip these fields - don't include them in the payload
+  //         return;
+  //       } else if (
+  //         enhancedFormData[key] !== "" &&
+  //         enhancedFormData[key] !== null &&
+  //         enhancedFormData[key] !== undefined
+  //       ) {
+  //         submissionData.append(key, enhancedFormData[key]);
+  //       }
+  //     });
+
+  //     const response = await axiosInstance.post(
+  //       "/form-details",
+  //       submissionData,
+  //       {
+  //         headers: {
+  //           "Content-Type": "multipart/form-data",
+  //         },
+  //       }
+  //     );
+
+  //     if (!response.data.success) {
+  //       throw new Error(response.data.message || "Submission failed");
+  //     }
+
+  //     console.log("✅ Form submitted successfully:", response.data);
+  //     setFormStatus(FORM_STATUS.SUBMITTED);
+
+  //     // Auto-close form after successful submission (with a small delay for user feedback)
+  //     setTimeout(() => {
+  //       closeForm();
+  //     }, 1500);
+
+  //     return Promise.resolve(response.data);
+  //   } catch (error) {
+  //     console.error("❌ Error submitting form:", error);
+  //     setFormStatus(FORM_STATUS.ERROR);
+
+  //     const errorMessage =
+  //       error.response?.data?.message ||
+  //       error.message ||
+  //       "An error occurred while submitting the form";
+
+  //     setSubmissionError(errorMessage);
+  //     setLastError(errorMessage);
+
+  //     return Promise.reject(new Error(errorMessage));
+  //   }
+  // };
   const submitForm = async () => {
     console.log("📝 Submitting form data");
 
@@ -347,9 +441,7 @@ const FormProvider = ({ children }) => {
       // Prepare form data for submission
       const enhancedFormData = {
         ...formData,
-        // Set inquiryNumber to customerPhoneNumber instead of account ID
         inquiryNumber: currentCallDetails?.number || formData.inquiryNumber,
-        // Don't include callDuration and customerPhoneNumber in payload
       };
 
       console.log("📝 Enhanced form data:", enhancedFormData);
@@ -357,14 +449,13 @@ const FormProvider = ({ children }) => {
       // Create FormData for multipart submission
       const submissionData = new FormData();
 
-      // List of fields to exclude from the payload
       const excludedFields = [
         "callDuration",
         "customerPhoneNumber",
         "customerData",
         "orderData",
         "submittedAt",
-        "attachments", // Handle attachments separately
+        "attachments",
       ];
 
       Object.keys(enhancedFormData).forEach((key) => {
@@ -378,7 +469,6 @@ const FormProvider = ({ children }) => {
             });
           }
         } else if (excludedFields.includes(key)) {
-          // Skip these fields - don't include them in the payload
           return;
         } else if (
           enhancedFormData[key] !== "" &&
@@ -406,7 +496,19 @@ const FormProvider = ({ children }) => {
       console.log("✅ Form submitted successfully:", response.data);
       setFormStatus(FORM_STATUS.SUBMITTED);
 
-      // Auto-close form after successful submission (with a small delay for user feedback)
+      // **NEW: Emit event to notify DialerProvider that form was submitted**
+      if (window.dispatchEvent) {
+        window.dispatchEvent(
+          new CustomEvent("formSubmitted", {
+            detail: {
+              callId: enhancedFormData.CallId,
+              success: true,
+            },
+          })
+        );
+      }
+
+      // Auto-close form after successful submission
       setTimeout(() => {
         closeForm();
       }, 1500);

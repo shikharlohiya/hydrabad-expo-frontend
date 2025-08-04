@@ -45,6 +45,8 @@ const DialerProvider = ({ children }) => {
   const [hasFormBeenSubmitted, setHasFormBeenSubmitted] = useState(false);
   const [callDetailsForForm, setCallDetailsForForm] = useState(null);
 
+  const callEndProcessedRef = useRef(false);
+
   // User data from localStorage
   const [userData] = useState(() => {
     try {
@@ -74,6 +76,25 @@ const DialerProvider = ({ children }) => {
   const timerIntervalRef = useRef(null);
   const incomingCallTimerRef = useRef(null);
 
+  useEffect(() => {
+    const handleFormSubmitted = (event) => {
+      const { callId } = event.detail;
+      console.log(`✅ Form submission confirmed for call ${callId}`);
+
+      // Only update if it's for the current active call
+      if (String(callId) === String(activeCallId)) {
+        console.log("✅ Setting hasFormBeenSubmitted to true");
+        setHasFormBeenSubmitted(true);
+      }
+    };
+
+    window.addEventListener("formSubmitted", handleFormSubmitted);
+
+    return () => {
+      window.removeEventListener("formSubmitted", handleFormSubmitted);
+    };
+  }, [activeCallId]);
+
   // Register socket event handlers on mount
   // Updated DialerProvider.jsx - Replace your event handlers with these:
 
@@ -93,7 +114,6 @@ const DialerProvider = ({ children }) => {
       onCallConnected: (data) => {
         console.log("🔗 Call connected event:", data);
 
-        // Handle both string and number callIds by converting both to strings
         const callId = String(data.callId || data.CALL_ID);
         const currentCallId = String(activeCallId);
 
@@ -102,16 +122,22 @@ const DialerProvider = ({ children }) => {
         );
 
         if (callId === currentCallId) {
+          // **NEW: Check if this is a stale event (call already ended)**
+          if (callStatus === CALL_STATUS.ENDED || hasFormBeenSubmitted) {
+            console.log(
+              "🔍 Ignoring stale call-connected event - call already ended or form submitted"
+            );
+            return;
+          }
+
           console.log(
             `✅ Call IDs match! Outgoing call ${callId} is connected`
           );
-
           setCallStatus(CALL_STATUS.CONNECTED);
 
           // Set call start time from webhook data or current time
           const startTime = data.callStartTime || data.CALL_START_TIME;
           if (startTime && !callStartTime) {
-            // Parse the webhook time format (DDMMYYYYHHMMSS)
             const parsedTime = parseWebhookTime(startTime);
             setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
           } else if (!callStartTime) {
@@ -131,18 +157,11 @@ const DialerProvider = ({ children }) => {
       onCallDisconnected: (data) => {
         console.log("📱 Call disconnected event received:", data);
 
-        // Handle both string and number callIds by converting both to strings
         const callId = String(data.callId || data.CALL_ID);
         const currentCallId = String(activeCallId);
 
         console.log(
           `🔍 Disconnect event - Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
-        );
-        console.log(`🔍 Current call status before disconnect: ${callStatus}`);
-        console.log(
-          `🔍 Disconnected by: ${
-            data.disconnectedBy || data.DISCONNECTED_BY || "Unknown"
-          }`
         );
 
         if (callId === currentCallId) {
@@ -160,40 +179,41 @@ const DialerProvider = ({ children }) => {
 
           console.log(`📱 About to call handleCallEnd() for call ${callId}`);
           handleCallEnd();
-        } else {
-          console.log(
-            `❌ Call ID mismatch for disconnect: webhook="${callId}" vs active="${currentCallId}"`
-          );
-          console.log(`🔍 Available data keys:`, Object.keys(data));
         }
       },
 
       onCallStatusUpdate: (data) => {
         console.log("📱 Call status update event:", data);
 
-        // Handle both string and number callIds by converting both to strings
         const callId = String(data.callId || data.CALL_ID);
         const currentCallId = String(activeCallId);
 
         if (callId === currentCallId) {
           const status = data.status;
-          const eventType = data.eventType || data.EVENT_TYPE;
-
           console.log(
-            `📊 Processing status update for call ${callId}: ${
-              status || eventType
-            }`
+            `📊 Processing status update for call ${callId}: ${status}`
           );
 
           if (status === "ringing") {
             setCallStatus(CALL_STATUS.RINGING);
           } else if (status === "connected") {
+            // **NEW: Check if this is a stale event**
+            if (callStatus === CALL_STATUS.ENDED || hasFormBeenSubmitted) {
+              console.log(
+                "🔍 Ignoring stale connected status - call already ended or form submitted"
+              );
+              return;
+            }
+
             setCallStatus(CALL_STATUS.CONNECTED);
             if (!callStartTime) {
               setCallStartTime(Date.now());
             }
           } else if (status === "ended") {
-            handleCallEnd();
+            console.log(
+              "📊 Status ended - but handleCallEnd will be called by disconnect event"
+            );
+            // Don't call handleCallEnd here since onCallDisconnected already handles it
           }
         }
       },
@@ -254,7 +274,13 @@ const DialerProvider = ({ children }) => {
         handleIncomingCallEnded(data);
       },
     });
-  }, [activeCallId, callStartTime, hasFormBeenSubmitted, callDetailsForForm]);
+  }, [
+    activeCallId,
+    callStartTime,
+    hasFormBeenSubmitted,
+    callDetailsForForm,
+    callStatus,
+  ]);
 
   // Helper function to parse webhook time format
   const parseWebhookTime = (timeStr) => {
@@ -457,6 +483,149 @@ const DialerProvider = ({ children }) => {
   }, []);
 
   // Initiate call
+  // const initiateCall = async (number, contactInfo = null) => {
+  //   // Validation
+  //   if (!number || number.trim() === "") {
+  //     setLastError("Please enter a valid phone number");
+  //     return;
+  //   }
+
+  //   if (!userData.EmployeePhone) {
+  //     setLastError("User data not found. Please login again.");
+  //     return;
+  //   }
+
+  //   // Get auth token if needed
+  //   let currentToken = bearerToken;
+  //   if (!currentToken || currentToken.trim() === "") {
+  //     try {
+  //       currentToken = await getAuthToken();
+  //     } catch (error) {
+  //       return;
+  //     }
+  //   }
+
+  //   const callData = {
+  //     cli: cliNumber,
+  //     apartyno: userData.EmployeePhone,
+  //     bpartyno: number,
+  //     reference_id: `123`,
+  //     dtmfflag: 0,
+  //     recordingflag: 0,
+  //   };
+
+  //   try {
+  //     setIsLoading(true);
+  //     setLastError(null);
+  //     setCurrentNumber(number);
+  //     setCallStatus(CALL_STATUS.DIALING);
+  //     setCallDirection("outgoing");
+  //     setContactName(contactInfo?.name || null);
+  //     setHasFormBeenSubmitted(false);
+
+  //     const headers = {
+  //       Authorization: `Bearer ${currentToken}`,
+  //       "Content-Type": "application/json",
+  //       Accept: "application/json",
+  //       "X-Requested-With": "XMLHttpRequest",
+  //     };
+
+  //     const response = await axiosInstance.post("/initiate-call", callData, {
+  //       headers,
+  //     });
+  //     const { status, message } = response.data;
+
+  //     if (status === 1 && message?.Response === "success" && message?.callid) {
+  //       setActiveCallId(message.callid);
+  //       setCallStatus(CALL_STATUS.RINGING);
+
+  //       if (isConnected()) {
+  //         emitCallEvent("call-initiated", {
+  //           callId: message.callid,
+  //           agentNumber: userData.EmployeePhone,
+  //           customerNumber: number,
+  //           timestamp: new Date().toISOString(),
+  //         });
+  //       }
+  //     } else {
+  //       const errorMsg =
+  //         message?.Response ===
+  //         "Unable to initiate call now. maximum channel limit reached"
+  //           ? "Maximum channel limit reached. Please try again later."
+  //           : message?.Response === "Agent not available"
+  //           ? "Agent not available. Please try again."
+  //           : message?.Response || "Call initiation failed";
+
+  //       throw new Error(errorMsg);
+  //     }
+  //   } catch (error) {
+  //     // Handle 403 errors with token refresh
+  //     if (error.response?.status === 403) {
+  //       try {
+  //         setBearerToken(null);
+  //         localStorage.removeItem("clickToCallToken");
+  //         const newToken = await getAuthToken();
+
+  //         if (newToken) {
+  //           const retryHeaders = {
+  //             Authorization: `Bearer ${newToken}`,
+  //             "Content-Type": "application/json",
+  //             Accept: "application/json",
+  //             "X-Requested-With": "XMLHttpRequest",
+  //           };
+
+  //           const retryResponse = await axiosInstance.post(
+  //             "/initiate-call",
+  //             callData,
+  //             {
+  //               headers: retryHeaders,
+  //             }
+  //           );
+
+  //           const { status: retryStatus, message: retryMessage } =
+  //             retryResponse.data;
+
+  //           if (
+  //             retryStatus === 1 &&
+  //             retryMessage?.Response === "success" &&
+  //             retryMessage?.callid
+  //           ) {
+  //             setActiveCallId(retryMessage.callid);
+  //             setCallStatus(CALL_STATUS.RINGING);
+
+  //             if (isConnected()) {
+  //               emitCallEvent("call-initiated", {
+  //                 callId: retryMessage.callid,
+  //                 agentNumber: userData.EmployeePhone,
+  //                 customerNumber: number,
+  //                 timestamp: new Date().toISOString(),
+  //               });
+  //             }
+  //             return;
+  //           }
+  //         }
+  //       } catch (retryError) {
+  //         // Retry failed
+  //       }
+
+  //       setLastError("Authentication failed. Please login again.");
+  //     } else if (error.response?.status === 401) {
+  //       setLastError("Unauthorized. Please login again.");
+  //       setBearerToken(null);
+  //       localStorage.removeItem("clickToCallToken");
+  //     } else {
+  //       setLastError(
+  //         error.message || "Unable to place call. Please try again."
+  //       );
+  //     }
+
+  //     setCallStatus(CALL_STATUS.FAILED);
+  //     setTimeout(resetCallState, 3000);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+  // Initiate call
   const initiateCall = async (number, contactInfo = null) => {
     // Validation
     if (!number || number.trim() === "") {
@@ -468,6 +637,11 @@ const DialerProvider = ({ children }) => {
       setLastError("User data not found. Please login again.");
       return;
     }
+
+    // Reset flags for new call
+    callEndProcessedRef.current = false;
+    setHasFormBeenSubmitted(false);
+    setCallDetailsForForm(null);
 
     // Get auth token if needed
     let currentToken = bearerToken;
@@ -681,6 +855,17 @@ const DialerProvider = ({ children }) => {
   // Handle call end
   const handleCallEnd = () => {
     console.log("🔚 handleCallEnd() called");
+
+    // **NEW: Prevent multiple executions for the same call**
+    if (callEndProcessedRef.current) {
+      console.log(
+        "🔚 handleCallEnd() already processed for this call, skipping"
+      );
+      return;
+    }
+
+    callEndProcessedRef.current = true;
+
     console.log(
       "🔍 Current state - callStartTime:",
       callStartTime,
@@ -727,15 +912,20 @@ const DialerProvider = ({ children }) => {
       );
     }
 
-    // Don't reset immediately - wait for form submission or timeout
-    setTimeout(() => {
-      if (!hasFormBeenSubmitted) {
-        console.log("⏰ Timeout reached, resetting call state");
-        resetCallState();
-      } else {
-        console.log("✅ Form was submitted, not resetting");
-      }
-    }, 30000); // 30 second timeout for form submission
+    // Reset the processed flag and state after a delay
+    setTimeout(
+      () => {
+        callEndProcessedRef.current = false;
+        if (!hasFormBeenSubmitted) {
+          console.log("⏰ Timeout reached, resetting call state");
+          resetCallState();
+        } else {
+          console.log("✅ Form was submitted, resetting call state");
+          resetCallState();
+        }
+      },
+      hasFormBeenSubmitted ? 1000 : 30000
+    );
   };
 
   const handleIncomingCallEnded = (data) => {
@@ -818,20 +1008,27 @@ const DialerProvider = ({ children }) => {
   // Handle form submission - this should be called when form is successfully submitted
   const handleRemarksSubmit = async (formData) => {
     try {
-      // Ensure CallId is included in form data
+      console.log("📤 Submitting form with data:", formData);
+
       const submissionData = {
         ...formData,
         CallId: formData.CallId || callDetailsForForm?.callId || activeCallId,
       };
 
-      console.log("📤 Submitting form with data:", submissionData);
-
       const result = await submitCallForm(submissionData);
-      setHasFormBeenSubmitted(true); // Mark form as submitted
 
-      // Clear preserved call details and reset state after successful submission
+      // IMMEDIATELY mark form as submitted to prevent re-opening
+      setHasFormBeenSubmitted(true);
+      console.log("✅ Form marked as submitted");
+
+      // Clear preserved call details
       setCallDetailsForForm(null);
-      setTimeout(resetCallState, 1000); // Short delay then reset
+
+      // Reset the call end processed flag since we're done
+      callEndProcessedRef.current = false;
+
+      // Reset state after successful submission
+      setTimeout(resetCallState, 1000);
 
       return result;
     } catch (error) {
@@ -932,8 +1129,9 @@ const DialerProvider = ({ children }) => {
     setCurrentNumber("");
     setIncomingCallData(null);
     setIsIncomingCall(false);
-    setHasFormBeenSubmitted(false); // Reset form submission flag
-    setCallDetailsForForm(null); // Clear preserved call details
+    setHasFormBeenSubmitted(false);
+    setCallDetailsForForm(null);
+    callEndProcessedRef.current = false;
     stopIncomingCallTimer();
   };
 
