@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import useDialer from "../../hooks/useDialer";
+import useForm from "../../hooks/useForm";
 import { CALL_STATUS } from "../../context/Providers/DialerProvider";
 import CallRemarksForm from "./CallRemarksForm";
 import CustomerInfoPanel from "./CustomerInfoPanel";
@@ -13,14 +14,21 @@ const CallRemarksPage = () => {
     callStatus,
     currentNumber,
     handleRemarksSubmit,
-    handleRemarksCancel,
-    currentCallDetails,
-    isRemarksFormOpen,
     callDirection,
     callStartTime,
     callDuration,
     activeCallId,
   } = useDialer();
+
+  const {
+    isFormOpen,
+    closeForm,
+    formData,
+    updateFormData,
+    submitForm,
+    errors,
+    formStatus,
+  } = useForm();
 
   // UI state
   const [showCustomerPanel, setShowCustomerPanel] = useState(false);
@@ -40,6 +48,17 @@ const CallRemarksPage = () => {
 
   const isCallEnded =
     callStatus === CALL_STATUS.IDLE || callStatus === CALL_STATUS.ENDED;
+
+  // Create currentCallDetails from available data
+  const currentCallDetails = {
+    CallId: activeCallId,
+    EmployeeId: userData?.EmployeeId,
+    startTime: callStartTime,
+    number: currentNumber,
+    contactName: null,
+    callType: callDirection,
+    callDuration: callDuration,
+  };
 
   // Mock customer database - replace with actual API
   const mockCustomerDatabase = {
@@ -197,24 +216,12 @@ const CallRemarksPage = () => {
     }
   };
 
-  const handleSubmit = async (formData) => {
-    setIsSubmitting(true);
-    setSubmissionError(null);
-
+  const handleSubmit = async () => {
     try {
-      // Include customer data in the submission if available
-      const submissionData = {
-        ...formData,
-        customerData: customerData,
-        submittedAt: new Date(),
-      };
-
-      // This will call the DialerProvider's handleRemarksSubmit which makes the API call
-      await handleRemarksSubmit(submissionData);
+      setIsSubmitting(true);
+      setSubmissionError(null);
+      await submitForm(); // Use FormProvider's submitForm directly
       setIsSubmitted(true);
-
-      // Form submission successful - the provider will handle closing the form
-      console.log("Form submitted successfully");
     } catch (error) {
       console.error("Error submitting form:", error);
       setSubmissionError(
@@ -232,15 +239,15 @@ const CallRemarksPage = () => {
           "Are you sure you want to cancel? All form data will be lost."
         )
       ) {
-        handleRemarksCancel();
+        closeForm();
       }
     } else {
-      handleRemarksCancel();
+      closeForm();
     }
   };
 
-  // Don't render the page if the form is not open
-  if (!isRemarksFormOpen) {
+  // Fix the condition
+  if (!isFormOpen) {
     return null;
   }
 
@@ -343,6 +350,9 @@ const CallRemarksPage = () => {
                     currentNumber={currentNumber}
                     currentCallDetails={currentCallDetails}
                     customerData={customerData}
+                    formData={formData}
+                    updateFormData={updateFormData}
+                    errors={errors}
                     onSubmit={handleSubmit}
                     onCancel={handleCancel}
                     isSubmitting={isSubmitting}

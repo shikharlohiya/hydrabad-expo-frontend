@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "../../library/axios";
 import FormContext from "../FormContext";
 
@@ -260,28 +260,31 @@ const FormProvider = ({ children }) => {
   };
 
   // Handle form input changes
-  const updateFormData = (name, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Clear follow-up date if status is changed to closed
-    if (name === "status" && value === "closed") {
+  const updateFormData = useCallback(
+    (name, value) => {
       setFormData((prev) => ({
         ...prev,
-        followUpDate: "",
+        [name]: value,
       }));
-    }
 
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
-  };
+      // Clear follow-up date if status is changed to closed
+      if (name === "status" && value === "closed") {
+        setFormData((prev) => ({
+          ...prev,
+          followUpDate: "",
+        }));
+      }
+
+      // Clear error when user starts typing
+      if (errors[name]) {
+        setErrors((prev) => ({
+          ...prev,
+          [name]: "",
+        }));
+      }
+    },
+    [errors]
+  );
 
   // Handle file attachments
   const updateFormFiles = (files) => {
@@ -328,6 +331,7 @@ const FormProvider = ({ children }) => {
   };
 
   // Submit form data
+  // Submit form data
   const submitForm = async () => {
     console.log("📝 Submitting form data");
 
@@ -343,17 +347,25 @@ const FormProvider = ({ children }) => {
       // Prepare form data for submission
       const enhancedFormData = {
         ...formData,
-        callDuration: currentCallDetails?.callDuration || 0,
-        customerPhoneNumber: currentCallDetails?.number || "",
-        customerData: customerData,
-        orderData: orderData,
-        submittedAt: new Date(),
+        // Set inquiryNumber to customerPhoneNumber instead of account ID
+        inquiryNumber: currentCallDetails?.number || formData.inquiryNumber,
+        // Don't include callDuration and customerPhoneNumber in payload
       };
 
       console.log("📝 Enhanced form data:", enhancedFormData);
 
       // Create FormData for multipart submission
       const submissionData = new FormData();
+
+      // List of fields to exclude from the payload
+      const excludedFields = [
+        "callDuration",
+        "customerPhoneNumber",
+        "customerData",
+        "orderData",
+        "submittedAt",
+        "attachments", // Handle attachments separately
+      ];
 
       Object.keys(enhancedFormData).forEach((key) => {
         if (key === "attachments") {
@@ -365,12 +377,8 @@ const FormProvider = ({ children }) => {
               submissionData.append("attachments", file);
             });
           }
-        } else if (
-          key === "customerData" ||
-          key === "orderData" ||
-          key === "submittedAt"
-        ) {
-          // Skip these or handle specially
+        } else if (excludedFields.includes(key)) {
+          // Skip these fields - don't include them in the payload
           return;
         } else if (
           enhancedFormData[key] !== "" &&
@@ -397,6 +405,11 @@ const FormProvider = ({ children }) => {
 
       console.log("✅ Form submitted successfully:", response.data);
       setFormStatus(FORM_STATUS.SUBMITTED);
+
+      // Auto-close form after successful submission (with a small delay for user feedback)
+      setTimeout(() => {
+        closeForm();
+      }, 1500);
 
       return Promise.resolve(response.data);
     } catch (error) {
@@ -507,7 +520,7 @@ const FormProvider = ({ children }) => {
       case FORM_STATUS.SUBMITTING:
         return "Submitting...";
       case FORM_STATUS.SUBMITTED:
-        return "Submitted";
+        return "Submitted Successfully";
       case FORM_STATUS.ERROR:
         return "Error";
       default:

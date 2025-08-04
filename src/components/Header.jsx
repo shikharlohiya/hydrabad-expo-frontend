@@ -32,31 +32,45 @@ const Header = ({ collapsed, setCollapsed }) => {
     isMuted,
     isOnHold,
     callDirection,
+    isIncomingCall, // Add this
   } = useDialer();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDialerOpen, setIsDialerOpen] = useState(false);
   const menuRef = useRef(null);
   const dialerContainerRef = useRef(null);
+  const autoOpenedRef = useRef(false);
 
   const navigate = useNavigate();
 
   // Simplified click outside detection - only for user menu
+  // Separate click outside detection for dialer
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false);
+    const handleDialerClickOutside = (event) => {
+      if (
+        dialerContainerRef.current &&
+        !dialerContainerRef.current.contains(event.target)
+      ) {
+        // Additional check: make sure we're not clicking on the call status area
+        const callStatusArea = event.target.closest("[data-call-status]");
+        if (!callStatusArea) {
+          setIsDialerOpen(false);
+        }
       }
     };
 
-    if (isMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    if (isDialerOpen) {
+      // Small delay to prevent immediate closing
+      const timer = setTimeout(() => {
+        document.addEventListener("mousedown", handleDialerClickOutside);
+      }, 100);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isMenuOpen]);
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener("mousedown", handleDialerClickOutside);
+      };
+    }
+  }, [isDialerOpen]);
 
   // Separate click outside detection for dialer
   useEffect(() => {
@@ -82,12 +96,17 @@ const Header = ({ collapsed, setCollapsed }) => {
     }
   }, [isDialerOpen]);
 
-  // Auto-open dialer for incoming calls
+  // Auto-open dialer for incoming calls - UPDATED
   useEffect(() => {
-    if (callStatus === CALL_STATUS.RINGING && callDirection === "incoming") {
+    if (isIncomingCall && !autoOpenedRef.current) {
+      console.log("📞 Header: Auto-opening dialer for incoming call");
       setIsDialerOpen(true);
+      autoOpenedRef.current = true;
+    } else if (!isIncomingCall) {
+      // Reset when call ends
+      autoOpenedRef.current = false;
     }
-  }, [callStatus, callDirection]);
+  }, [isIncomingCall]);
 
   // Function to get initials from name
   const getInitials = (name) => {
@@ -147,6 +166,26 @@ const Header = ({ collapsed, setCollapsed }) => {
     )}-${digitsOnly.slice(6, 10)}`;
   };
 
+  // Enhanced status display for incoming calls
+  const getCallStatusDisplay = () => {
+    if (isIncomingCall) {
+      return "Incoming Call";
+    }
+
+    switch (callStatus) {
+      case CALL_STATUS.INCOMING_CALL:
+        return "Incoming Call";
+      case CALL_STATUS.RINGING:
+        return callDirection === "incoming" ? "Incoming Call" : "Ringing";
+      case CALL_STATUS.CONNECTED:
+        return isOnHold ? "On Hold" : "Connected";
+      case CALL_STATUS.ON_HOLD:
+        return "On Hold";
+      default:
+        return callStatus;
+    }
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm border-b border-gray-200 z-50">
       <div className="h-full flex items-center justify-between px-6">
@@ -186,10 +225,20 @@ const Header = ({ collapsed, setCollapsed }) => {
         <div className="flex items-center space-x-4">
           {/* Call Status Display - Shows when call is active */}
           {isCallActive() && (
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center space-x-6" data-call-status>
+              <div
+                className={`flex items-center space-x-3 px-3 py-2 rounded-lg border ${
+                  isIncomingCall
+                    ? "bg-red-50 border-red-200 animate-pulse"
+                    : "bg-gray-50 border-gray-200"
+                }`}
+              >
                 <div
-                  className={`w-2 h-2 rounded-full ${getStatusBgColor()}`}
+                  className={`w-2 h-2 rounded-full ${
+                    isIncomingCall
+                      ? "bg-red-500 animate-ping"
+                      : getStatusBgColor()
+                  }`}
                 ></div>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-gray-800">
@@ -197,13 +246,11 @@ const Header = ({ collapsed, setCollapsed }) => {
                   </span>
                   <div className="flex items-center space-x-2">
                     <span
-                      className={`text-xs font-medium capitalize ${getStatusColor()}`}
+                      className={`text-xs font-medium capitalize ${
+                        isIncomingCall ? "text-red-700" : getStatusColor()
+                      }`}
                     >
-                      {callStatus === CALL_STATUS.RINGING
-                        ? callDirection === "incoming"
-                          ? "Incoming"
-                          : "Ringing"
-                        : callStatus}
+                      {getCallStatusDisplay()}
                     </span>
                     {callStatus === CALL_STATUS.CONNECTED && (
                       <span className="text-xs text-gray-500">
@@ -214,8 +261,8 @@ const Header = ({ collapsed, setCollapsed }) => {
                 </div>
               </div>
 
-              {/* Call Controls */}
-              {!isDialerOpen && (
+              {/* Call Controls - Hide during incoming call */}
+              {!isDialerOpen && !isIncomingCall && (
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={toggleMute}
@@ -260,26 +307,47 @@ const Header = ({ collapsed, setCollapsed }) => {
           )}
 
           {/* Dialer Button */}
+          {/* Dialer Button and Panel Container */}
           <div className="relative" ref={dialerContainerRef}>
             <button
               onClick={toggleDialer}
               className={`
-                                relative p-2 rounded-full transition-all duration-200
-                                ${
-                                  isCallActive()
-                                    ? `${getStatusBgColor()} text-white shadow-md`
-                                    : "bg-[#F68A1F] hover:bg-[#e5791c] text-white shadow-md"
-                                }
-                            `}
-              title={isCallActive() ? `Call ${callStatus}` : "Open Dialer"}
+      relative p-2 rounded-full transition-all duration-200
+      ${
+        isIncomingCall
+          ? "bg-red-500 text-white shadow-md animate-pulse"
+          : isCallActive()
+          ? `${getStatusBgColor()} text-white shadow-md`
+          : "bg-[#F68A1F] hover:bg-[#e5791c] text-white shadow-md"
+      }
+    `}
+              title={
+                isIncomingCall
+                  ? "Incoming Call - Click to view"
+                  : isCallActive()
+                  ? `Call ${callStatus}`
+                  : "Open Dialer"
+              }
             >
               <MdDialpad className="w-5 h-5" />
 
               {/* Active call indicator dot */}
               {isCallActive() && (
                 <div className="absolute -top-1 -right-1">
-                  <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
-                  <div className="absolute inset-0 w-3 h-3 bg-red-400 rounded-full animate-ping"></div>
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      isIncomingCall
+                        ? "bg-red-400 animate-ping"
+                        : "bg-red-400 animate-pulse"
+                    }`}
+                  ></div>
+                  <div
+                    className={`absolute inset-0 w-3 h-3 rounded-full ${
+                      isIncomingCall
+                        ? "bg-red-400 animate-ping"
+                        : "bg-red-400 animate-ping"
+                    }`}
+                  ></div>
                 </div>
               )}
             </button>
@@ -288,7 +356,11 @@ const Header = ({ collapsed, setCollapsed }) => {
             {isDialerOpen && (
               <div className="absolute top-full -right-56 mt-2 z-50">
                 <div className="bg-white rounded-lg shadow-2xl border z-50 border-gray-200">
-                  <DialerPanel onClose={closeDialer} />
+                  <DialerPanel
+                    onClose={closeDialer}
+                    isOpen={isDialerOpen}
+                    onToggle={toggleDialer}
+                  />
                 </div>
               </div>
             )}

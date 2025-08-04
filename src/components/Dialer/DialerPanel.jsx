@@ -14,11 +14,12 @@ import {
   ClockIcon,
   UserGroupIcon,
   PlusIcon,
+  BellIcon,
 } from "@heroicons/react/24/outline";
 import useDialer from "../../hooks/useDialer";
 import { CALL_STATUS } from "../../context/Providers/DialerProvider";
 
-const DialerPanel = ({ onClose }) => {
+const DialerPanel = ({ onClose, isOpen, onToggle }) => {
   const {
     callStatus,
     currentNumber,
@@ -26,7 +27,6 @@ const DialerPanel = ({ onClose }) => {
     isMuted,
     isOnHold,
     initiateCall,
-    answerCall,
     endCall,
     callDirection,
     toggleMute,
@@ -43,6 +43,9 @@ const DialerPanel = ({ onClose }) => {
     contactName,
     userData,
     bearerToken,
+    incomingCallData,
+    isIncomingCall,
+    incomingCallTimer,
   } = useDialer();
 
   const [displayNumber, setDisplayNumber] = useState("");
@@ -54,202 +57,128 @@ const DialerPanel = ({ onClose }) => {
   const [conferenceNumber, setConferenceNumber] = useState("");
   const [conferenceParticipants, setConferenceParticipants] = useState([]);
 
-  // Audio refs for different sounds
-  const ringingAudioRef = useRef(null); // Incoming
-  const dialToneAudioRef = useRef(null); // Outgoing
-  const buttonClickAudioRef = useRef(null); // Button
+  // Audio refs
+  const ringingAudioRef = useRef(null);
+  const dialToneAudioRef = useRef(null);
+  const buttonClickAudioRef = useRef(null);
 
+  // Auto-open dialer when incoming call arrives
+  // useEffect(() => {
+  //   if (isIncomingCall && !isOpen) {
+  //     console.log("📞 Auto-opening dialer for incoming call");
+  //     onToggle?.();
+  //   }
+  // }, [isIncomingCall, isOpen, onToggle]);
+
+  // Initialize audio
   useEffect(() => {
-    // Create audio elements
-    ringingAudioRef.current = new Audio("/sounds/phone-ring.mp3");
-    ringingAudioRef.current.loop = true;
-    ringingAudioRef.current.volume = 0.6;
-    ringingAudioRef.current.preload = "auto";
-
-    dialToneAudioRef.current = new Audio("/sounds/dial-tone.mp3");
-    dialToneAudioRef.current.loop = true; // Optional: for continuous outgoing ringing
-    dialToneAudioRef.current.volume = 0.5;
-    dialToneAudioRef.current.preload = "auto";
-
-    buttonClickAudioRef.current = new Audio("/sounds/button-click.mp3");
-    buttonClickAudioRef.current.volume = 0.4;
-    buttonClickAudioRef.current.preload = "auto";
-
-    // Handle audio loading errors
-    const handleRingingError = () => {
-      console.warn("Could not load phone-ring.mp3, using fallback sound");
-      ringingAudioRef.current.src =
-        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBCWO1fDQfCEEJJbN8Nw=";
+    const initAudio = (ref, src, volume, loop = false) => {
+      ref.current = new Audio(src);
+      ref.current.volume = volume;
+      ref.current.loop = loop;
+      ref.current.preload = "auto";
+      ref.current.addEventListener("error", () =>
+        console.warn(`Audio error: ${src}`)
+      );
+      ref.current.load();
     };
 
-    const handleDialToneError = () => {
-      console.warn("Could not load dial-tone.mp3, using fallback sound");
-      dialToneAudioRef.current.src =
-        "data:audio/wav;base64,UklGRi4BAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQoBAAAA";
-    };
-
-    const handleButtonClickError = () => {
-      console.warn("Could not load button-click.mp3");
-    };
-
-    // Attach error listeners
-    ringingAudioRef.current.addEventListener("error", handleRingingError);
-    dialToneAudioRef.current.addEventListener("error", handleDialToneError);
-    buttonClickAudioRef.current.addEventListener(
-      "error",
-      handleButtonClickError
-    );
-
-    // Preload
-    ringingAudioRef.current.load();
-    dialToneAudioRef.current.load();
-    buttonClickAudioRef.current.load();
+    initAudio(ringingAudioRef, "/sounds/phone-ring.mp3", 0.6, true);
+    initAudio(dialToneAudioRef, "/sounds/dial-tone.mp3", 0.5, true);
+    initAudio(buttonClickAudioRef, "/sounds/button-click.mp3", 0.4);
 
     return () => {
-      // Clean up ringing audio
-      if (ringingAudioRef.current) {
-        ringingAudioRef.current.pause();
-        ringingAudioRef.current.currentTime = 0;
-        ringingAudioRef.current.removeEventListener(
-          "error",
-          handleRingingError
-        );
-        ringingAudioRef.current = null;
-      }
-
-      // Clean up dial tone audio
-      if (dialToneAudioRef.current) {
-        dialToneAudioRef.current.pause();
-        dialToneAudioRef.current.currentTime = 0;
-        dialToneAudioRef.current.removeEventListener(
-          "error",
-          handleDialToneError
-        );
-        dialToneAudioRef.current = null;
-      }
-
-      // Clean up button click audio
-      if (buttonClickAudioRef.current) {
-        buttonClickAudioRef.current.pause();
-        buttonClickAudioRef.current.currentTime = 0;
-        buttonClickAudioRef.current.removeEventListener(
-          "error",
-          handleButtonClickError
-        );
-        buttonClickAudioRef.current = null;
-      }
+      [ringingAudioRef, dialToneAudioRef, buttonClickAudioRef].forEach(
+        (ref) => {
+          if (ref.current) {
+            ref.current.pause();
+            ref.current = null;
+          }
+        }
+      );
     };
   }, []);
 
-  // Handle ringing sound based on call status
+  // Handle ringing sound
   useEffect(() => {
     if (!ringingAudioRef.current || !isRingingSoundEnabled) return;
 
-    const playRinging = async () => {
-      try {
-        if (
-          callStatus === CALL_STATUS.RINGING &&
-          callDirection === "incoming"
-        ) {
-          ringingAudioRef.current.currentTime = 0;
-          await ringingAudioRef.current.play();
-          console.log("Ringing sound started");
-        } else {
-          ringingAudioRef.current.pause();
-          ringingAudioRef.current.currentTime = 0;
-          console.log("Ringing sound stopped");
-        }
-      } catch (error) {
-        console.warn("Could not play ringing sound:", error.message);
-      }
-    };
+    const shouldPlayRinging =
+      isIncomingCall || callStatus === CALL_STATUS.INCOMING_CALL;
 
-    playRinging();
+    if (shouldPlayRinging) {
+      ringingAudioRef.current.currentTime = 0;
+      ringingAudioRef.current.play().catch(console.warn);
+    } else {
+      ringingAudioRef.current.pause();
+      ringingAudioRef.current.currentTime = 0;
+    }
+
     return () => {
       if (ringingAudioRef.current) {
         ringingAudioRef.current.pause();
         ringingAudioRef.current.currentTime = 0;
       }
     };
-  }, [callStatus, isRingingSoundEnabled, callDirection]);
+  }, [callStatus, isRingingSoundEnabled, isIncomingCall]);
 
   // Handle error display
   useEffect(() => {
     if (lastError) {
       setShowError(true);
-      const timer = setTimeout(() => {
-        setShowError(false);
-      }, 5000);
+      const timer = setTimeout(() => setShowError(false), 5000);
       return () => clearTimeout(timer);
     }
   }, [lastError]);
 
-  // Update display number when current number changes
+  // Update display number
   useEffect(() => {
-    if (currentNumber && callStatus !== CALL_STATUS.IDLE) {
+    if (currentNumber && (callStatus !== CALL_STATUS.IDLE || isIncomingCall)) {
       setDisplayNumber(formatPhoneNumber(currentNumber));
     }
-  }, [currentNumber, callStatus]);
+  }, [currentNumber, callStatus, isIncomingCall]);
 
-  // Play dial tone when making a call (optional)
-  const playDialTone = useCallback(async () => {
-    if (dialToneAudioRef.current && isRingingSoundEnabled) {
-      try {
-        dialToneAudioRef.current.currentTime = 0;
-        await dialToneAudioRef.current.play();
-      } catch (error) {
-        console.warn("Could not play dial tone:", error.message);
+  // Audio helpers
+  const playSound = useCallback(
+    async (audioRef) => {
+      if (audioRef.current && isRingingSoundEnabled) {
+        try {
+          audioRef.current.currentTime = 0;
+          await audioRef.current.play();
+        } catch (error) {
+          console.warn("Could not play sound:", error.message);
+        }
       }
-    }
-  }, [isRingingSoundEnabled]);
+    },
+    [isRingingSoundEnabled]
+  );
 
-  // Play button click sound (optional)
-  const playButtonSound = useCallback(async () => {
-    if (buttonClickAudioRef.current && isRingingSoundEnabled) {
-      try {
-        buttonClickAudioRef.current.currentTime = 0;
-        await buttonClickAudioRef.current.play();
-      } catch (error) {
-        console.warn("Could not play button sound:", error.message);
-      }
-    }
-  }, [isRingingSoundEnabled]);
+  // Phone number utilities
+  const isValidPhoneNumber = (number) =>
+    number.replace(/\D/g, "").length === 10;
 
-  // Phone number validation
-  const isValidPhoneNumber = (number) => {
-    const digitsOnly = number.replace(/\D/g, "");
-    return digitsOnly.length === 10;
-  };
-
-  // Format phone number for display
   const formatPhoneNumber = (number) => {
-    const digitsOnly = number.replace(/\D/g, "");
-    if (digitsOnly.length <= 3) return digitsOnly;
-    if (digitsOnly.length <= 6)
-      return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
-    return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(
-      3,
-      6
-    )}-${digitsOnly.slice(6, 10)}`;
+    const digits = number.replace(/\D/g, "");
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
   };
 
-  // Handle number input
+  // Number input handlers
   const handleNumberClick = (digit) => {
-    if (callStatus === CALL_STATUS.IDLE) {
+    if (callStatus === CALL_STATUS.IDLE && !isIncomingCall) {
       const currentDigits = displayNumber.replace(/\D/g, "");
       if (currentDigits.length < 10) {
         const newNumber = currentDigits + digit;
-        const formattedNumber = formatPhoneNumber(newNumber);
-        setDisplayNumber(formattedNumber);
+        setDisplayNumber(formatPhoneNumber(newNumber));
         setCurrentNumber(newNumber);
-        playButtonSound();
+        playSound(buttonClickAudioRef);
       }
     }
   };
 
-  // Handle backspace
   const handleBackspace = useCallback(() => {
-    if (callStatus === CALL_STATUS.IDLE) {
+    if (callStatus === CALL_STATUS.IDLE && !isIncomingCall) {
       const currentDigits = displayNumber.replace(/\D/g, "");
       if (currentDigits.length > 0) {
         const newNumber = currentDigits.slice(0, -1);
@@ -257,21 +186,20 @@ const DialerPanel = ({ onClose }) => {
         setCurrentNumber(newNumber);
       }
     }
-  }, [callStatus, displayNumber, setCurrentNumber]);
+  }, [callStatus, displayNumber, setCurrentNumber, isIncomingCall]);
 
-  // Handle conference number input
+  // Conference handlers
   const handleConferenceNumberClick = (digit) => {
     if (isConferenceMode) {
       const currentDigits = conferenceNumber.replace(/\D/g, "");
       if (currentDigits.length < 10) {
         const newNumber = currentDigits + digit;
         setConferenceNumber(formatPhoneNumber(newNumber));
-        playButtonSound();
+        playSound(buttonClickAudioRef);
       }
     }
   };
 
-  // Handle conference backspace
   const handleConferenceBackspace = () => {
     if (isConferenceMode) {
       const currentDigits = conferenceNumber.replace(/\D/g, "");
@@ -282,25 +210,22 @@ const DialerPanel = ({ onClose }) => {
     }
   };
 
-  // Handle call actions
+  // Call actions
   const handleCall = async () => {
     const digitsOnly = displayNumber.replace(/\D/g, "");
     if (isValidPhoneNumber(displayNumber)) {
-      await playDialTone();
+      await playSound(dialToneAudioRef);
       await initiateCall(digitsOnly, { name: contactName });
     }
   };
 
   const handleEndCall = () => {
-    // Stop all audio when ending call
-    if (ringingAudioRef.current) {
-      ringingAudioRef.current.pause();
-      ringingAudioRef.current.currentTime = 0;
-    }
-    if (dialToneAudioRef.current) {
-      dialToneAudioRef.current.pause();
-      dialToneAudioRef.current.currentTime = 0;
-    }
+    [ringingAudioRef, dialToneAudioRef].forEach((ref) => {
+      if (ref.current) {
+        ref.current.pause();
+        ref.current.currentTime = 0;
+      }
+    });
     endCall();
     setDisplayNumber("");
     setIsConferenceMode(false);
@@ -308,29 +233,20 @@ const DialerPanel = ({ onClose }) => {
     setConferenceParticipants([]);
   };
 
-  const handleAnswerCall = () => {
-    answerCall();
-  };
-
-  // Toggle conference mode
   const toggleConferenceMode = () => {
     setIsConferenceMode(!isConferenceMode);
     setConferenceNumber("");
   };
 
-  // Add conference participant (placeholder - would need backend implementation)
   const addConferenceParticipant = () => {
     const digitsOnly = conferenceNumber.replace(/\D/g, "");
     if (digitsOnly.length === 10) {
       setConferenceParticipants([...conferenceParticipants, digitsOnly]);
       setConferenceNumber("");
       setIsConferenceMode(false);
-      // Here you would make API call to add participant
-      console.log("Adding conference participant:", digitsOnly);
     }
   };
 
-  // Toggle sound on/off
   const toggleRingingSound = () => {
     setIsRingingSoundEnabled(!isRingingSoundEnabled);
     if (!isRingingSoundEnabled && ringingAudioRef.current) {
@@ -342,33 +258,28 @@ const DialerPanel = ({ onClose }) => {
   // Keyboard handling
   const handleKeyPress = useCallback(
     (e) => {
-      if (callStatus !== CALL_STATUS.IDLE && !isConferenceMode) return;
+      if (
+        (callStatus !== CALL_STATUS.IDLE && !isConferenceMode) ||
+        isIncomingCall
+      )
+        return;
 
       const { key } = e;
+      e.preventDefault();
 
       if (/^[0-9*#]$/.test(key)) {
-        e.preventDefault();
-        if (isConferenceMode) {
-          handleConferenceNumberClick(key);
-        } else {
-          handleNumberClick(key);
-        }
+        isConferenceMode
+          ? handleConferenceNumberClick(key)
+          : handleNumberClick(key);
       } else if (key === "Backspace") {
-        e.preventDefault();
-        if (isConferenceMode) {
-          handleConferenceBackspace();
-        } else {
-          handleBackspace();
-        }
+        isConferenceMode ? handleConferenceBackspace() : handleBackspace();
       } else if (key === "Enter") {
-        e.preventDefault();
         if (isConferenceMode && isValidPhoneNumber(conferenceNumber)) {
           addConferenceParticipant();
         } else if (isValidPhoneNumber(displayNumber)) {
           handleCall();
         }
       } else if (key === "Escape") {
-        e.preventDefault();
         onClose();
       }
     },
@@ -377,6 +288,7 @@ const DialerPanel = ({ onClose }) => {
       displayNumber,
       conferenceNumber,
       isConferenceMode,
+      isIncomingCall,
       handleBackspace,
       onClose,
     ]
@@ -387,80 +299,76 @@ const DialerPanel = ({ onClose }) => {
     return () => document.removeEventListener("keydown", handleKeyPress);
   }, [handleKeyPress]);
 
-  // Get call status display text
+  // Status helpers
   const getCallStatusText = () => {
-    switch (callStatus) {
-      case CALL_STATUS.DIALING:
-        return "Dialing...";
-      case CALL_STATUS.RINGING:
-        return callDirection === "incoming" ? "Incoming Call" : "Ringing...";
-      case CALL_STATUS.CONNECTED:
-        return isOnHold ? "On Hold" : "Connected";
-      case CALL_STATUS.ON_HOLD:
-        return "On Hold";
-      case CALL_STATUS.FAILED:
-        return "Call Failed";
-      case CALL_STATUS.ENDED:
-        return "Call Ended";
-      default:
-        return "Ready";
-    }
+    if (isIncomingCall || callStatus === CALL_STATUS.INCOMING_CALL)
+      return "Incoming Call";
+
+    const statusMap = {
+      [CALL_STATUS.DIALING]: "Dialing...",
+      [CALL_STATUS.RINGING]:
+        callDirection === "incoming" ? "Incoming Call" : "Ringing...",
+      [CALL_STATUS.CONNECTED]: isOnHold ? "On Hold" : "Connected",
+      [CALL_STATUS.ON_HOLD]: "On Hold",
+      [CALL_STATUS.FAILED]: "Call Failed",
+      [CALL_STATUS.ENDED]: "Call Ended",
+    };
+
+    return statusMap[callStatus] || "Ready";
   };
 
-  // Get connection status indicator
   const getConnectionIndicator = () => {
-    if (connectionStatus === "connected") {
+    if (connectionStatus === "connected")
       return <CheckCircleIcon className="w-3 h-3 text-green-500" />;
-    } else if (
+    if (
       connectionStatus === "connecting" ||
       connectionStatus === "reconnecting"
     ) {
       return <ClockIcon className="w-3 h-3 text-yellow-500 animate-spin" />;
-    } else {
-      return <ExclamationTriangleIcon className="w-3 h-3 text-red-500" />;
     }
+    return <ExclamationTriangleIcon className="w-3 h-3 text-red-500" />;
   };
 
-  // Dialpad buttons
-  const dialpadButtons = [
-    { digit: "1" },
-    { digit: "2" },
-    { digit: "3" },
-    { digit: "4" },
-    { digit: "5" },
-    { digit: "6" },
-    { digit: "7" },
-    { digit: "8" },
-    { digit: "9" },
-    { digit: "*" },
-    { digit: "0" },
-    { digit: "#" },
-  ];
+  // UI state helpers
+  const shouldShowIncomingCallUI = () =>
+    isIncomingCall || callStatus === CALL_STATUS.INCOMING_CALL;
+  const shouldShowOutgoingCallUI = () =>
+    callStatus === CALL_STATUS.RINGING && callDirection === "outgoing";
+  const shouldShowDialpad = () =>
+    (callStatus === CALL_STATUS.IDLE && !isIncomingCall) || isConferenceMode;
+
+  const dialpadButtons = Array.from("123456789*0#").map((digit) => ({ digit }));
 
   return (
     <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 w-72 overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 bg-gradient-to-r from-slate-50/80 to-blue-50/80 border-b border-gray-100/50">
+      <div
+        className={`px-4 py-3 border-b border-gray-100/50 ${
+          shouldShowIncomingCallUI() ? "bg-blue-50" : "bg-gray-50"
+        }`}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
               {getConnectionIndicator()}
               <div
                 className={`w-2 h-2 rounded-full ${
-                  callStatus === CALL_STATUS.RINGING
-                    ? "bg-red-400 animate-ping"
+                  shouldShowIncomingCallUI()
+                    ? "bg-blue-500"
                     : callStatus === CALL_STATUS.CONNECTED
                     ? "bg-green-400"
+                    : callStatus === CALL_STATUS.RINGING
+                    ? "bg-yellow-400"
                     : "bg-gray-400"
                 }`}
-              ></div>
+              />
             </div>
             <h3 className="text-sm font-medium text-gray-700">
               Dialer {userData?.EmployeeName && `• ${userData.EmployeeName}`}
             </h3>
           </div>
+
           <div className="flex items-center space-x-2">
-            {/* Sound toggle button */}
             <button
               onClick={toggleRingingSound}
               className={`p-1.5 rounded-full transition-all duration-200 ${
@@ -476,7 +384,6 @@ const DialerPanel = ({ onClose }) => {
                 <SpeakerXMarkIcon className="w-4 h-4" />
               )}
             </button>
-
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-white/60 transition-all duration-200"
@@ -501,25 +408,39 @@ const DialerPanel = ({ onClose }) => {
       <div className="p-4 space-y-4">
         {/* Number Display */}
         <div className="relative">
-          <div className="bg-gray-50/80 rounded-xl p-3 min-h-[3rem] flex items-center justify-between">
+          <div
+            className={`rounded-xl p-3 min-h-[3rem] flex items-center justify-between ${
+              shouldShowIncomingCallUI()
+                ? "bg-blue-50 border border-blue-200"
+                : "bg-gray-50/80"
+            }`}
+          >
             <div className="flex-1 text-center">
               <div className="text-lg font-mono text-gray-800 tracking-wider">
                 {isConferenceMode
                   ? conferenceNumber || "Enter conference number"
-                  : callStatus === CALL_STATUS.IDLE
-                  ? displayNumber || "Enter number"
-                  : formatPhoneNumber(currentNumber)}
+                  : shouldShowIncomingCallUI() ||
+                    callStatus !== CALL_STATUS.IDLE
+                  ? formatPhoneNumber(currentNumber) || "Unknown Number"
+                  : displayNumber || "Enter number"}
               </div>
+
               {conferenceParticipants.length > 0 && !isConferenceMode && (
                 <div className="text-xs text-gray-500 mt-1">
                   +{conferenceParticipants.length} participant
                   {conferenceParticipants.length > 1 ? "s" : ""}
                 </div>
               )}
+
+              {/* {shouldShowIncomingCallUI() && contactName && (
+                <div className="text-sm text-gray-600 mt-1">{contactName}</div>
+              )} */}
             </div>
 
             {/* Backspace button */}
-            {((callStatus === CALL_STATUS.IDLE && displayNumber) ||
+            {((callStatus === CALL_STATUS.IDLE &&
+              displayNumber &&
+              !isIncomingCall) ||
               (isConferenceMode && conferenceNumber)) && (
               <button
                 onClick={
@@ -532,47 +453,60 @@ const DialerPanel = ({ onClose }) => {
             )}
           </div>
 
-          {/* Call status */}
-          {(callStatus !== CALL_STATUS.IDLE || isLoading) && (
+          {/* Call status - Simplified */}
+          {(callStatus !== CALL_STATUS.IDLE || isLoading || isIncomingCall) && (
             <div className="flex items-center justify-center mt-2">
               <div
-                className={`text-xs font-medium capitalize px-2 py-1 rounded-full flex items-center space-x-2 ${
-                  callStatus === CALL_STATUS.CONNECTED
+                className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${
+                  shouldShowIncomingCallUI()
+                    ? "bg-blue-100 text-blue-700"
+                    : callStatus === CALL_STATUS.CONNECTED
                     ? "bg-green-100 text-green-700"
                     : callStatus === CALL_STATUS.RINGING
-                    ? "bg-red-100 text-red-700"
+                    ? "bg-yellow-100 text-yellow-700"
                     : callStatus === CALL_STATUS.FAILED
                     ? "bg-red-100 text-red-700"
                     : "bg-gray-100 text-gray-700"
                 }`}
               >
                 {isLoading && <ClockIcon className="w-3 h-3 animate-spin" />}
-                {callStatus === CALL_STATUS.RINGING &&
-                  isRingingSoundEnabled && (
-                    <SpeakerWaveIcon className="w-3 h-3 animate-pulse" />
+
+                <span>
+                  {getCallStatusText()}
+                  {callStatus === CALL_STATUS.CONNECTED && !isOnHold && (
+                    <span className="ml-1">
+                      • {formatDuration(callDuration)}
+                    </span>
                   )}
-                <span>{getCallStatusText()}</span>
-                {callStatus === CALL_STATUS.CONNECTED && !isOnHold && (
-                  <span className="ml-1 text-xs">
-                    • {formatDuration(callDuration)}
-                  </span>
-                )}
-                {activeCallId && typeof activeCallId === "string" ? (
-                  <span className="text-xs opacity-60">
-                    #{activeCallId.slice(-4)}
-                  </span>
-                ) : activeCallId != null ? (
-                  <span className="text-xs opacity-60">
-                    #{String(activeCallId).slice(-4)}
-                  </span>
-                ) : null}
+                </span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Call Controls - show during active call */}
-        {isCallActive() && (
+        {/* Incoming Call Interface - SIMPLIFIED */}
+        {/* Incoming Call Interface - SIMPLIFIED */}
+        {shouldShowIncomingCallUI() && (
+          <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="flex items-center justify-center space-x-2 text-blue-600 mb-2">
+              <BellIcon className="w-4 h-4" />
+              <span className="text-sm font-medium">Incoming Call</span>
+            </div>
+
+            {/* {contactName && (
+              <div className="text-lg font-semibold text-gray-900 mb-1">
+                {contactName}
+              </div>
+            )} */}
+
+            <div className="text-xs text-gray-500">
+              Call will be handled automatically
+            </div>
+          </div>
+        )}
+
+        {/* Call Controls */}
+        {isCallActive() && !shouldShowIncomingCallUI() && (
           <div className="flex justify-center space-x-3">
             <button
               onClick={toggleMute}
@@ -644,8 +578,8 @@ const DialerPanel = ({ onClose }) => {
           </div>
         )}
 
-        {/* Dialpad - only show when idle or in conference mode */}
-        {(callStatus === CALL_STATUS.IDLE || isConferenceMode) && (
+        {/* Dialpad */}
+        {shouldShowDialpad() && (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               {dialpadButtons.map(({ digit }) => (
@@ -661,102 +595,66 @@ const DialerPanel = ({ onClose }) => {
                   <span className="text-lg font-semibold text-gray-800 group-hover:text-gray-900">
                     {digit}
                   </span>
-                  <div className="absolute inset-0 rounded-2xl bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity duration-200"></div>
+                  <div className="absolute inset-0 rounded-2xl bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity duration-200" />
                 </button>
               ))}
             </div>
 
-            {/* Call Button - only show when idle */}
-            {callStatus === CALL_STATUS.IDLE && !isConferenceMode && (
-              <div className="flex justify-center pt-2">
-                <button
-                  onClick={handleCall}
-                  disabled={
-                    !isValidPhoneNumber(displayNumber) || !canInitiateCall()
-                  }
-                  className={`px-6 py-3 rounded-2xl transition-all duration-200 flex items-center space-x-2 ${
-                    isValidPhoneNumber(displayNumber) && canInitiateCall()
-                      ? "bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl active:scale-95"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  }`}
-                  title={
-                    !bearerToken
-                      ? "Authentication required"
-                      : !isValidPhoneNumber(displayNumber)
-                      ? "Enter 10 digits"
-                      : "Call"
-                  }
-                >
-                  {isLoading ? (
-                    <ClockIcon className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <PhoneIcon className="w-5 h-5" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {isLoading ? "Calling..." : "Call"}
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Incoming Call Interface */}
-        {callStatus === CALL_STATUS.RINGING && callDirection === "incoming" && (
-          <div className="space-y-3">
-            <div className="text-center">
-              <div className="text-sm text-gray-600 mb-3 flex items-center justify-center space-x-2">
-                <span>Incoming call</span>
-                {isRingingSoundEnabled && (
-                  <SpeakerWaveIcon className="w-4 h-4 text-red-500 animate-pulse" />
-                )}
-              </div>
-              <div className="text-lg font-medium text-gray-800">
-                {formatPhoneNumber(currentNumber)}
-              </div>
-              {contactName && (
-                <div className="text-sm text-gray-500 mt-1">{contactName}</div>
+            {/* Call Button */}
+            {callStatus === CALL_STATUS.IDLE &&
+              !isConferenceMode &&
+              !isIncomingCall && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={handleCall}
+                    disabled={
+                      !isValidPhoneNumber(displayNumber) || !canInitiateCall()
+                    }
+                    className={`px-6 py-3 rounded-2xl transition-all duration-200 flex items-center space-x-2 ${
+                      isValidPhoneNumber(displayNumber) && canInitiateCall()
+                        ? "bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl active:scale-95"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    }`}
+                    title={
+                      !bearerToken
+                        ? "Authentication required"
+                        : !isValidPhoneNumber(displayNumber)
+                        ? "Enter 10 digits"
+                        : "Call"
+                    }
+                  >
+                    {isLoading ? (
+                      <ClockIcon className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <PhoneIcon className="w-5 h-5" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {isLoading ? "Calling..." : "Call"}
+                    </span>
+                  </button>
+                </div>
               )}
-            </div>
-
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={handleEndCall}
-                className="px-6 py-3 rounded-2xl bg-red-500 text-white hover:bg-red-600 transition-all duration-200 shadow-lg flex items-center space-x-2"
-                title="Decline"
-              >
-                <PhoneXMarkIcon className="w-5 h-5" />
-                <span className="text-sm font-medium">Decline</span>
-              </button>
-
-              <button
-                onClick={handleAnswerCall}
-                className="px-6 py-3 rounded-2xl bg-green-500 text-white hover:bg-green-600 transition-all duration-200 shadow-lg animate-pulse flex items-center space-x-2"
-                title="Answer"
-              >
-                <PhoneIcon className="w-5 h-5" />
-                <span className="text-sm font-medium">Answer</span>
-              </button>
-            </div>
           </div>
         )}
 
         {/* Outgoing Call Interface */}
-        {callStatus === CALL_STATUS.RINGING && callDirection === "outgoing" && (
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Calling {formatPhoneNumber(currentNumber)}
-            </p>
+        {shouldShowOutgoingCallUI() && (
+          <div className="text-center space-y-3">
+            <div className="text-sm text-gray-600 flex items-center justify-center space-x-2">
+              <span>Calling {formatPhoneNumber(currentNumber)}</span>
+              <ClockIcon className="w-4 h-4 animate-spin" />
+            </div>
             <button
               onClick={handleEndCall}
-              className="mt-3 px-6 py-3 rounded-2xl bg-red-500 text-white hover:bg-red-600 transition-all duration-200 shadow-lg"
+              className="px-6 py-3 rounded-2xl bg-red-500 text-white hover:bg-red-600 transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
             >
-              End Call
+              <PhoneXMarkIcon className="w-5 h-5" />
+              <span className="text-sm font-medium">End Call</span>
             </button>
           </div>
         )}
 
-        {/* Connection status footer */}
+        {/* Connection Status Footer */}
         <div className="text-xs text-gray-500 text-center">
           {connectionStatus === "connected" && bearerToken && (
             <span className="text-green-600">● Connected</span>
@@ -770,6 +668,18 @@ const DialerPanel = ({ onClose }) => {
           )}
           {!bearerToken && (
             <span className="text-red-600">● Authentication Required</span>
+          )}
+
+          {/* Debug info */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="mt-1 text-xs text-gray-400 space-y-1">
+              <div>Status: {callStatus}</div>
+              <div>Incoming: {isIncomingCall ? "YES" : "NO"}</div>
+              <div>Direction: {callDirection}</div>
+              {activeCallId && (
+                <div>Call ID: {String(activeCallId).slice(-6)}</div>
+              )}
+            </div>
           )}
         </div>
       </div>

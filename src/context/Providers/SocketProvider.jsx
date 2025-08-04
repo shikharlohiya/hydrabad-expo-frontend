@@ -22,9 +22,6 @@ const SocketProvider = ({ children }) => {
   const [lastError, setLastError] = useState(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
-  // Call event handlers - these will be set by DialerProvider
-  const [callEventHandlers, setCallEventHandlers] = useState({});
-
   // User data for connection
   const [userData] = useState(() => {
     try {
@@ -37,102 +34,84 @@ const SocketProvider = ({ children }) => {
   // Refs
   const socketRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
+  const callEventHandlersRef = useRef({});
   const maxReconnectAttempts = 5;
-  const reconnectDelay = 3000; // 3 seconds
+  const reconnectDelay = 3000;
 
   // Socket configuration
   const socketConfig = {
-    transports: ["polling", "websocket"], // Try polling first, then websocket
-    timeout: 20000, // Increase timeout
+    transports: ["polling", "websocket"],
+    timeout: 20000,
     reconnection: true,
     reconnectionAttempts: maxReconnectAttempts,
     reconnectionDelay: reconnectDelay,
-    autoConnect: false, // We'll connect manually
-    forceNew: true, // Force new connection
-    upgrade: true, // Allow transport upgrades
+    autoConnect: false,
+    forceNew: true,
+    upgrade: true,
   };
 
   // Initialize socket connection
   const connectSocket = () => {
-    if (socketRef.current?.connected) {
-      console.log("🔌 Socket already connected");
-      return;
-    }
+    if (socketRef.current?.connected) return;
 
     try {
       setConnectionStatus(CONNECTION_STATUS.CONNECTING);
       setLastError(null);
 
       const serverUrl = baseURL || "http://localhost:5000";
-      console.log("🔌 Connecting to socket server:", serverUrl);
-
       const newSocket = io(serverUrl, socketConfig);
+
       socketRef.current = newSocket;
       setSocket(newSocket);
 
       // Connection event handlers
       newSocket.on("connect", () => {
-        console.log("✅ Socket connected:", newSocket.id);
         setConnectionStatus(CONNECTION_STATUS.CONNECTED);
         setLastError(null);
         setReconnectAttempts(0);
 
-        // Register this client for call events if user data is available
         if (userData.EmployeeId) {
           registerForCallEvents(userData.EmployeeId);
         }
       });
 
       newSocket.on("connect_error", (error) => {
-        console.error("❌ Socket connection error:", error);
         setConnectionStatus(CONNECTION_STATUS.ERROR);
         setLastError(`Connection failed: ${error.message}`);
-
-        // Handle reconnection
         handleReconnection();
       });
 
       newSocket.on("disconnect", (reason) => {
-        console.log("🔌 Socket disconnected:", reason);
         setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
-
         if (reason === "io server disconnect") {
-          // Server initiated disconnect, try to reconnect
           handleReconnection();
         }
       });
 
-      newSocket.on("reconnect", (attemptNumber) => {
-        console.log("🔄 Socket reconnected after", attemptNumber, "attempts");
+      newSocket.on("reconnect", () => {
         setConnectionStatus(CONNECTION_STATUS.CONNECTED);
         setLastError(null);
         setReconnectAttempts(0);
       });
 
       newSocket.on("reconnect_attempt", (attemptNumber) => {
-        console.log("🔄 Reconnection attempt:", attemptNumber);
         setConnectionStatus(CONNECTION_STATUS.RECONNECTING);
         setReconnectAttempts(attemptNumber);
       });
 
       newSocket.on("reconnect_error", (error) => {
-        console.error("❌ Reconnection failed:", error);
         setLastError(`Reconnection failed: ${error.message}`);
       });
 
       newSocket.on("reconnect_failed", () => {
-        console.error("❌ All reconnection attempts failed");
         setConnectionStatus(CONNECTION_STATUS.ERROR);
         setLastError("Unable to reconnect to server. Please refresh the page.");
       });
 
       // Call-specific event handlers
       setupCallEventListeners(newSocket);
-
-      // Manually connect
       newSocket.connect();
     } catch (error) {
-      console.error("❌ Error initializing socket:", error);
       setConnectionStatus(CONNECTION_STATUS.ERROR);
       setLastError(`Failed to initialize connection: ${error.message}`);
     }
@@ -140,73 +119,43 @@ const SocketProvider = ({ children }) => {
 
   // Setup call event listeners
   const setupCallEventListeners = (socket) => {
-    // Call initiated successfully
-    socket.on("call-initiated", (data) => {
-      console.log("📞 Call initiated event:", data);
-      if (callEventHandlers.onCallInitiated) {
-        callEventHandlers.onCallInitiated(data);
-      }
+    const callEvents = [
+      "call-initiated",
+      "call-status-update",
+      "call-connected",
+      "call-hold-status",
+      "call-ended",
+      "call-failed",
+      "call-error",
+      "incomingCall",
+      "incomingCallStatus",
+      "incomingCallCdr",
+    ];
+
+    callEvents.forEach((eventName) => {
+      socket.on(eventName, (data) => {
+        const handlers = callEventHandlersRef.current;
+        const handlerMap = {
+          "call-initiated": "onCallInitiated",
+          "call-status-update": "onCallStatusUpdate",
+          "call-connected": "onCallConnected",
+          "call-hold-status": "onCallHoldStatus",
+          "call-ended": "onCallEnded",
+          "call-failed": "onCallFailed",
+          "call-error": "onCallError",
+          incomingCall: "onIncomingCall",
+          incomingCallStatus: "incomingCallStatus",
+          incomingCallCdr: "incomingCallCdr",
+        };
+
+        const handlerName = handlerMap[eventName];
+        if (handlers[handlerName]) {
+          handlers[handlerName](data);
+        }
+      });
     });
 
-    // Call status updates (ringing, connected, etc.)
-    socket.on("call-status-update", (data) => {
-      console.log("📱 Call status update:", data);
-      if (callEventHandlers.onCallStatusUpdate) {
-        callEventHandlers.onCallStatusUpdate(data);
-      }
-    });
-
-    // Call connected (both parties answered)
-    socket.on("call-connected", (data) => {
-      console.log("✅ Call connected event:", data);
-      if (callEventHandlers.onCallConnected) {
-        callEventHandlers.onCallConnected(data);
-      }
-    });
-
-    // Call hold status changed
-    socket.on("call-hold-status", (data) => {
-      console.log("⏸️ Call hold status:", data);
-      if (callEventHandlers.onCallHoldStatus) {
-        callEventHandlers.onCallHoldStatus(data);
-      }
-    });
-
-    // Call ended
-    socket.on("call-ended", (data) => {
-      console.log("📱 Call ended event:", data);
-      if (callEventHandlers.onCallEnded) {
-        callEventHandlers.onCallEnded(data);
-      }
-    });
-
-    // Call failed
-    socket.on("call-failed", (data) => {
-      console.log("❌ Call failed event:", data);
-      if (callEventHandlers.onCallFailed) {
-        callEventHandlers.onCallFailed(data);
-      }
-    });
-
-    // General call error
-    socket.on("call-error", (data) => {
-      console.log("⚠️ Call error event:", data);
-      if (callEventHandlers.onCallError) {
-        callEventHandlers.onCallError(data);
-      }
-    });
-
-    // Incoming call (for future use)
-    socket.on("incoming-call", (data) => {
-      console.log("📞 Incoming call event:", data);
-      if (callEventHandlers.onIncomingCall) {
-        callEventHandlers.onIncomingCall(data);
-      }
-    });
-
-    // Generic error handler
     socket.on("error", (error) => {
-      console.error("❌ Socket error:", error);
       setLastError(`Socket error: ${error.message || error}`);
     });
   };
@@ -214,7 +163,6 @@ const SocketProvider = ({ children }) => {
   // Register client for call events
   const registerForCallEvents = (employeeId) => {
     if (socketRef.current?.connected) {
-      console.log("📝 Registering for call events:", employeeId);
       socketRef.current.emit("registerCall", {
         employeeId,
         clientType: "web",
@@ -226,7 +174,6 @@ const SocketProvider = ({ children }) => {
   // Handle reconnection logic
   const handleReconnection = () => {
     if (reconnectAttempts >= maxReconnectAttempts) {
-      console.log("❌ Max reconnection attempts reached");
       setConnectionStatus(CONNECTION_STATUS.ERROR);
       setLastError("Connection lost. Please refresh the page.");
       return;
@@ -239,13 +186,7 @@ const SocketProvider = ({ children }) => {
     setConnectionStatus(CONNECTION_STATUS.RECONNECTING);
 
     reconnectTimeoutRef.current = setTimeout(() => {
-      console.log(
-        `🔄 Attempting reconnection (${
-          reconnectAttempts + 1
-        }/${maxReconnectAttempts})`
-      );
       setReconnectAttempts((prev) => prev + 1);
-
       if (socketRef.current) {
         socketRef.current.connect();
       }
@@ -255,7 +196,6 @@ const SocketProvider = ({ children }) => {
   // Disconnect socket
   const disconnectSocket = () => {
     if (socketRef.current) {
-      console.log("🔌 Disconnecting socket");
       socketRef.current.disconnect();
       socketRef.current = null;
       setSocket(null);
@@ -270,7 +210,6 @@ const SocketProvider = ({ children }) => {
 
   // Manually force reconnection
   const forceReconnect = () => {
-    console.log("🔄 Forcing reconnection");
     disconnectSocket();
     setReconnectAttempts(0);
     setTimeout(() => {
@@ -281,25 +220,21 @@ const SocketProvider = ({ children }) => {
   // Emit call-related events
   const emitCallEvent = (eventName, data) => {
     if (socketRef.current?.connected) {
-      console.log(`📤 Emitting ${eventName}:`, data);
       socketRef.current.emit(eventName, data);
     } else {
-      console.warn("⚠️ Cannot emit event - socket not connected");
       setLastError("Not connected to server");
     }
   };
 
   // Register call event handlers from DialerProvider
   const registerCallEventHandlers = (handlers) => {
-    console.log("📝 Registering call event handlers");
-    setCallEventHandlers(handlers);
+    callEventHandlersRef.current = handlers;
   };
 
   // Auto-connect on mount
   useEffect(() => {
     connectSocket();
 
-    // Cleanup on unmount
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -308,7 +243,7 @@ const SocketProvider = ({ children }) => {
     };
   }, []);
 
-  // Re-register for events when user data changes or connection is restored
+  // Re-register for events when connection is restored
   useEffect(() => {
     if (
       connectionStatus === CONNECTION_STATUS.CONNECTED &&

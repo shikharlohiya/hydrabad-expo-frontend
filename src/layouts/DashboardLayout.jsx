@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import { Outlet } from "react-router-dom";
 import CallRemarksPage from "../components/CallRemarks/CallRemarksPage";
 import useDialer from "../hooks/useDialer";
+import useForm from "../hooks/useForm";
 import { CALL_STATUS } from "../context/Providers/DialerProvider";
 
 const DashboardLayout = () => {
@@ -11,14 +12,15 @@ const DashboardLayout = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   // Get dialer state
-  const { callStatus, isRemarksFormOpen, isFormSubmitted } = useDialer();
+  const { callStatus, isIncomingCall } = useDialer();
+
+  // Get form state from FormProvider
+  const { isFormOpen } = useForm();
 
   // Show form when:
-  // 1. Call is connected OR
-  // 2. Form is explicitly open (even if call disconnects) AND not yet submitted
-  const showCallRemarksForm =
-    callStatus === CALL_STATUS.CONNECTED ||
-    (isRemarksFormOpen && !isFormSubmitted);
+  // 1. Form is explicitly open (from FormProvider)
+  // This handles both connected calls and manual form opens
+  const showCallRemarksForm = isFormOpen;
 
   // Handle mobile detection
   useEffect(() => {

@@ -6,6 +6,9 @@ const CallRemarksForm = ({
   currentCallDetails,
   customerData,
   orderData, // Add this prop for order data
+  formData,
+  updateFormData,
+  errors,
   onSubmit,
   onCancel,
   isSubmitting,
@@ -18,20 +21,20 @@ const CallRemarksForm = ({
   activeCallId,
   userData,
 }) => {
-  const [formData, setFormData] = useState({
-    CallId: "",
-    EmployeeId: "",
-    callDateTime: "",
-    callType: "",
-    supportTypeId: "",
-    inquiryNumber: "",
-    processTypeId: "",
-    queryTypeId: "",
-    remarks: "",
-    attachments: [],
-    status: "closed",
-    followUpDate: "",
-  });
+  // const [formData, setFormData] = useState({
+  //   CallId: "",
+  //   EmployeeId: "",
+  //   callDateTime: "",
+  //   callType: "",
+  //   supportTypeId: "",
+  //   inquiryNumber: "",
+  //   processTypeId: "",
+  //   queryTypeId: "",
+  //   remarks: "",
+  //   attachments: [],
+  //   status: "closed",
+  //   followUpDate: "",
+  // });
 
   const [dropdownOptions, setDropdownOptions] = useState({
     supportTypes: [],
@@ -45,7 +48,7 @@ const CallRemarksForm = ({
     queryTypes: false,
   });
 
-  const [errors, setErrors] = useState({});
+  // const [errors, setErrors] = useState({});
 
   // Auto-populate form data with actual call information
   useEffect(() => {
@@ -58,29 +61,35 @@ const CallRemarksForm = ({
       // Determine call type from direction
       const callType = callDirection === "incoming" ? "InBound" : "OutBound";
 
-      // Auto-populate inquiry number from order data or customer data
-      const inquiryNumber = orderData?.orderId || customerData?.accountId || "";
+      // Auto-populate inquiry number with phone number
+      const inquiryNumber = currentCallDetails?.number || "";
 
-      setFormData((prev) => ({
-        ...prev,
-        CallId: activeCallId || currentCallDetails?.CallId || "",
-        EmployeeId:
-          userData?.EmployeeId || currentCallDetails?.EmployeeId || "",
-        callDateTime: callDateTime,
-        callType: callType,
-        inquiryNumber: inquiryNumber,
-      }));
+      // Use updateFormData for each field instead of setFormData
+      updateFormData(
+        "CallId",
+        activeCallId || currentCallDetails?.CallId || ""
+      );
+      updateFormData(
+        "EmployeeId",
+        userData?.EmployeeId || currentCallDetails?.EmployeeId || ""
+      );
+      updateFormData("callDateTime", callDateTime);
+      updateFormData("callType", callType);
+      updateFormData("inquiryNumber", inquiryNumber);
     };
 
     populateCallData();
   }, [
+    // Only include primitive values and IDs to prevent infinite loops
     activeCallId,
-    currentCallDetails,
-    userData,
+    currentCallDetails?.CallId,
+    currentCallDetails?.EmployeeId,
+    userData?.EmployeeId,
     callStartTime,
     callDirection,
-    orderData,
-    customerData,
+    orderData?.orderId,
+    customerData?.accountId,
+    // Remove updateFormData from dependencies to prevent infinite loops
   ]);
 
   // Fetch dropdown options from APIs
@@ -165,35 +174,20 @@ const CallRemarksForm = ({
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    const newValue = type === "checkbox" ? checked : value;
+
+    updateFormData(name, newValue);
 
     // Clear follow-up date if status is changed to closed
     if (name === "status" && value === "closed") {
-      setFormData((prev) => ({
-        ...prev,
-        followUpDate: "",
-      }));
-    }
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
+      updateFormData("followUpDate", "");
     }
   };
 
   // Handle multiple file selection
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setFormData((prev) => ({
-      ...prev,
-      attachments: files,
-    }));
+    updateFormData("attachments", files);
   };
 
   const validateForm = () => {
@@ -239,25 +233,10 @@ const CallRemarksForm = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
-    if (isSubmitting) {
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    // Include additional call metadata in submission
-    const enhancedFormData = {
-      ...formData,
-      callDuration: callDuration || 0,
-      customerPhoneNumber: currentNumber,
-      customerData: customerData,
-      orderData: orderData,
-    };
-
-    await onSubmit(enhancedFormData);
+    // Just call the parent's onSubmit
+    await onSubmit();
   };
 
   const handleCancel = () => {

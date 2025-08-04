@@ -13,6 +13,7 @@ export const CALL_STATUS = {
   ON_HOLD: "on_hold",
   ENDED: "ended",
   FAILED: "failed",
+  INCOMING_CALL: "incoming_call", // Added specific status for incoming calls
 };
 
 const DialerProvider = ({ children }) => {
@@ -28,6 +29,11 @@ const DialerProvider = ({ children }) => {
   const [activeCallId, setActiveCallId] = useState(null);
   const [contactName, setContactName] = useState(null);
   const [callDirection, setCallDirection] = useState("outgoing");
+
+  // Incoming call state
+  const [incomingCallData, setIncomingCallData] = useState(null);
+  const [isIncomingCall, setIsIncomingCall] = useState(false);
+  const [incomingCallTimer, setIncomingCallTimer] = useState(0);
 
   // API state
   const [bearerToken, setBearerToken] = useState(
@@ -49,45 +55,25 @@ const DialerProvider = ({ children }) => {
     localStorage.getItem("empRole") || userData.EmployeeRole || "1"
   );
 
-  // CLI number based on role
-  const cliNumber = "9522205500";
+  const cliNumber = "9522011188";
 
-  // Hooks for Socket and Form providers
+  // Hooks
   const {
     registerCallEventHandlers,
     emitCallEvent,
     isConnected,
     connectionStatus,
   } = useSocket();
+  const { openForm, submitForm: submitCallForm, closeForm } = useForm();
 
-  const { openForm, submitForm: submitCallForm } = useForm();
-
-  // Refs for cleanup
+  // Refs
   const timerIntervalRef = useRef(null);
-
-  // Debug function for request analysis
-  const debugRequest = (endpoint, data, headers) => {
-    console.group("🔍 REQUEST DEBUG");
-    console.log("Endpoint:", endpoint);
-    console.log("Base URL:", baseURL);
-    console.log("Full URL:", axiosInstance.defaults.baseURL + endpoint);
-    console.log("Data:", JSON.stringify(data, null, 2));
-    console.log("Headers:", JSON.stringify(headers, null, 2));
-    console.log("Bearer Token Present:", !!bearerToken);
-    console.log("Bearer Token Length:", bearerToken?.length || 0);
-    console.log(
-      "Bearer Token Sample:",
-      bearerToken ? bearerToken.substring(0, 30) + "..." : "NO TOKEN"
-    );
-    console.log("User Data:", userData);
-    console.groupEnd();
-  };
+  const incomingCallTimerRef = useRef(null);
 
   // Register socket event handlers on mount
   useEffect(() => {
     registerCallEventHandlers({
       onCallInitiated: (data) => {
-        console.log("📞 Socket: Call initiated", data);
         if (data.callId) {
           setActiveCallId(data.callId);
           setCallStatus(CALL_STATUS.RINGING);
@@ -96,7 +82,6 @@ const DialerProvider = ({ children }) => {
       },
 
       onCallStatusUpdate: (data) => {
-        console.log("📱 Socket: Call status update", data);
         if (data.callId === activeCallId) {
           if (data.status === "ringing") {
             setCallStatus(CALL_STATUS.RINGING);
@@ -110,16 +95,15 @@ const DialerProvider = ({ children }) => {
       },
 
       onCallConnected: (data) => {
-        console.log("✅ Socket: Call connected", data);
         if (data.callId === activeCallId) {
           setCallStatus(CALL_STATUS.CONNECTED);
           setCallStartTime(Date.now());
+          // Open form when call connects (both incoming and outgoing)
           openCallRemarksForm();
         }
       },
 
       onCallHoldStatus: (data) => {
-        console.log("⏸️ Socket: Hold status", data);
         if (data.callId === activeCallId) {
           const isHeld = data.action === "hold" || data.isHeld;
           setIsOnHold(isHeld);
@@ -128,93 +112,174 @@ const DialerProvider = ({ children }) => {
       },
 
       onCallEnded: (data) => {
-        console.log("📱 Socket: Call ended", data);
         if (data.callId === activeCallId) {
           handleCallEnd();
         }
       },
 
       onCallFailed: (data) => {
-        console.log("❌ Socket: Call failed", data);
         if (data.callId === activeCallId) {
           setCallStatus(CALL_STATUS.FAILED);
           setLastError(data.error || "Call failed");
-          setTimeout(() => {
-            resetCallState();
-          }, 3000);
+          setTimeout(resetCallState, 3000);
         }
       },
 
       onCallError: (data) => {
-        console.log("⚠️ Socket: Call error", data);
         setLastError(data.error || "Call error occurred");
       },
 
       onIncomingCall: (data) => {
-        console.log("📞 Socket: Incoming call", data);
-        setActiveCallId(data.callId);
-        setCurrentNumber(data.fromNumber);
-        setContactName(data.contactName || null);
-        setCallStatus(CALL_STATUS.RINGING);
-        setCallDirection("incoming");
+        handleIncomingCall(data);
+      },
+
+      incomingCallStatus: (data) => {
+        handleIncomingCallStatus(data);
+      },
+
+      incomingCallCdr: (data) => {
+        // Handle post-call data if needed
       },
     });
   }, [activeCallId, callStartTime]);
 
-  // Enhanced authentication function with better debugging
+  // Get authentication token
   const getAuthToken = async () => {
     try {
       setIsLoading(true);
       setLastError(null);
 
-      console.log("🔐 Requesting auth token...");
-
-      // Use axiosInstance instead of axios
       const response = await axiosInstance.post("/get-auth-token");
-      console.log("🔐 Auth token response:", response.data);
 
       // Extract token from various possible response structures
-      let token;
-      if (response.data?.token?.idToken) {
-        token = response.data.token.idToken;
-      } else if (response.data?.token) {
-        token = response.data.token;
-      } else if (response.data?.data?.token) {
-        token = response.data.data.token;
-      } else if (response.data?.access_token) {
-        token = response.data.access_token;
-      } else if (response.data?.jwt) {
-        token = response.data.jwt;
-      } else if (response.data?.authToken) {
-        token = response.data.authToken;
-      } else {
-        console.error("❌ Token not found in response:", response.data);
+      let token =
+        response.data?.token?.idToken ||
+        response.data?.token ||
+        response.data?.data?.token ||
+        response.data?.access_token ||
+        response.data?.jwt ||
+        response.data?.authToken;
+
+      if (!token || typeof token !== "string" || token.trim().length === 0) {
         throw new Error("No valid token received from server");
       }
 
-      if (token && typeof token === "string" && token.trim().length > 0) {
-        setBearerToken(token);
-        localStorage.setItem("clickToCallToken", token);
-        console.log("✅ Auth token obtained successfully");
-        console.log("🔐 Token length:", token.length);
-        console.log("🔐 Token preview:", token.substring(0, 50) + "...");
-        return token;
-      } else {
-        throw new Error("Invalid token format received");
-      }
+      setBearerToken(token);
+      localStorage.setItem("clickToCallToken", token);
+      return token;
     } catch (error) {
-      console.error("❌ Error getting auth token:", error);
-      console.error("❌ Error response:", error.response?.data);
       setLastError("Failed to authenticate. Please try again.");
-
-      // Clear invalid token
       setBearerToken(null);
       localStorage.removeItem("clickToCallToken");
-
       throw error;
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle incoming call
+  const handleIncomingCall = (data) => {
+    const callerNumber = data.caller_no || data.callerNumber;
+    const agentNumber = data.agent_number || data.agentNumber;
+    const callId = data.callid || data.call_id || data.callId;
+
+    // Check if this call is for the current user
+    if (
+      agentNumber !== userData.EmployeePhone &&
+      agentNumber !== userData.phone &&
+      agentNumber !== userData.Phone
+    ) {
+      return;
+    }
+
+    setIncomingCallData(data);
+    setIsIncomingCall(true);
+    setActiveCallId(callId);
+    setCurrentNumber(callerNumber);
+    setContactName(`Caller ${callerNumber}`);
+    // Set specific incoming call status
+    setCallStatus(CALL_STATUS.INCOMING_CALL);
+    setCallDirection("incoming");
+    startIncomingCallTimer();
+  };
+
+  // Handle incoming call status updates
+  const handleIncomingCallStatus = (data) => {
+    const callId = data.callid || data.call_id || data.callId;
+    const eventType = data.event || data.eventType;
+
+    if (callId !== activeCallId) return;
+
+    if (eventType === "oncallconnect") {
+      setCallStatus(CALL_STATUS.CONNECTED);
+      setCallStartTime(Date.now());
+      setIsIncomingCall(false);
+      stopIncomingCallTimer();
+      // Open form when incoming call connects
+      openCallRemarksForm();
+    } else if (eventType === "call_ended") {
+      handleCallEnd();
+    }
+  };
+
+  // Timer functions
+  const startIncomingCallTimer = () => {
+    setIncomingCallTimer(0);
+    incomingCallTimerRef.current = setInterval(() => {
+      setIncomingCallTimer((prev) => prev + 1);
+    }, 1000);
+  };
+
+  const stopIncomingCallTimer = () => {
+    if (incomingCallTimerRef.current) {
+      clearInterval(incomingCallTimerRef.current);
+      incomingCallTimerRef.current = null;
+    }
+    setIncomingCallTimer(0);
+  };
+
+  // Accept incoming call
+  const acceptIncomingCall = () => {
+    if (!isIncomingCall || !activeCallId) return;
+
+    setCallStatus(CALL_STATUS.CONNECTED);
+    setCallStartTime(Date.now());
+    setIsIncomingCall(false);
+    stopIncomingCallTimer();
+
+    if (isConnected()) {
+      emitCallEvent("call-accepted", {
+        callId: activeCallId,
+        agentNumber: userData.EmployeePhone,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Open form when call is accepted
+    openCallRemarksForm();
+  };
+
+  // Reject incoming call
+  const rejectIncomingCall = () => {
+    if (!isIncomingCall || !activeCallId) return;
+
+    if (isConnected()) {
+      emitCallEvent("call-rejected", {
+        callId: activeCallId,
+        agentNumber: userData.EmployeePhone,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    resetIncomingCallState();
+  };
+
+  // Reset incoming call state
+  const resetIncomingCallState = () => {
+    setIncomingCallData(null);
+    setIsIncomingCall(false);
+    stopIncomingCallTimer();
+    resetCallState();
   };
 
   // Timer effect for call duration
@@ -244,45 +309,40 @@ const DialerProvider = ({ children }) => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
+      if (incomingCallTimerRef.current) {
+        clearInterval(incomingCallTimerRef.current);
+      }
     };
   }, []);
 
-  // Enhanced initiate call with proper error handling and debugging
+  // Initiate call
   const initiateCall = async (number, contactInfo = null) => {
-    console.log("📞 Starting call initiation process...");
-
-    // Validate inputs
+    // Validation
     if (!number || number.trim() === "") {
       setLastError("Please enter a valid phone number");
       return;
     }
 
     if (!userData.EmployeePhone) {
-      console.error("❌ Missing user data:", userData);
       setLastError("User data not found. Please login again.");
       return;
     }
 
-    // Check and get auth token if needed
+    // Get auth token if needed
     let currentToken = bearerToken;
     if (!currentToken || currentToken.trim() === "") {
-      console.log("🔐 No bearer token found, requesting new token...");
       try {
         currentToken = await getAuthToken();
       } catch (error) {
-        console.error("❌ Failed to get auth token:", error);
         return;
       }
-    } else {
-      console.log("🔐 Using existing bearer token");
     }
 
-    // Prepare call data (moved outside try block for retry access)
     const callData = {
       cli: cliNumber,
       apartyno: userData.EmployeePhone,
       bpartyno: number,
-      reference_id: `${Date.now()}`,
+      reference_id: `123`,
       dtmfflag: 0,
       recordingflag: 0,
     };
@@ -299,30 +359,18 @@ const DialerProvider = ({ children }) => {
         Authorization: `Bearer ${currentToken}`,
         "Content-Type": "application/json",
         Accept: "application/json",
-        // Add additional headers that might be required
         "X-Requested-With": "XMLHttpRequest",
       };
 
-      // Debug the request before sending
-      debugRequest("/initiate-call", callData, headers);
-
-      console.log("📞 Initiating call with data:", callData);
-
       const response = await axiosInstance.post("/initiate-call", callData, {
-        headers: headers,
+        headers,
       });
-
-      console.log("📞 Call response:", response.data);
-
-      // Handle API response based on your actual response structure
       const { status, message } = response.data;
 
       if (status === 1 && message?.Response === "success" && message?.callid) {
         setActiveCallId(message.callid);
         setCallStatus(CALL_STATUS.RINGING);
-        console.log("✅ Call initiated successfully:", message.callid);
 
-        // Emit socket event for call initiation
         if (isConnected()) {
           emitCallEvent("call-initiated", {
             callId: message.callid,
@@ -331,45 +379,26 @@ const DialerProvider = ({ children }) => {
             timestamp: new Date().toISOString(),
           });
         }
-      } else if (
-        message?.Response ===
-        "Unable to initiate call now. maximum channel limit reached"
-      ) {
-        throw new Error(
-          "Maximum channel limit reached. Please try again later."
-        );
-      } else if (message?.Response === "Agent not available") {
-        throw new Error("Agent not available. Please try again.");
       } else {
-        throw new Error(message?.Response || "Call initiation failed");
+        const errorMsg =
+          message?.Response ===
+          "Unable to initiate call now. maximum channel limit reached"
+            ? "Maximum channel limit reached. Please try again later."
+            : message?.Response === "Agent not available"
+            ? "Agent not available. Please try again."
+            : message?.Response || "Call initiation failed";
+
+        throw new Error(errorMsg);
       }
     } catch (error) {
-      console.error("❌ Error initiating call:", error);
-
-      // Enhanced 403 error handling
+      // Handle 403 errors with token refresh
       if (error.response?.status === 403) {
-        console.group("❌ 403 FORBIDDEN ERROR ANALYSIS");
-        console.error("Status:", error.response.status);
-        console.error("Status Text:", error.response.statusText);
-        console.error("Response Data:", error.response.data);
-        console.error("Request Headers:", error.config?.headers);
-        console.error("Request URL:", error.config?.url);
-        console.error(
-          "Current Token:",
-          currentToken ? currentToken.substring(0, 30) + "..." : "NO TOKEN"
-        );
-        console.groupEnd();
-
-        // Try to refresh token and retry once
-        console.log("🔄 Attempting to refresh token due to 403 error...");
         try {
           setBearerToken(null);
           localStorage.removeItem("clickToCallToken");
           const newToken = await getAuthToken();
 
           if (newToken) {
-            console.log("🔄 Retrying call with new token...");
-            // Retry the call with new token (callData is now accessible)
             const retryHeaders = {
               Authorization: `Bearer ${newToken}`,
               "Content-Type": "application/json",
@@ -385,8 +414,6 @@ const DialerProvider = ({ children }) => {
               }
             );
 
-            console.log("📞 Retry call response:", retryResponse.data);
-
             const { status: retryStatus, message: retryMessage } =
               retryResponse.data;
 
@@ -397,10 +424,6 @@ const DialerProvider = ({ children }) => {
             ) {
               setActiveCallId(retryMessage.callid);
               setCallStatus(CALL_STATUS.RINGING);
-              console.log(
-                "✅ Call initiated successfully on retry:",
-                retryMessage.callid
-              );
 
               if (isConnected()) {
                 emitCallEvent("call-initiated", {
@@ -410,11 +433,11 @@ const DialerProvider = ({ children }) => {
                   timestamp: new Date().toISOString(),
                 });
               }
-              return; // Success on retry
+              return;
             }
           }
         } catch (retryError) {
-          console.error("❌ Retry failed:", retryError);
+          // Retry failed
         }
 
         setLastError("Authentication failed. Please login again.");
@@ -429,11 +452,7 @@ const DialerProvider = ({ children }) => {
       }
 
       setCallStatus(CALL_STATUS.FAILED);
-
-      // Auto-reset after showing error
-      setTimeout(() => {
-        resetCallState();
-      }, 3000);
+      setTimeout(resetCallState, 3000);
     } finally {
       setIsLoading(false);
     }
@@ -443,7 +462,7 @@ const DialerProvider = ({ children }) => {
   const answerCall = async () => {
     if (
       !activeCallId ||
-      callStatus !== CALL_STATUS.RINGING ||
+      callStatus !== CALL_STATUS.INCOMING_CALL ||
       callDirection !== "incoming"
     ) {
       return;
@@ -453,12 +472,11 @@ const DialerProvider = ({ children }) => {
       setIsLoading(true);
       setLastError(null);
 
-      console.log("📞 Answering call:", activeCallId);
-
       setCallStatus(CALL_STATUS.CONNECTED);
       setCallStartTime(Date.now());
+      setIsIncomingCall(false);
+      stopIncomingCallTimer();
 
-      // Emit socket event for call answer
       if (isConnected()) {
         emitCallEvent("call-answered", {
           callId: activeCallId,
@@ -466,10 +484,9 @@ const DialerProvider = ({ children }) => {
         });
       }
 
-      // Open form when call connects
+      // Open form when call is answered
       openCallRemarksForm();
     } catch (error) {
-      console.error("❌ Error answering call:", error);
       setLastError("Unable to answer call");
     } finally {
       setIsLoading(false);
@@ -501,40 +518,36 @@ const DialerProvider = ({ children }) => {
         }
       );
 
-      console.log("✅ Call disconnection response:", response.data);
-
       if (response.data?.status === 1) {
-        console.log("✅ Call ended successfully");
-
-        // Emit socket event for call end
         if (isConnected()) {
           emitCallEvent("call-disconnected", {
             callId: activeCallId,
             timestamp: new Date().toISOString(),
           });
         }
-
-        handleCallEnd();
-      } else {
-        throw new Error("Failed to disconnect call");
       }
-    } catch (error) {
-      console.error("❌ Error ending call:", error);
-      setLastError("Unable to end call properly");
-      // Still end the call locally even if API fails
+
       handleCallEnd();
+    } catch (error) {
+      setLastError("Unable to end call properly");
+      handleCallEnd(); // Still end locally
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle call end (from API or socket)
+  // Handle call end
   const handleCallEnd = () => {
     setCallStatus(CALL_STATUS.ENDED);
-    openCallRemarksForm();
-    setTimeout(() => {
-      resetCallState();
-    }, 1000);
+    setIsIncomingCall(false);
+    stopIncomingCallTimer();
+
+    // Only open form if call was connected (don't open for rejected/missed calls)
+    if (callStartTime) {
+      openCallRemarksForm();
+    }
+
+    setTimeout(resetCallState, 1000);
   };
 
   // Open call remarks form
@@ -549,20 +562,15 @@ const DialerProvider = ({ children }) => {
       callDuration: callDuration,
     };
 
-    console.log("📝 Opening call remarks form:", callDetails);
     openForm(callDetails);
   };
 
-  // Handle form submission (called by form)
+  // Handle form submission - this should be called when form is successfully submitted
   const handleRemarksSubmit = async (formData) => {
     try {
-      console.log("📝 Submitting call remarks:", formData);
-      const result = await submitCallForm();
-      console.log("✅ Form submitted successfully:", result);
-      return Promise.resolve(result);
+      return await submitCallForm(formData);
     } catch (error) {
-      console.error("❌ Error submitting remarks:", error);
-      return Promise.reject(error);
+      throw error;
     }
   };
 
@@ -579,7 +587,6 @@ const DialerProvider = ({ children }) => {
 
       setIsMuted(newMuteState);
 
-      // Emit socket event for mute status
       if (isConnected()) {
         emitCallEvent("call-mute-changed", {
           callId: activeCallId,
@@ -587,10 +594,7 @@ const DialerProvider = ({ children }) => {
           timestamp: new Date().toISOString(),
         });
       }
-
-      console.log(`✅ Call ${newMuteState ? "muted" : "unmuted"} successfully`);
     } catch (error) {
-      console.error("❌ Error toggling mute:", error);
       setLastError(`Unable to ${isMuted ? "unmute" : "mute"} call`);
     } finally {
       setIsLoading(false);
@@ -623,8 +627,6 @@ const DialerProvider = ({ children }) => {
         }
       );
 
-      console.log("✅ Hold/Resume response:", response.data);
-
       if (
         response.data?.status === "1" &&
         response.data?.message === "Success"
@@ -634,7 +636,6 @@ const DialerProvider = ({ children }) => {
           newHoldState ? CALL_STATUS.ON_HOLD : CALL_STATUS.CONNECTED
         );
 
-        // Emit socket event for hold status
         if (isConnected()) {
           emitCallEvent("call-hold-changed", {
             callId: activeCallId,
@@ -642,22 +643,17 @@ const DialerProvider = ({ children }) => {
             timestamp: new Date().toISOString(),
           });
         }
-
-        console.log(
-          `✅ Call ${newHoldState ? "held" : "resumed"} successfully`
-        );
       } else {
         throw new Error("Failed to change hold status");
       }
     } catch (error) {
-      console.error("❌ Error toggling hold:", error);
       setLastError(`Unable to ${isOnHold ? "resume" : "hold"} call`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Reset call state to idle
+  // Reset call state
   const resetCallState = () => {
     setCallStatus(CALL_STATUS.IDLE);
     setCallDuration(0);
@@ -669,34 +665,36 @@ const DialerProvider = ({ children }) => {
     setCallDirection("outgoing");
     setLastError(null);
     setCurrentNumber("");
+    setIncomingCallData(null);
+    setIsIncomingCall(false);
+    stopIncomingCallTimer();
   };
 
-  // Clear the current number from dialer
-  const clearCurrentNumber = () => {
-    setCurrentNumber("");
-  };
-
-  // Complete reset of all dialer state
+  // Helper functions
+  const clearCurrentNumber = () => setCurrentNumber("");
   const resetDialer = () => {
     resetCallState();
     setCurrentNumber("");
   };
 
-  // Helper functions
   const isCallActive = () => {
-    return [
-      CALL_STATUS.DIALING,
-      CALL_STATUS.RINGING,
-      CALL_STATUS.CONNECTED,
-      CALL_STATUS.ON_HOLD,
-    ].includes(callStatus);
+    return (
+      [
+        CALL_STATUS.DIALING,
+        CALL_STATUS.RINGING,
+        CALL_STATUS.CONNECTED,
+        CALL_STATUS.ON_HOLD,
+        CALL_STATUS.INCOMING_CALL, // Include incoming call status
+      ].includes(callStatus) || isIncomingCall
+    );
   };
 
   const canInitiateCall = () => {
     return (
       callStatus === CALL_STATUS.IDLE &&
       !isLoading &&
-      currentNumber.trim() !== ""
+      currentNumber.trim() !== "" &&
+      !isIncomingCall
     );
   };
 
@@ -715,6 +713,8 @@ const DialerProvider = ({ children }) => {
       case CALL_STATUS.DIALING:
       case CALL_STATUS.RINGING:
         return "text-yellow-500";
+      case CALL_STATUS.INCOMING_CALL:
+        return "text-blue-500"; // Different color for incoming calls
       case CALL_STATUS.ON_HOLD:
         return "text-orange-500";
       case CALL_STATUS.FAILED:
@@ -733,6 +733,8 @@ const DialerProvider = ({ children }) => {
       case CALL_STATUS.DIALING:
       case CALL_STATUS.RINGING:
         return "bg-yellow-500";
+      case CALL_STATUS.INCOMING_CALL:
+        return "bg-blue-500"; // Different background for incoming calls
       case CALL_STATUS.ON_HOLD:
         return "bg-orange-500";
       case CALL_STATUS.FAILED:
@@ -752,6 +754,8 @@ const DialerProvider = ({ children }) => {
         return "Dialing...";
       case CALL_STATUS.RINGING:
         return "Ringing...";
+      case CALL_STATUS.INCOMING_CALL:
+        return "Incoming Call"; // Clear text for incoming calls
       case CALL_STATUS.CONNECTED:
         return "Connected";
       case CALL_STATUS.ON_HOLD:
@@ -781,12 +785,15 @@ const DialerProvider = ({ children }) => {
     isLoading,
     bearerToken,
 
+    // Incoming call state
+    incomingCallData,
+    isIncomingCall,
+    incomingCallTimer,
+
     // User data
     userData,
     empRole,
     cliNumber,
-
-    // Connection status from socket
     connectionStatus,
 
     // Actions
@@ -801,6 +808,11 @@ const DialerProvider = ({ children }) => {
     getAuthToken,
     handleRemarksSubmit,
     openCallRemarksForm,
+
+    // Incoming call actions
+    acceptIncomingCall,
+    rejectIncomingCall,
+    resetIncomingCallState,
 
     // Helpers
     isCallActive,
