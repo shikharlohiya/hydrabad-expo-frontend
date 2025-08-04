@@ -1017,22 +1017,18 @@ const DialerProvider = ({ children }) => {
 
       const result = await submitCallForm(submissionData);
 
-      // IMMEDIATELY mark form as submitted to prevent re-opening
       setHasFormBeenSubmitted(true);
       console.log("✅ Form marked as submitted");
-
-      // Clear preserved call details
       setCallDetailsForForm(null);
-
-      // Reset the call end processed flag since we're done
       callEndProcessedRef.current = false;
-
-      // Reset state after successful submission
       setTimeout(resetCallState, 1000);
 
       return result;
     } catch (error) {
-      throw error;
+      console.error("❌ Error submitting form:", error);
+      // Optionally notify user:
+      // toast.error("Something went wrong. Please try again.");
+      throw error; // optionally re-throw
     }
   };
 

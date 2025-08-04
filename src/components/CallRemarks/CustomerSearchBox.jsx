@@ -36,13 +36,13 @@ const CustomerSearchBox = ({
   };
 
   const handleInputBlur = () => {
-    // Delay hiding dropdown to allow for quick actions
+    // Delay hiding dropdown to allow for clicks
     setTimeout(() => setShowDropdown(false), 200);
   };
 
   const getStatusIcon = () => {
     if (isSearching) {
-      // return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+      return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
     }
     if (hasResults) {
       return <CheckCircle className="w-4 h-4 text-green-500" />;
@@ -55,13 +55,34 @@ const CustomerSearchBox = ({
 
   const quickSearchOptions = [
     {
-      type: "Current Call",
-      value: currentNumber || "", // Add fallback
-      disabled: !currentNumber, // Add disabled state
+      type: "Current Call Number",
+      value: currentNumber || "",
+      disabled: !currentNumber,
+      placeholder: "No active call",
     },
-    { type: "Customer ID", placeholder: "ACC123456" },
-    { type: "Phone Number", placeholder: "+1234567890" },
+    {
+      type: "Customer ID",
+      placeholder: "e.g., CUST123456",
+      value: "",
+    },
+    {
+      type: "Phone Number",
+      placeholder: "e.g., +1234567890",
+      value: "",
+    },
   ];
+
+  const handleQuickSearch = (option) => {
+    if (option.value && !option.disabled) {
+      setSearchTerm(option.value);
+      onSearch(option.value);
+    } else if (option.placeholder && !option.disabled) {
+      setSearchTerm("");
+      // Focus on input for manual entry
+      document.querySelector('input[type="text"]')?.focus();
+    }
+    setShowDropdown(false);
+  };
 
   return (
     <div className="relative">
@@ -100,35 +121,34 @@ const CustomerSearchBox = ({
                   <button
                     key={index}
                     type="button"
-                    disabled={option.disabled} // Add this
-                    onClick={() => {
-                      if (option.value && !option.disabled) {
-                        // Add !option.disabled check
-                        setSearchTerm(option.value);
-                        onSearch(option.value);
-                      } else if (!option.disabled) {
-                        setSearchTerm(option.placeholder);
-                      }
-                      setShowDropdown(false);
-                    }}
-                    className={`w-full flex items-center space-x-3 px-2 py-2 text-sm text-left rounded transition-colors ${
+                    disabled={option.disabled}
+                    onClick={() => handleQuickSearch(option)}
+                    className={`w-full flex items-center justify-between px-2 py-2 text-sm text-left rounded transition-colors ${
                       option.disabled
-                        ? "opacity-50 cursor-not-allowed bg-gray-100"
-                        : "hover:bg-gray-50"
+                        ? "opacity-50 cursor-not-allowed bg-gray-50"
+                        : "hover:bg-gray-50 cursor-pointer"
                     }`}
                   >
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-gray-700">
                         {option.type}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {option.value ||
-                          option.placeholder ||
-                          "No current call"}
+                        {option.value || option.placeholder}
                       </div>
                     </div>
+                    {option.value && !option.disabled && (
+                      <Search className="w-3 h-3 text-gray-400" />
+                    )}
                   </button>
                 ))}
+              </div>
+
+              {/* Quick tip */}
+              <div className="px-2 pb-2 border-t border-gray-100 pt-2">
+                <div className="text-xs text-gray-400">
+                  💡 Search by customer ID, phone number, or email
+                </div>
               </div>
             </div>
           )}
@@ -153,18 +173,26 @@ const CustomerSearchBox = ({
         </button>
       </form>
 
-      {/* Error Message */}
-      {searchError && (
-        <div className="mt-1 p-2 text-sm text-red-700">{searchError}</div>
-      )}
+      {/* Status Messages */}
+      <div className="mt-1">
+        {searchError && (
+          <div className="p-2 text-sm text-red-700 bg-red-50 rounded border border-red-200">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{searchError}</span>
+            </div>
+          </div>
+        )}
 
-      {/* Success Message */}
-      {hasResults && !searchError && (
-        <div className="mt-1 p-2 text-sm text-green-700 flex items-center space-x-2">
-          <User className="w-4 h-4" />
-          <span>Customer found and loaded</span>
-        </div>
-      )}
+        {hasResults && !searchError && (
+          <div className="p-2 text-sm text-green-700 bg-green-50 rounded border border-green-200">
+            <div className="flex items-center space-x-2">
+              <User className="w-4 h-4 flex-shrink-0" />
+              <span>Customer found and loaded</span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

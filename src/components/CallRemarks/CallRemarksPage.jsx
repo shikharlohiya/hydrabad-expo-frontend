@@ -6,8 +6,81 @@ import CallRemarksForm from "./CallRemarksForm";
 import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
+import NewCustomerForm from "./NewCustomerForm";
 import { ChevronRight } from "lucide-react";
 import UserContext from "../../context/UserContext";
+import axiosInstance from "../../library/axios";
+
+// Mock data for testing (remove this in production)
+const MOCK_MODE = true; // Set to false when API is ready
+
+const mockCustomerDatabase = {
+  9301196473: {
+    name: "John Doe",
+    email: "john.doe@example.com",
+    accountId: "ACC123456",
+    phoneNumber: "9301196473",
+    joinDate: "2023-01-15",
+    lastActivity: "2024-12-20",
+    accountType: "Premium",
+    totalCalls: 12,
+    status: "Active",
+  },
+  "+1234567890": {
+    name: "Jane Smith",
+    email: "jane.smith@example.com",
+    accountId: "ACC789012",
+    phoneNumber: "+1234567890",
+    joinDate: "2022-06-10",
+    lastActivity: "2024-12-18",
+    accountType: "Standard",
+    totalCalls: 8,
+    status: "Active",
+  },
+};
+
+const mockCallHistory = {
+  ACC123456: [
+    {
+      id: 1,
+      date: "2024-12-18",
+      time: "14:30",
+      duration: "12:45",
+      type: "support",
+      category: "technical issue",
+      priority: "high",
+      resolution: "Issue resolved - password reset completed",
+      agent: "Agent Smith",
+      status: "closed",
+    },
+    {
+      id: 2,
+      date: "2024-12-10",
+      time: "10:15",
+      duration: "8:22",
+      type: "billing",
+      category: "payment inquiry",
+      priority: "medium",
+      resolution: "Payment processed successfully",
+      agent: "Agent Johnson",
+      status: "closed",
+    },
+  ],
+  ACC789012: [
+    {
+      id: 3,
+      date: "2024-12-15",
+      time: "16:45",
+      duration: "15:33",
+      type: "sales",
+      category: "account upgrade",
+      priority: "low",
+      resolution: "Account upgrade completed to Standard plan",
+      agent: "Agent Williams",
+      status: "closed",
+    },
+  ],
+};
 
 const CallRemarksPage = () => {
   const {
@@ -44,6 +117,11 @@ const CallRemarksPage = () => {
   const [searchError, setSearchError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // New customer form states
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [customerCreationError, setCustomerCreationError] = useState(null);
+
   const { userData } = useContext(UserContext);
 
   const isCallEnded =
@@ -60,97 +138,6 @@ const CallRemarksPage = () => {
     callDuration: callDuration,
   };
 
-  // Mock customer database - replace with actual API
-  const mockCustomerDatabase = {
-    9301196473: {
-      name: "John Doe",
-      email: "john.doe@example.com",
-      accountId: "ACC123456",
-      phoneNumber: "9301196473",
-      joinDate: "2023-01-15",
-      lastActivity: "2024-12-20",
-      accountType: "Premium",
-      totalCalls: 12,
-      status: "Active",
-    },
-    "+1234567890": {
-      name: "John Doe",
-      email: "john.doe@example.com",
-      accountId: "ACC123456",
-      phoneNumber: "+1234567890",
-      joinDate: "2023-01-15",
-      lastActivity: "2024-12-20",
-      accountType: "Premium",
-      totalCalls: 12,
-      status: "Active",
-    },
-    ACC789012: {
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      accountId: "ACC789012",
-      phoneNumber: "+1987654321",
-      joinDate: "2022-06-10",
-      lastActivity: "2024-12-18",
-      accountType: "Standard",
-      totalCalls: 8,
-      status: "Active",
-    },
-    "+1987654321": {
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      accountId: "ACC789012",
-      phoneNumber: "+1987654321",
-      joinDate: "2022-06-10",
-      lastActivity: "2024-12-18",
-      accountType: "Standard",
-      totalCalls: 8,
-      status: "Active",
-    },
-  };
-
-  const mockCallHistoryDatabase = {
-    ACC123456: [
-      {
-        id: 1,
-        date: "2024-12-18",
-        time: "14:30",
-        duration: "12:45",
-        type: "support",
-        category: "technical",
-        priority: "high",
-        resolution: "Issue resolved - password reset",
-        satisfaction: "satisfied",
-        agent: "Agent Smith",
-      },
-      {
-        id: 2,
-        date: "2024-12-10",
-        time: "10:15",
-        duration: "8:22",
-        type: "billing",
-        category: "payment",
-        priority: "medium",
-        resolution: "Payment processed successfully",
-        satisfaction: "very_satisfied",
-        agent: "Agent Johnson",
-      },
-    ],
-    ACC789012: [
-      {
-        id: 3,
-        date: "2024-12-15",
-        time: "16:45",
-        duration: "15:33",
-        type: "sales",
-        category: "account",
-        priority: "low",
-        resolution: "Account upgrade completed",
-        satisfaction: "satisfied",
-        agent: "Agent Williams",
-      },
-    ],
-  };
-
   // Auto-search when component mounts with current number
   useEffect(() => {
     if (currentNumber && !hasSearched) {
@@ -165,20 +152,77 @@ const CallRemarksPage = () => {
       setCustomerData(null);
       setCallHistory([]);
       setSearchError(null);
+      setShowNewCustomerForm(false);
     }
   }, [currentNumber]);
 
-  // API call simulation - replace with actual API
+  // API call to search customer with mock mode
   const searchCustomerAPI = async (searchTerm) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const customer = mockCustomerDatabase[searchTerm];
-        const history = customer
-          ? mockCallHistoryDatabase[customer.accountId] || []
-          : [];
-        resolve({ customer, history });
-      }, 1000); // Simulate API delay
-    });
+    if (MOCK_MODE) {
+      // Mock API simulation
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const customer = mockCustomerDatabase[searchTerm];
+          const history = customer
+            ? mockCallHistory[customer.accountId] || []
+            : [];
+          resolve({ customer, history });
+        }, 1000); // Simulate API delay
+      });
+    }
+
+    try {
+      const response = await axiosInstance.get(`/customers/search`, {
+        params: { query: searchTerm },
+      });
+
+      if (response.data.success && response.data.data) {
+        return {
+          customer: response.data.data,
+          history: response.data.data.callHistory || [],
+        };
+      }
+      return { customer: null, history: [] };
+    } catch (error) {
+      console.error("Customer search API error:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to search customer"
+      );
+    }
+  };
+
+  // API call to create new customer with mock mode
+  const createCustomerAPI = async (customerData) => {
+    if (MOCK_MODE) {
+      // Mock customer creation
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const newCustomer = {
+            ...customerData,
+            accountId: `ACC${Date.now()}`,
+            joinDate: new Date().toISOString().split("T")[0],
+            lastActivity: new Date().toISOString().split("T")[0],
+            totalCalls: 0,
+            status: "Active",
+          };
+          resolve(newCustomer);
+        }, 1500); // Simulate API delay
+      });
+    }
+
+    try {
+      const response = await axiosInstance.post("/customers", customerData);
+
+      if (response.data.success) {
+        return response.data.data;
+      }
+      throw new Error(response.data.message || "Failed to create customer");
+    } catch (error) {
+      console.error("Create customer API error:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to create customer"
+      );
+    }
   };
 
   const handleCustomerSearch = async (searchTerm) => {
@@ -190,6 +234,7 @@ const CallRemarksPage = () => {
     setIsSearching(true);
     setSearchError(null);
     setHasSearched(true);
+    setShowNewCustomerForm(false);
 
     try {
       const { customer, history } = await searchCustomerAPI(searchTerm.trim());
@@ -199,28 +244,59 @@ const CallRemarksPage = () => {
         setCallHistory(history);
         setShowCustomerPanel(true);
         setSearchError(null);
+        setShowNewCustomerForm(false);
       } else {
         setCustomerData(null);
         setCallHistory([]);
+        setShowCustomerPanel(false);
+        setShowNewCustomerForm(true);
         setSearchError(
-          "Customer not found. Please check the ID or phone number."
+          "Customer not found. You can add them below (optional)."
         );
       }
     } catch (error) {
       console.error("Search error:", error);
-      setSearchError("Search failed. Please try again.");
+      setSearchError(error.message);
       setCustomerData(null);
       setCallHistory([]);
+      setShowCustomerPanel(false);
+      setShowNewCustomerForm(false);
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleCreateCustomer = async (newCustomerData) => {
+    setIsCreatingCustomer(true);
+    setCustomerCreationError(null);
+
+    try {
+      const createdCustomer = await createCustomerAPI(newCustomerData);
+
+      // Set the created customer data
+      setCustomerData(createdCustomer);
+      setCallHistory([]); // New customer won't have call history
+      setShowCustomerPanel(true);
+      setShowNewCustomerForm(false);
+      setSearchError(null);
+    } catch (error) {
+      console.error("Error creating customer:", error);
+      setCustomerCreationError(error.message);
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
+
+  const handleSkipNewCustomer = () => {
+    setShowNewCustomerForm(false);
+    setCustomerCreationError(null);
   };
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmissionError(null);
-      await submitForm(); // Use FormProvider's submitForm directly
+      await submitForm();
       setIsSubmitted(true);
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -246,7 +322,6 @@ const CallRemarksPage = () => {
     }
   };
 
-  // Fix the condition
   if (!isFormOpen) {
     return null;
   }
@@ -265,14 +340,32 @@ const CallRemarksPage = () => {
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    Call Remarks & Details
-                  </h2>
+                  <div className="flex items-center space-x-3">
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      Call Remarks & Details
+                    </h2>
+                    {/* Mock Mode Indicator */}
+                    {MOCK_MODE && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        🧪 Demo Mode
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-600 mt-1">
                     {isCallEnded
                       ? "Call has ended. Please complete the remarks form to continue."
                       : "Please fill out the call details and remarks."}
                   </p>
+
+                  {/* Mock Mode Info */}
+                  {MOCK_MODE && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        💡 <strong>Testing Mode:</strong> Try searching for
+                        "9301196473" or "+1234567890" to see sample data
+                      </p>
+                    </div>
+                  )}
 
                   {/* Call Status Indicator */}
                   {isCallEnded && (
@@ -306,6 +399,19 @@ const CallRemarksPage = () => {
                 </div>
               </div>
 
+              {/* New Customer Form - Shows when customer not found */}
+              {showNewCustomerForm && (
+                <div className="border-b border-gray-200">
+                  <NewCustomerForm
+                    phoneNumber={currentNumber}
+                    onSubmit={handleCreateCustomer}
+                    onCancel={handleSkipNewCustomer}
+                    isSubmitting={isCreatingCustomer}
+                    error={customerCreationError}
+                  />
+                </div>
+              )}
+
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto">
                 {isSubmitted ? (
@@ -337,7 +443,7 @@ const CallRemarksPage = () => {
                       </p>
                       {isCallEnded && (
                         <button
-                          onClick={() => handleRemarksCancel()}
+                          onClick={() => closeForm()}
                           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                         >
                           Return to Dashboard
@@ -358,7 +464,6 @@ const CallRemarksPage = () => {
                     isSubmitting={isSubmitting}
                     isCallEnded={isCallEnded}
                     submissionError={submissionError}
-                    // Add these props from your DialerProvider
                     callDirection={callDirection}
                     callStartTime={callStartTime}
                     callDuration={callDuration}
