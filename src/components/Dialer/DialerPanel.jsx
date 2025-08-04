@@ -305,6 +305,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
       return "Incoming Call";
 
     const statusMap = {
+      [CALL_STATUS.IDLE]: "Ready",
       [CALL_STATUS.DIALING]: "Dialing...",
       [CALL_STATUS.RINGING]:
         callDirection === "incoming" ? "Incoming Call" : "Ringing...",

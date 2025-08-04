@@ -3,16 +3,13 @@ import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 import { Outlet } from "react-router-dom";
 import CallRemarksPage from "../components/CallRemarks/CallRemarksPage";
-import useDialer from "../hooks/useDialer";
+// import useDialer from "../hooks/useDialer";
 import useForm from "../hooks/useForm";
-import { CALL_STATUS } from "../context/Providers/DialerProvider";
+// import { CALL_STATUS } from "../context/Providers/DialerProvider";
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-
-  // Get dialer state
-  const { callStatus, isIncomingCall } = useDialer();
 
   // Get form state from FormProvider
   const { isFormOpen } = useForm();

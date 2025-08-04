@@ -42,6 +42,9 @@ const DialerProvider = ({ children }) => {
   const [lastError, setLastError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [hasFormBeenSubmitted, setHasFormBeenSubmitted] = useState(false);
+  const [callDetailsForForm, setCallDetailsForForm] = useState(null);
+
   // User data from localStorage
   const [userData] = useState(() => {
     try {
@@ -64,6 +67,7 @@ const DialerProvider = ({ children }) => {
     isConnected,
     connectionStatus,
   } = useSocket();
+  // Forms Context
   const { openForm, submitForm: submitCallForm, closeForm } = useForm();
 
   // Refs
@@ -71,40 +75,136 @@ const DialerProvider = ({ children }) => {
   const incomingCallTimerRef = useRef(null);
 
   // Register socket event handlers on mount
+  // Updated DialerProvider.jsx - Replace your event handlers with these:
+
   useEffect(() => {
     registerCallEventHandlers({
       onCallInitiated: (data) => {
+        console.log("📞 Call initiated event:", data);
         if (data.callId) {
           setActiveCallId(data.callId);
           setCallStatus(CALL_STATUS.RINGING);
           setCallDirection("outgoing");
-        }
-      },
-
-      onCallStatusUpdate: (data) => {
-        if (data.callId === activeCallId) {
-          if (data.status === "ringing") {
-            setCallStatus(CALL_STATUS.RINGING);
-          } else if (data.status === "connected") {
-            setCallStatus(CALL_STATUS.CONNECTED);
-            if (!callStartTime) {
-              setCallStartTime(Date.now());
-            }
-          }
+          setHasFormBeenSubmitted(false);
+          setCallDetailsForForm(null);
         }
       },
 
       onCallConnected: (data) => {
-        if (data.callId === activeCallId) {
+        console.log("🔗 Call connected event:", data);
+
+        // Handle both string and number callIds by converting both to strings
+        const callId = String(data.callId || data.CALL_ID);
+        const currentCallId = String(activeCallId);
+
+        console.log(
+          `🔍 Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
+        );
+
+        if (callId === currentCallId) {
+          console.log(
+            `✅ Call IDs match! Outgoing call ${callId} is connected`
+          );
+
           setCallStatus(CALL_STATUS.CONNECTED);
-          setCallStartTime(Date.now());
-          // Open form when call connects (both incoming and outgoing)
+
+          // Set call start time from webhook data or current time
+          const startTime = data.callStartTime || data.CALL_START_TIME;
+          if (startTime && !callStartTime) {
+            // Parse the webhook time format (DDMMYYYYHHMMSS)
+            const parsedTime = parseWebhookTime(startTime);
+            setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
+          } else if (!callStartTime) {
+            setCallStartTime(Date.now());
+          }
+
+          // Open form when call connects
+          console.log("📋 Opening form for connected call");
           openCallRemarksForm();
+        } else {
+          console.log(
+            `❌ Call ID mismatch: webhook="${callId}" vs active="${currentCallId}"`
+          );
         }
       },
 
+      onCallDisconnected: (data) => {
+        console.log("📱 Call disconnected event received:", data);
+
+        // Handle both string and number callIds by converting both to strings
+        const callId = String(data.callId || data.CALL_ID);
+        const currentCallId = String(activeCallId);
+
+        console.log(
+          `🔍 Disconnect event - Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
+        );
+        console.log(`🔍 Current call status before disconnect: ${callStatus}`);
+        console.log(
+          `🔍 Disconnected by: ${
+            data.disconnectedBy || data.DISCONNECTED_BY || "Unknown"
+          }`
+        );
+
+        if (callId === currentCallId) {
+          console.log(
+            `✅ Call IDs match! Processing disconnect for call ${callId}`
+          );
+
+          // Extract duration if available from webhook
+          if (data.callDuration) {
+            console.log(
+              `⏱️ Setting call duration from webhook: ${data.callDuration} seconds`
+            );
+            setCallDuration(data.callDuration);
+          }
+
+          console.log(`📱 About to call handleCallEnd() for call ${callId}`);
+          handleCallEnd();
+        } else {
+          console.log(
+            `❌ Call ID mismatch for disconnect: webhook="${callId}" vs active="${currentCallId}"`
+          );
+          console.log(`🔍 Available data keys:`, Object.keys(data));
+        }
+      },
+
+      onCallStatusUpdate: (data) => {
+        console.log("📱 Call status update event:", data);
+
+        // Handle both string and number callIds by converting both to strings
+        const callId = String(data.callId || data.CALL_ID);
+        const currentCallId = String(activeCallId);
+
+        if (callId === currentCallId) {
+          const status = data.status;
+          const eventType = data.eventType || data.EVENT_TYPE;
+
+          console.log(
+            `📊 Processing status update for call ${callId}: ${
+              status || eventType
+            }`
+          );
+
+          if (status === "ringing") {
+            setCallStatus(CALL_STATUS.RINGING);
+          } else if (status === "connected") {
+            setCallStatus(CALL_STATUS.CONNECTED);
+            if (!callStartTime) {
+              setCallStartTime(Date.now());
+            }
+          } else if (status === "ended") {
+            handleCallEnd();
+          }
+        }
+      },
+
+      // Keep other handlers unchanged...
       onCallHoldStatus: (data) => {
-        if (data.callId === activeCallId) {
+        console.log("⏸️ Call hold status event:", data);
+        const callId = String(data.callId);
+        const currentCallId = String(activeCallId);
+
+        if (callId === currentCallId) {
           const isHeld = data.action === "hold" || data.isHeld;
           setIsOnHold(isHeld);
           setCallStatus(isHeld ? CALL_STATUS.ON_HOLD : CALL_STATUS.CONNECTED);
@@ -112,13 +212,21 @@ const DialerProvider = ({ children }) => {
       },
 
       onCallEnded: (data) => {
-        if (data.callId === activeCallId) {
+        console.log("📱 Call ended event (legacy):", data);
+        const callId = String(data.callId || data.CALL_ID);
+        const currentCallId = String(activeCallId);
+
+        if (callId === currentCallId) {
           handleCallEnd();
         }
       },
 
       onCallFailed: (data) => {
-        if (data.callId === activeCallId) {
+        console.log("❌ Call failed event:", data);
+        const callId = String(data.callId);
+        const currentCallId = String(activeCallId);
+
+        if (callId === currentCallId) {
           setCallStatus(CALL_STATUS.FAILED);
           setLastError(data.error || "Call failed");
           setTimeout(resetCallState, 3000);
@@ -126,6 +234,7 @@ const DialerProvider = ({ children }) => {
       },
 
       onCallError: (data) => {
+        console.log("⚠️ Call error event:", data);
         setLastError(data.error || "Call error occurred");
       },
 
@@ -138,10 +247,42 @@ const DialerProvider = ({ children }) => {
       },
 
       incomingCallCdr: (data) => {
-        // Handle post-call data if needed
+        console.log("📄 Incoming call CDR:", data);
+      },
+
+      onIncomingCallEnded: (data) => {
+        handleIncomingCallEnded(data);
       },
     });
-  }, [activeCallId, callStartTime]);
+  }, [activeCallId, callStartTime, hasFormBeenSubmitted, callDetailsForForm]);
+
+  // Helper function to parse webhook time format
+  const parseWebhookTime = (timeStr) => {
+    if (!timeStr || timeStr.length !== 14) return null;
+
+    try {
+      // Format: DDMMYYYYHHMMSS
+      const day = timeStr.substring(0, 2);
+      const month = timeStr.substring(2, 4);
+      const year = timeStr.substring(4, 8);
+      const hour = timeStr.substring(8, 10);
+      const minute = timeStr.substring(10, 12);
+      const second = timeStr.substring(12, 14);
+
+      // Create date object (month is 0-indexed in JavaScript)
+      return new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        parseInt(second)
+      );
+    } catch (error) {
+      console.error("❌ Error parsing webhook time:", timeStr, error);
+      return null;
+    }
+  };
 
   // Get authentication token
   const getAuthToken = async () => {
@@ -197,9 +338,9 @@ const DialerProvider = ({ children }) => {
     setActiveCallId(callId);
     setCurrentNumber(callerNumber);
     setContactName(`Caller ${callerNumber}`);
-    // Set specific incoming call status
     setCallStatus(CALL_STATUS.INCOMING_CALL);
     setCallDirection("incoming");
+    setHasFormBeenSubmitted(false); // Reset form submission flag for new call
     startIncomingCallTimer();
   };
 
@@ -354,6 +495,7 @@ const DialerProvider = ({ children }) => {
       setCallStatus(CALL_STATUS.DIALING);
       setCallDirection("outgoing");
       setContactName(contactInfo?.name || null);
+      setHasFormBeenSubmitted(false);
 
       const headers = {
         Authorization: `Bearer ${currentToken}`,
@@ -538,21 +680,114 @@ const DialerProvider = ({ children }) => {
 
   // Handle call end
   const handleCallEnd = () => {
+    console.log("🔚 handleCallEnd() called");
+    console.log(
+      "🔍 Current state - callStartTime:",
+      callStartTime,
+      "activeCallId:",
+      activeCallId
+    );
+    console.log(
+      "🔍 Form submission state - hasFormBeenSubmitted:",
+      hasFormBeenSubmitted
+    );
+
+    // Preserve call details for form submission BEFORE resetting state
+    if (callStartTime || activeCallId) {
+      const callDetails = {
+        callId: activeCallId,
+        number: currentNumber,
+        contactName: contactName,
+        callDirection: callDirection,
+        callDuration: callDuration,
+        startTime: callStartTime ? new Date(callStartTime) : new Date(),
+      };
+
+      console.log("💾 Preserving call details:", callDetails);
+      setCallDetailsForForm(callDetails);
+    }
+
+    console.log("📊 Setting call status to ENDED");
     setCallStatus(CALL_STATUS.ENDED);
     setIsIncomingCall(false);
     stopIncomingCallTimer();
 
-    // Only open form if call was connected (don't open for rejected/missed calls)
-    if (callStartTime) {
+    // Only open form if call was connected AND form hasn't been submitted yet
+    if (callStartTime && !hasFormBeenSubmitted) {
+      console.log(
+        "📋 Opening form because call was connected and form not submitted"
+      );
       openCallRemarksForm();
+    } else {
+      console.log(
+        "📋 NOT opening form - callStartTime:",
+        !!callStartTime,
+        "hasFormBeenSubmitted:",
+        hasFormBeenSubmitted
+      );
     }
 
-    setTimeout(resetCallState, 1000);
+    // Don't reset immediately - wait for form submission or timeout
+    setTimeout(() => {
+      if (!hasFormBeenSubmitted) {
+        console.log("⏰ Timeout reached, resetting call state");
+        resetCallState();
+      } else {
+        console.log("✅ Form was submitted, not resetting");
+      }
+    }, 30000); // 30 second timeout for form submission
+  };
+
+  const handleIncomingCallEnded = (data) => {
+    const callId = data.callId;
+    const callerNumber = data.callerNumber;
+    const agentNumber = data.agentNumber;
+
+    console.log(
+      `📱 Incoming call ${callId} ended - Caller: ${callerNumber}, Agent: ${agentNumber}`
+    );
+
+    // Check if this is the current active call
+    if (callId === activeCallId || callerNumber === currentNumber) {
+      // Preserve call details for form submission BEFORE resetting state
+      if (callStartTime || activeCallId) {
+        setCallDetailsForForm({
+          callId: activeCallId || callId,
+          number: currentNumber || callerNumber,
+          contactName: contactName,
+          callDirection: callDirection,
+          callDuration: callDuration,
+          startTime: callStartTime ? new Date(callStartTime) : new Date(),
+        });
+      }
+
+      // Set call status to ended
+      setCallStatus(CALL_STATUS.ENDED);
+      setIsIncomingCall(false);
+      stopIncomingCallTimer();
+
+      // Only open form if call was connected AND form hasn't been submitted yet
+      if (
+        callStartTime &&
+        callStatus === CALL_STATUS.CONNECTED &&
+        !hasFormBeenSubmitted
+      ) {
+        openCallRemarksForm();
+      }
+
+      // Don't reset immediately - wait for form submission or timeout
+      setTimeout(() => {
+        if (!hasFormBeenSubmitted) {
+          resetCallState();
+        }
+      }, 30000); // 30 second timeout for form submission
+    }
   };
 
   // Open call remarks form
   const openCallRemarksForm = () => {
-    const callDetails = {
+    // Use preserved call details if available, otherwise use current state
+    const callDetails = callDetailsForForm || {
       CallId: activeCallId,
       EmployeeId: userData.EmployeeId,
       startTime: callStartTime ? new Date(callStartTime) : new Date(),
@@ -562,13 +797,43 @@ const DialerProvider = ({ children }) => {
       callDuration: callDuration,
     };
 
-    openForm(callDetails);
+    // Ensure we have the necessary data
+    const formData = {
+      CallId: callDetails.callId || callDetails.CallId || activeCallId,
+      EmployeeId: userData.EmployeeId,
+      startTime:
+        callDetails.startTime ||
+        (callStartTime ? new Date(callStartTime) : new Date()),
+      number: callDetails.number || currentNumber,
+      contactName: callDetails.contactName || contactName,
+      callType:
+        callDetails.callDirection || callDetails.callType || callDirection,
+      callDuration: callDetails.callDuration || callDuration,
+    };
+
+    console.log("📋 Opening form with call details:", formData);
+    openForm(formData);
   };
 
   // Handle form submission - this should be called when form is successfully submitted
   const handleRemarksSubmit = async (formData) => {
     try {
-      return await submitCallForm(formData);
+      // Ensure CallId is included in form data
+      const submissionData = {
+        ...formData,
+        CallId: formData.CallId || callDetailsForForm?.callId || activeCallId,
+      };
+
+      console.log("📤 Submitting form with data:", submissionData);
+
+      const result = await submitCallForm(submissionData);
+      setHasFormBeenSubmitted(true); // Mark form as submitted
+
+      // Clear preserved call details and reset state after successful submission
+      setCallDetailsForForm(null);
+      setTimeout(resetCallState, 1000); // Short delay then reset
+
+      return result;
     } catch (error) {
       throw error;
     }
@@ -667,6 +932,8 @@ const DialerProvider = ({ children }) => {
     setCurrentNumber("");
     setIncomingCallData(null);
     setIsIncomingCall(false);
+    setHasFormBeenSubmitted(false); // Reset form submission flag
+    setCallDetailsForForm(null); // Clear preserved call details
     stopIncomingCallTimer();
   };
 
