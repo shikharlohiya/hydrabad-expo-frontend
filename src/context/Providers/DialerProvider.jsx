@@ -39,6 +39,25 @@ const DialerProvider = ({ children }) => {
   const [bearerToken, setBearerToken] = useState(
     localStorage.getItem("clickToCallToken")
   );
+
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const token = await getAuthToken();
+        setBearerToken(token); // ✅ Save to state
+        localStorage.setItem("clickToCallToken", token); // ✅ Save to localStorage
+        console.log("✅ Fetched and stored bearer token");
+      } catch (err) {
+        console.error("❌ Failed to fetch token on mount:", err);
+      }
+    };
+
+    // Only fetch if token doesn't exist
+    if (!bearerToken) {
+      fetchToken();
+    }
+  }, []);
+
   const [lastError, setLastError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1111,6 +1130,46 @@ const DialerProvider = ({ children }) => {
     }
   };
 
+  const mergeCall = async (cpartyNumber) => {
+    // if (!activeCallId || !bearerToken) {
+    //   setLastError("Cannot merge call - missing call ID or token");
+    //   return;
+    // }
+
+    try {
+      setIsLoading(true);
+      setLastError(null);
+
+      const response = await axiosInstance.post(
+        "/merge-call",
+        {
+          cli: cliNumber,
+          call_id: String(activeCallId),
+          cparty_number: cpartyNumber,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${bearerToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // if (status === 1) {
+      //   console.log("✅ Merge call successful:", message);
+      //   // Optionally update UI state if needed (e.g., mark as merged)
+      // } else {
+      //   setLastError(message || "Merge failed");
+      // }
+      console.log("📞 Merge call response:", response.data);
+    } catch (error) {
+      console.error("❌ Error merging call:", error);
+      setLastError("Unable to merge call");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Reset call state
   const resetCallState = () => {
     setCallStatus(CALL_STATUS.IDLE);
@@ -1263,6 +1322,7 @@ const DialerProvider = ({ children }) => {
     endCall,
     toggleMute,
     toggleHold,
+    mergeCall,
     setCurrentNumber,
     clearCurrentNumber,
     resetDialer,

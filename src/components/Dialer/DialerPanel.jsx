@@ -26,6 +26,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
     callDuration,
     isMuted,
     isOnHold,
+    mergeCall,
     initiateCall,
     endCall,
     callDirection,
@@ -241,6 +242,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
   const addConferenceParticipant = () => {
     const digitsOnly = conferenceNumber.replace(/\D/g, "");
     if (digitsOnly.length === 10) {
+      mergeCall(digitsOnly);
       setConferenceParticipants([...conferenceParticipants, digitsOnly]);
       setConferenceNumber("");
       setIsConferenceMode(false);
@@ -566,7 +568,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
           <div className="flex justify-center">
             <button
               onClick={addConferenceParticipant}
-              disabled={!isValidPhoneNumber(conferenceNumber)}
+              disabled={!isValidPhoneNumber(conferenceNumber) || isLoading}
               className={`px-4 py-2 rounded-xl transition-all duration-200 flex items-center space-x-2 text-sm ${
                 isValidPhoneNumber(conferenceNumber)
                   ? "bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
