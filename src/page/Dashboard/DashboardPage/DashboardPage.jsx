@@ -21,7 +21,7 @@ import axiosInstance from "../../../library/axios";
 
 // Configuration
 const COMING_SOON_MODE = false; // Set to true to show coming soon page
-const MOCK_MODE = false; // Set to false when API is ready
+const MOCK_MODE = true; // Set to false when API is ready
 
 // Mock data for testing (remove when API is ready)
 const mockCallStats = {
@@ -313,335 +313,24 @@ const DashboardPage = () => {
   // Coming Soon Component - Overlay on actual dashboard
   if (COMING_SOON_MODE) {
     return (
-      <div className="relative bg-gray-50 min-h-screen">
-        {/* Mock Mode Indicator */}
-        {MOCK_MODE && (
-          <div className="bg-yellow-50 border-b border-yellow-200 p-3">
-            <div className="flex items-center justify-center space-x-2 text-yellow-800">
-              <span className="font-medium">🧪 Demo Mode Active</span>
-              <span className="text-sm">- Using sample data for testing</span>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 max-w-md mx-auto">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ChartBarIcon className="w-8 h-8 text-blue-600" />
             </div>
-          </div>
-        )}
-
-        {/* Actual Dashboard Content */}
-        <div>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <PhoneIcon className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Total Calls
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {mockCallStats.totalCalls}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Answered</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {mockCallStats.answeredCalls}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Missed</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {mockCallStats.missedCalls}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <ClockIcon className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Avg Duration
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {mockCallStats.avgCallDuration}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <ChartBarIcon className="w-6 h-6 text-orange-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Total Talk Time
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {mockCallStats.totalTalkTime}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <UserGroupIcon className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Follow-ups
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {mockCallStats.pendingFollowUps}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Recent Calls */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Recent Calls
-                    </h2>
-                    <div className="flex items-center space-x-3">
-                      <select
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                        disabled
-                        className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] opacity-50"
-                      >
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                      </select>
-                      <button
-                        disabled
-                        className="p-2 text-gray-400 hover:text-gray-600 opacity-50"
-                      >
-                        <FunnelIcon className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Search Bar */}
-                  <div className="mt-4 relative">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search calls by name or number..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      disabled
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] opacity-50"
-                    />
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Contact
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Duration
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Time
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {mockRecentCalls.map((call) => {
-                        const CallIcon = getCallTypeIcon(call.type);
-                        return (
-                          <tr key={call.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div
-                                  className={`p-2 rounded-full ${
-                                    call.type === "incoming"
-                                      ? "bg-blue-100"
-                                      : "bg-green-100"
-                                  }`}
-                                >
-                                  <CallIcon
-                                    className={`w-4 h-4 ${
-                                      call.type === "incoming"
-                                        ? "text-blue-600"
-                                        : "text-green-600"
-                                    }`}
-                                  />
-                                </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {call.customerName || "Unknown Caller"}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {call.number}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                                  call.status
-                                )}`}
-                              >
-                                {call.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {call.duration}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {call.category}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatRelativeTime(call.callDateTime)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar - Pending Follow-ups */}
-            <div className="space-y-8">
-              <div className="bg-white rounded-lg shadow border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Pending Follow-ups
-                    </h3>
-                    <CalendarIcon className="w-5 h-5 text-gray-400" />
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {mockFollowUps.map((followUp) => (
-                      <div
-                        key={followUp.id}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="text-sm font-medium text-gray-900">
-                              {followUp.customerName}
-                            </h4>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {followUp.phoneNumber}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-2">
-                              {followUp.issue}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Due:{" "}
-                              {new Date(
-                                followUp.followUpDate
-                              ).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(
-                              followUp.priority
-                            )}`}
-                          >
-                            {followUp.priority}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Coming Soon Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/50 to-white/60 backdrop-blur-[1px] flex items-center justify-center z-50">
-          <div className="text-center max-w-lg mx-auto p-8">
-            {/* Animated Icon */}
-            <div className="relative mb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg mx-auto flex items-center justify-center animate-pulse">
-                <RocketLaunchIcon className="w-10 h-10 text-white" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full animate-bounce"></div>
-            </div>
-
-            {/* Coming Soon Message */}
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-              Dashboard
-            </h1>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            <h2 className="text-3xl font-semibold text-gray-900 mb-4">
               Coming Soon
             </h2>
-            <p className="text-lg text-gray-600 mb-6">
-              We're putting the finishing touches on your analytics dashboard.
-              Real-time insights and reporting will be available soon!
+            <p className="text-gray-600 leading-relaxed">
+              Dashboard features are currently under development.
             </p>
-
-            {/* Status Badge */}
-            <div className="inline-flex items-center space-x-2 bg-white/90 backdrop-blur border border-white/50 rounded-full px-4 py-2 shadow-lg mb-6">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-gray-700">
-                In Development
-              </span>
-              <WrenchScrewdriverIcon className="w-4 h-4 text-gray-500" />
-            </div>
-
-            {/* Expected Launch */}
-            <div className="text-sm text-gray-500">
-              Expected Launch:{" "}
-              <span className="font-semibold text-blue-600">This Week</span>
-            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  // Loading state
   // Loading state
   if (isLoading) {
     return (
@@ -755,16 +444,6 @@ const DashboardPage = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Mock Mode Indicator */}
-      {MOCK_MODE && (
-        <div className="bg-yellow-50 border-b border-yellow-200 p-3">
-          <div className="flex items-center justify-center space-x-2 text-yellow-800">
-            <span className="font-medium">🧪 Demo Mode Active</span>
-            <span className="text-sm">- Using sample data for testing</span>
-          </div>
-        </div>
-      )}
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
         <div className="bg-white p-4 rounded-lg shadow border border-gray-200">

@@ -509,7 +509,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
         {/* Call Controls */}
         {isCallActive() && !shouldShowIncomingCallUI() && (
           <div className="flex justify-center space-x-3">
-            <button
+            {/* <button
               onClick={toggleMute}
               className={`p-2.5 rounded-full transition-all duration-200 ${
                 isMuted
@@ -519,7 +519,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
               title={isMuted ? "Unmute" : "Mute"}
             >
               <MicrophoneIcon className="w-4 h-4" />
-            </button>
+            </button> */}
 
             <button
               onClick={toggleHold}
@@ -645,19 +645,19 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
               <span>Calling {formatPhoneNumber(currentNumber)}</span>
               <ClockIcon className="w-4 h-4 animate-spin" />
             </div>
-            <button
+            {/* <button
               onClick={handleEndCall}
               className="px-6 py-3 rounded-2xl bg-red-500 text-white hover:bg-red-600 transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
             >
               <PhoneXMarkIcon className="w-5 h-5" />
               <span className="text-sm font-medium">End Call</span>
-            </button>
+            </button> */}
           </div>
         )}
 
         {/* Connection Status Footer */}
         <div className="text-xs text-gray-500 text-center">
-          {connectionStatus === "connected" && bearerToken && (
+          {/* {connectionStatus === "connected" && bearerToken && (
             <span className="text-green-600">● Connected</span>
           )}
           {(connectionStatus === "connecting" ||
@@ -669,10 +669,10 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
           )}
           {!bearerToken && (
             <span className="text-red-600">● Authentication Required</span>
-          )}
+          )} */}
 
           {/* Debug info */}
-          {process.env.NODE_ENV === "development" && (
+          {/* {import.meta.NODE_ENV === "development" && (
             <div className="mt-1 text-xs text-gray-400 space-y-1">
               <div>Status: {callStatus}</div>
               <div>Incoming: {isIncomingCall ? "YES" : "NO"}</div>
@@ -681,7 +681,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
                 <div>Call ID: {String(activeCallId).slice(-6)}</div>
               )}
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>

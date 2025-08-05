@@ -264,7 +264,7 @@ const Header = ({ collapsed, setCollapsed }) => {
               {/* Call Controls - Hide during incoming call */}
               {!isDialerOpen && !isIncomingCall && (
                 <div className="flex items-center space-x-2">
-                  <button
+                  {/* <button
                     onClick={toggleMute}
                     className={`p-2 rounded-full transition-colors ${
                       isMuted
@@ -274,9 +274,9 @@ const Header = ({ collapsed, setCollapsed }) => {
                     title={isMuted ? "Unmute" : "Mute"}
                   >
                     <MicrophoneIcon className="w-4 h-4" />
-                  </button>
+                  </button> */}
 
-                  <button
+                  {/* <button
                     onClick={toggleHold}
                     disabled={callStatus !== CALL_STATUS.CONNECTED}
                     className={`p-2 rounded-full transition-colors ${
@@ -291,16 +291,16 @@ const Header = ({ collapsed, setCollapsed }) => {
                     ) : (
                       <PauseIcon className="w-4 h-4" />
                     )}
-                  </button>
+                  </button> */}
 
-                  <button
+                  {/* <button
                     onClick={endCall}
                     className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-1 text-sm"
                     title="End Call"
                   >
                     <PhoneXMarkIcon className="w-4 h-4" />
                     <span>End Call</span>
-                  </button>
+                  </button> */}
                 </div>
               )}
             </div>

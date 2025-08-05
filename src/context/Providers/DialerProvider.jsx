@@ -924,7 +924,7 @@ const DialerProvider = ({ children }) => {
           resetCallState();
         }
       },
-      hasFormBeenSubmitted ? 1000 : 30000
+      hasFormBeenSubmitted ? 1000 : 3000
     );
   };
 

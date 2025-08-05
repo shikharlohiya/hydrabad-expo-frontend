@@ -345,11 +345,11 @@ const CallRemarksPage = () => {
                       Call Remarks & Details
                     </h2>
                     {/* Mock Mode Indicator */}
-                    {MOCK_MODE && (
+                    {/* {MOCK_MODE && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         🧪 Demo Mode
                       </span>
-                    )}
+                    )} */}
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
                     {isCallEnded
@@ -358,14 +358,14 @@ const CallRemarksPage = () => {
                   </p>
 
                   {/* Mock Mode Info */}
-                  {MOCK_MODE && (
+                  {/* {MOCK_MODE && (
                     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-800">
                         💡 <strong>Testing Mode:</strong> Try searching for
                         "9301196473" or "+1234567890" to see sample data
                       </p>
                     </div>
-                  )}
+                  )} */}
 
                   {/* Call Status Indicator */}
                   {isCallEnded && (
