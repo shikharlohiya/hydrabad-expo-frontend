@@ -1012,7 +1012,7 @@ const DialerProvider = ({ children }) => {
         if (!hasFormBeenSubmitted) {
           resetCallState();
         }
-      }, 30000); // 30 second timeout for form submission
+      }, 2000); // 30 second timeout for form submission
     }
   };
 
