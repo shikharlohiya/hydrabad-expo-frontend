@@ -368,15 +368,38 @@ const DialerProvider = ({ children }) => {
     const callerNumber = data.caller_no || data.callerNumber;
     const agentNumber = data.agent_number || data.agentNumber;
     const callId = data.callid || data.call_id || data.callId;
+    const ivrNumber = data.ivr_number || data.ivrNumber;
 
-    // Check if this call is for the current user
-    if (
-      agentNumber !== userData.EmployeePhone &&
-      agentNumber !== userData.phone &&
-      agentNumber !== userData.Phone
-    ) {
+    console.log("📞 Incoming call data:", {
+      callerNumber,
+      agentNumber,
+      callId,
+      ivrNumber,
+      userPhone: userData.EmployeePhone,
+      eventType: data.eventType || data.event
+    });
+
+    // If agent_number is provided and not empty, check if it matches current user
+    if (agentNumber && agentNumber.trim() !== "") {
+      const userPhone = userData.EmployeePhone || userData.phone || userData.Phone;
+      
+      if (agentNumber !== userPhone) {
+        console.log("❌ Incoming call not for this agent:", {
+          agentNumber,
+          userPhone,
+          matches: agentNumber === userPhone
+        });
+        return;
+      }
+    } else {
+      // If agent_number is empty, this might be a general incoming call
+      // For now, we'll skip showing it to avoid showing to all agents
+      // You might want to implement different logic here based on your business rules
+      console.log("⚠️ Incoming call has no specific agent - skipping to avoid showing to all agents");
       return;
     }
+
+    console.log("✅ Showing incoming call to agent:", userData.EmployeePhone);
 
     setIncomingCallData(data);
     setIsIncomingCall(true);
