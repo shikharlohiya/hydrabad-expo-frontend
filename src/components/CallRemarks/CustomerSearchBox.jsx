@@ -60,16 +60,6 @@ const CustomerSearchBox = ({
       disabled: !currentNumber,
       placeholder: "No active call",
     },
-    {
-      type: "Customer ID",
-      placeholder: "e.g., CUST123456",
-      value: "",
-    },
-    {
-      type: "Phone Number",
-      placeholder: "e.g., +1234567890",
-      value: "",
-    },
   ];
 
   const handleQuickSearch = (option) => {
@@ -142,13 +132,6 @@ const CustomerSearchBox = ({
                     )}
                   </button>
                 ))}
-              </div>
-
-              {/* Quick tip */}
-              <div className="px-2 pb-2 border-t border-gray-100 pt-2">
-                <div className="text-xs text-gray-400">
-                  💡 Search by customer ID, phone number, or email
-                </div>
               </div>
             </div>
           )}

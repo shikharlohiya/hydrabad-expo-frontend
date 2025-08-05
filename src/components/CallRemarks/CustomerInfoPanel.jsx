@@ -1,5 +1,14 @@
 import React from "react";
-import { User, Mail, Calendar, Phone, Shield, Activity } from "lucide-react";
+import {
+  User,
+  Mail,
+  Calendar,
+  Phone,
+  Shield,
+  Activity,
+  Building2,
+  MapPin,
+} from "lucide-react";
 
 const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
   const getStatusColor = (status) => {
@@ -17,6 +26,8 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
 
   const getAccountTypeColor = (type) => {
     switch (type?.toLowerCase()) {
+      case "trader":
+        return "text-blue-700 bg-blue-100";
       case "premium":
         return "text-purple-700 bg-purple-100";
       case "standard":
@@ -56,7 +67,7 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
   if (!customerData) {
     return (
       <div className="p-4 text-center">
-        <div className="text-gray-500 text-sm">No customer data available</div>
+        <div className="text-gray-500 text-sm">No trader data available</div>
       </div>
     );
   }
@@ -70,11 +81,18 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-gray-900 text-lg truncate">
-            {customerData.name || "Unknown Customer"}
+            {customerData.name || "Unknown Trader"}
           </h4>
           <p className="text-sm text-gray-500 mt-1">
-            ID: {customerData.accountId || customerData.customerId || "N/A"}
+            Code: {customerData.accountId || customerData.Code || "N/A"}
           </p>
+
+          {/* Business Name */}
+          {customerData.businessName && (
+            <p className="text-sm text-blue-600 mt-1 font-medium">
+              {customerData.businessName}
+            </p>
+          )}
 
           {/* Status Badges */}
           <div className="flex flex-wrap gap-2 mt-2">
@@ -91,7 +109,7 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
               )}`}
             >
               <Shield className="w-3 h-3 mr-1" />
-              {customerData.accountType || "Basic"}
+              {customerData.accountType || "Trader"}
             </span>
           </div>
         </div>
@@ -106,20 +124,56 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
           <div className="flex items-center space-x-3">
             <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <span className="text-sm text-gray-900">
-              {phoneNumber || customerData.phoneNumber || "N/A"}
+              {phoneNumber ||
+                customerData.phoneNumber ||
+                customerData.Contact_no ||
+                "N/A"}
             </span>
           </div>
-          <div className="flex items-center space-x-3">
-            <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <span className="text-sm text-gray-900 truncate">
-              {customerData.email || "N/A"}
-            </span>
-          </div>
+          {customerData.email && (
+            <div className="flex items-center space-x-3">
+              <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="text-sm text-gray-900 truncate">
+                {customerData.email}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Business Information */}
+      {(customerData.businessName ||
+        customerData.region ||
+        customerData.zone) && (
+        <div className="space-y-3">
+          <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
+            Business Information
+          </h5>
+          <div className="space-y-2">
+            {customerData.businessName && (
+              <div className="flex items-center space-x-3">
+                <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="text-sm text-gray-900">
+                  {customerData.businessName}
+                </span>
+              </div>
+            )}
+            {(customerData.region || customerData.zone) && (
+              <div className="flex items-center space-x-3">
+                <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="text-sm text-gray-900">
+                  {[customerData.region, customerData.zone]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Account Details */}
-      <div className="space-y-3">
+      {/* <div className="space-y-3">
         <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
           Account Details
         </h5>
@@ -160,7 +214,59 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
             </span>
           </div>
         </div>
-      </div>
+      </div> */}
+
+      {/* Follow-up Information */}
+      {(customerData.lastActionDate ||
+        customerData.followUpDate ||
+        customerData.completedOn) && (
+        <div className="space-y-3">
+          <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
+            Follow-up Details
+          </h5>
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            {customerData.lastActionDate && (
+              <div>
+                <div className="text-gray-500 mb-1">Last Action Date</div>
+                <span className="text-gray-900">
+                  {formatDate(customerData.lastActionDate)}
+                </span>
+              </div>
+            )}
+            {customerData.followUpDate && (
+              <div>
+                <div className="text-gray-500 mb-1">Follow-up Date</div>
+                <span className="text-gray-900">
+                  {formatDate(customerData.followUpDate)}
+                </span>
+              </div>
+            )}
+            {customerData.completedOn && (
+              <div>
+                <div className="text-gray-500 mb-1">Completed On</div>
+                <span className="text-gray-900">
+                  {formatDate(customerData.completedOn)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Agent Information */}
+      {customerData.agentId && (
+        <div className="space-y-3">
+          <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
+            Agent Information
+          </h5>
+          <div className="text-sm">
+            <div className="text-gray-500 mb-1">Assigned Agent ID</div>
+            <span className="text-gray-900 font-medium">
+              {customerData.agentId}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Additional Info (if available) */}
       {(customerData.notes || customerData.description) && (
@@ -176,22 +282,22 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
         </div>
       )}
 
-      {/* Customer Summary */}
-      <div className="space-y-3">
+      {/* Trader Summary */}
+      {/* <div className="space-y-3">
         <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
           Summary
         </h5>
         <div className="bg-blue-50 rounded-lg p-3">
           <p className="text-sm text-blue-800">
-            {customerData.accountType || "Basic"} customer active for{" "}
+            {customerData.accountType || "Trader"} active for{" "}
             {calculateYears(customerData.joinDate || customerData.createdAt)}{" "}
             years
-            {customerData.totalCalls > 0 &&
-              ` with ${customerData.totalCalls} previous calls`}
-            .
+            {customerData.businessName &&
+              ` operating ${customerData.businessName}`}
+            {customerData.region && ` in ${customerData.region}`}.
           </p>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -11,77 +11,6 @@ import { ChevronRight } from "lucide-react";
 import UserContext from "../../context/UserContext";
 import axiosInstance from "../../library/axios";
 
-// Mock data for testing (remove this in production)
-const MOCK_MODE = true; // Set to false when API is ready
-
-const mockCustomerDatabase = {
-  9301196473: {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    accountId: "ACC123456",
-    phoneNumber: "9301196473",
-    joinDate: "2023-01-15",
-    lastActivity: "2024-12-20",
-    accountType: "Premium",
-    totalCalls: 12,
-    status: "Active",
-  },
-  "+1234567890": {
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    accountId: "ACC789012",
-    phoneNumber: "+1234567890",
-    joinDate: "2022-06-10",
-    lastActivity: "2024-12-18",
-    accountType: "Standard",
-    totalCalls: 8,
-    status: "Active",
-  },
-};
-
-const mockCallHistory = {
-  ACC123456: [
-    {
-      id: 1,
-      date: "2024-12-18",
-      time: "14:30",
-      duration: "12:45",
-      type: "support",
-      category: "technical issue",
-      priority: "high",
-      resolution: "Issue resolved - password reset completed",
-      agent: "Agent Smith",
-      status: "closed",
-    },
-    {
-      id: 2,
-      date: "2024-12-10",
-      time: "10:15",
-      duration: "8:22",
-      type: "billing",
-      category: "payment inquiry",
-      priority: "medium",
-      resolution: "Payment processed successfully",
-      agent: "Agent Johnson",
-      status: "closed",
-    },
-  ],
-  ACC789012: [
-    {
-      id: 3,
-      date: "2024-12-15",
-      time: "16:45",
-      duration: "15:33",
-      type: "sales",
-      category: "account upgrade",
-      priority: "low",
-      resolution: "Account upgrade completed to Standard plan",
-      agent: "Agent Williams",
-      status: "closed",
-    },
-  ],
-};
-
 const CallRemarksPage = () => {
   const {
     callStatus,
@@ -127,7 +56,6 @@ const CallRemarksPage = () => {
   const isCallEnded =
     callStatus === CALL_STATUS.IDLE || callStatus === CALL_STATUS.ENDED;
 
-  // Create currentCallDetails from available data
   const currentCallDetails = {
     CallId: activeCallId,
     EmployeeId: userData?.EmployeeId,
@@ -156,78 +84,72 @@ const CallRemarksPage = () => {
     }
   }, [currentNumber]);
 
-  // API call to search customer with mock mode
+  // API call to search trader
   const searchCustomerAPI = async (searchTerm) => {
-    if (MOCK_MODE) {
-      // Mock API simulation
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const customer = mockCustomerDatabase[searchTerm];
-          const history = customer
-            ? mockCallHistory[customer.accountId] || []
-            : [];
-          resolve({ customer, history });
-        }, 1000); // Simulate API delay
-      });
-    }
-
     try {
-      const response = await axiosInstance.get(`/customers/search`, {
-        params: { query: searchTerm },
-      });
+      const response = await axiosInstance.get(`/trader/mobile/${searchTerm}`);
 
       if (response.data.success && response.data.data) {
+        const traderData = response.data.data;
+        const transformedCustomer = {
+          id: traderData.id,
+          name: traderData.Trader_Name,
+          email: traderData.email || null,
+          accountId: traderData.Code,
+          phoneNumber: traderData.Contact_no,
+          joinDate: traderData.createdAt,
+          lastActivity: traderData.updatedAt,
+          accountType: "Trader",
+          totalCalls: 0,
+          status: traderData.status,
+          businessName: traderData.Trader_business_Name,
+          region: traderData.Region,
+          zone: traderData.Zone,
+          lastActionDate: traderData.last_action_date,
+          followUpDate: traderData.follow_up_date,
+          completedOn: traderData.completed_on,
+          agentId: traderData.AgentId,
+        };
+
         return {
-          customer: response.data.data,
-          history: response.data.data.callHistory || [],
+          customer: transformedCustomer,
+          history: [],
         };
       }
       return { customer: null, history: [] };
     } catch (error) {
-      console.error("Customer search API error:", error);
+      console.error("Trader search API error:", error);
+
+      if (error.response?.status === 404) {
+        return { customer: null, history: [] };
+      }
+
       throw new Error(
-        error.response?.data?.message || "Failed to search customer"
+        error.response?.data?.message || "Failed to search trader"
       );
     }
   };
 
-  // API call to create new customer with mock mode
+  // API call to create new trader
   const createCustomerAPI = async (customerData) => {
-    if (MOCK_MODE) {
-      // Mock customer creation
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const newCustomer = {
-            ...customerData,
-            accountId: `ACC${Date.now()}`,
-            joinDate: new Date().toISOString().split("T")[0],
-            lastActivity: new Date().toISOString().split("T")[0],
-            totalCalls: 0,
-            status: "Active",
-          };
-          resolve(newCustomer);
-        }, 1500); // Simulate API delay
-      });
-    }
-
     try {
-      const response = await axiosInstance.post("/customers", customerData);
+      const response = await axiosInstance.post("/trader", customerData);
 
       if (response.data.success) {
         return response.data.data;
       }
-      throw new Error(response.data.message || "Failed to create customer");
+      throw new Error(response.data.message || "Failed to create trader");
     } catch (error) {
-      console.error("Create customer API error:", error);
+      console.error("Create trader API error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to create customer"
+        error.response?.data?.message || "Failed to create trader"
       );
     }
   };
 
   const handleCustomerSearch = async (searchTerm) => {
     if (!searchTerm.trim()) {
-      setSearchError("Please enter a customer ID or phone number");
+      setSearchError("Please enter a trader ID or phone number");
       return;
     }
 
@@ -250,9 +172,7 @@ const CallRemarksPage = () => {
         setCallHistory([]);
         setShowCustomerPanel(false);
         setShowNewCustomerForm(true);
-        setSearchError(
-          "Customer not found. You can add them below (optional)."
-        );
+        setSearchError("Trader not found. You can add them below (optional).");
       }
     } catch (error) {
       console.error("Search error:", error);
@@ -273,14 +193,13 @@ const CallRemarksPage = () => {
     try {
       const createdCustomer = await createCustomerAPI(newCustomerData);
 
-      // Set the created customer data
       setCustomerData(createdCustomer);
-      setCallHistory([]); // New customer won't have call history
+      setCallHistory([]);
       setShowCustomerPanel(true);
       setShowNewCustomerForm(false);
       setSearchError(null);
     } catch (error) {
-      console.error("Error creating customer:", error);
+      console.error("Error creating trader:", error);
       setCustomerCreationError(error.message);
     } finally {
       setIsCreatingCustomer(false);
@@ -340,32 +259,14 @@ const CallRemarksPage = () => {
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      Call Remarks & Details
-                    </h2>
-                    {/* Mock Mode Indicator */}
-                    {/* {MOCK_MODE && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        🧪 Demo Mode
-                      </span>
-                    )} */}
-                  </div>
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Call Remarks & Details
+                  </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {isCallEnded
                       ? "Call has ended. Please complete the remarks form to continue."
                       : "Please fill out the call details and remarks."}
                   </p>
-
-                  {/* Mock Mode Info */}
-                  {/* {MOCK_MODE && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        💡 <strong>Testing Mode:</strong> Try searching for
-                        "9301196473" or "+1234567890" to see sample data
-                      </p>
-                    </div>
-                  )} */}
 
                   {/* Call Status Indicator */}
                   {isCallEnded && (
@@ -399,7 +300,7 @@ const CallRemarksPage = () => {
                 </div>
               </div>
 
-              {/* New Customer Form - Shows when customer not found */}
+              {/* New Customer Form */}
               {showNewCustomerForm && (
                 <div className="border-b border-gray-200">
                   <NewCustomerForm
@@ -477,7 +378,7 @@ const CallRemarksPage = () => {
         </div>
       </div>
 
-      {/* Customer Info Sliding Panel */}
+      {/* Trader Info Sliding Panel */}
       <div
         className={`fixed top-16 right-0 bottom-0 w-[450px] bg-white shadow-lg border-l border-gray-200 transform transition-transform duration-300 ease-in-out z-40 ${
           showCustomerPanel ? "translate-x-0" : "translate-x-full"
@@ -488,12 +389,12 @@ const CallRemarksPage = () => {
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800">
-                Customer Information
+                Trader Information
               </h3>
               <button
                 onClick={() => setShowCustomerPanel(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                aria-label="Close customer panel"
+                aria-label="Close trader panel"
               >
                 <ChevronRight size={20} />
               </button>
@@ -509,7 +410,7 @@ const CallRemarksPage = () => {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Customer Info
+                Trader Info
               </button>
               <button
                 onClick={() => setActiveTab("history")}
@@ -532,18 +433,22 @@ const CallRemarksPage = () => {
                   customerData={customerData}
                   phoneNumber={currentNumber}
                 />
-              ) : (
+              ) : callHistory.length > 0 ? (
                 <CustomerCallHistory
                   callHistory={callHistory}
                   phoneNumber={currentNumber}
                 />
+              ) : (
+                <div className="p-4 text-center">
+                  <div className="text-gray-500 text-sm">No recent calls</div>
+                </div>
               )
             ) : (
               <div className="p-4 text-center">
                 <div className="text-gray-500 text-sm">
                   {hasSearched
-                    ? "No customer data found"
-                    : "Search for customer information to view details"}
+                    ? "No trader data found"
+                    : "Search for trader information to view details"}
                 </div>
               </div>
             )}
