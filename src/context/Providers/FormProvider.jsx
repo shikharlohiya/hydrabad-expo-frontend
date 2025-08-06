@@ -219,9 +219,15 @@ const FormProvider = ({ children }) => {
       callDetails?.callType === "incoming" ? "InBound" : "OutBound";
     const inquiryNumber = orderData?.orderId || customerData?.accountId || "";
 
+    // Extract CallId from multiple possible sources
+    const callId = callDetails?.CallId || callDetails?.callId || "";
+    
+    console.log("📝 PopulateFormData - CallId being set:", callId);
+    console.log("📝 PopulateFormData - Full callDetails:", callDetails);
+
     setFormData((prev) => ({
       ...prev,
-      CallId: callDetails?.CallId || "",
+      CallId: callId,
       EmployeeId: userData?.EmployeeId || callDetails?.EmployeeId || "",
       callDateTime: callDateTime,
       callType: callType,
@@ -445,6 +451,13 @@ const FormProvider = ({ children }) => {
       };
 
       console.log("📝 Enhanced form data:", enhancedFormData);
+      console.log("📝 CallId being submitted:", enhancedFormData.CallId);
+      
+      if (!enhancedFormData.CallId) {
+        console.error("❌ WARNING: CallId is missing from form submission!");
+        console.log("📝 Current currentCallDetails:", currentCallDetails);
+        console.log("📝 Current formData:", formData);
+      }
 
       // Create FormData for multipart submission
       const submissionData = new FormData();

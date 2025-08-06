@@ -239,46 +239,62 @@ const ContactsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Traders Directory</h1>
-            <p className="text-gray-600 mt-1">
-              {searchTerm ? `${filteredTraders.length} filtered` : `${traders.length}`} of {totalRecords} traders
-              {pagination && (
-                <span className="ml-2 text-sm">
-                  (Page {currentPage} of {totalPages})
-                </span>
-              )}
-            </p>
-            {employeeInfo && (
-              <p className="text-sm text-blue-600 mt-1">
-                Region: {employeeInfo.region}
+    <div className="space-y-4">
+      {/* Compact Header with Stats */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Traders Directory</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {searchTerm ? `${filteredTraders.length} filtered` : `${traders.length}`} of {totalRecords} traders
+                {pagination && (
+                  <span className="ml-2">
+                    • Page {currentPage} of {totalPages}
+                  </span>
+                )}
+                {employeeInfo && (
+                  <span className="ml-2 text-blue-600">
+                    • {employeeInfo.region}
+                  </span>
+                )}
               </p>
-            )}
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-center">
-              <ChartBarIcon className="h-8 w-8 text-indigo-600 mx-auto" />
-              <span className="text-sm text-gray-500">Total Contacts</span>
             </div>
-            {traderCounts && (
+          </div>
+
+          {/* Compact Stats Row */}
+          {traderCounts && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
               <div className="text-center">
-                <div className="text-lg font-bold text-green-600">
+                <div className="text-2xl font-bold text-indigo-600">{traderCounts.totalCount}</div>
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
                   {traderCounts.statusCounts?.find(s => s.status === 'active')?.count || 0}
                 </div>
-                <span className="text-sm text-gray-500">Active</span>
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Active</div>
               </div>
-            )}
-          </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {traderCounts.statusCounts?.find(s => s.status === 'inactive')?.count || 0}
+                </div>
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Inactive</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {traderCounts.matchedRegions?.length || 0}
+                </div>
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Regions</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div className="bg-white shadow rounded-lg p-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           {/* Search */}
           <div className="relative">
             <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
@@ -359,16 +375,16 @@ const ContactsPage = () => {
         </div>
       </div>
 
-      {/* Traders List */}
+      {/* Traders List - Compact Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         {filteredTraders.length === 0 ? (
-          <div className="text-center py-12">
-            <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No traders found</h3>
-            <p className="text-gray-600">
+          <div className="text-center py-8">
+            <UserGroupIcon className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+            <h3 className="text-sm font-medium text-gray-900 mb-1">No traders found</h3>
+            <p className="text-xs text-gray-600">
               {searchTerm || selectedRegion || selectedStatus
-                ? "Try adjusting your search or filter criteria"
-                : "No traders available for your region"}
+                ? "Try adjusting your search criteria"
+                : "No traders available"}
             </p>
           </div>
         ) : (
@@ -376,99 +392,84 @@ const ContactsPage = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Trader Details
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trader
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Business
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Location
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredTraders.map((trader) => (
                   <tr key={trader.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-indigo-800">
+                        <div className="flex-shrink-0 h-8 w-8">
+                          <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <span className="text-xs font-medium text-indigo-800">
                               {trader.Trader_Name?.charAt(0) || "T"}
                             </span>
                           </div>
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="ml-3 min-w-0 flex-1">
+                          <div className="text-sm font-medium text-gray-900 truncate">
                             {trader.Trader_Name || "N/A"}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            Code: {trader.Code}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            📞 {trader.Contact_no}
+                          <div className="text-xs text-gray-500">
+                            {trader.Code} • {trader.Contact_no}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <BuildingOfficeIcon className="h-5 w-5 text-gray-400 mr-2" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {trader.Trader_business_Name || "N/A"}
-                          </div>
-                        </div>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-900 max-w-xs truncate" title={trader.Trader_business_Name}>
+                        {trader.Trader_business_Name || "N/A"}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <MapPinIcon className="h-5 w-5 text-gray-400 mr-2" />
-                        <div>
-                          <div className="text-sm text-gray-900">{trader.Region}</div>
-                          <div className="text-sm text-gray-500">{trader.Zone}</div>
-                        </div>
-                      </div>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-900">{trader.Region}</div>
+                      <div className="text-xs text-gray-500">{trader.Zone}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           trader.status === "active"
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {trader.status === "active" ? (
-                          <CheckCircleIcon className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ExclamationTriangleIcon className="h-3 w-3 mr-1" />
-                        )}
+                        <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                          trader.status === "active" ? "bg-green-600" : "bg-red-600"
+                        }`}></div>
                         {trader.status?.charAt(0).toUpperCase() + trader.status?.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-4 py-3">
                       <button
                         onClick={() => handleCall(trader.Contact_no, trader.Trader_Name)}
                         disabled={!trader.Contact_no}
-                        className={`inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white focus:outline-none focus:ring-1 focus:ring-offset-1 ${
                           trader.Contact_no
                             ? "bg-green-600 hover:bg-green-700 focus:ring-green-500"
                             : "bg-gray-400 cursor-not-allowed"
                         }`}
                         title={
                           !trader.Contact_no
-                            ? "No phone number available"
+                            ? "No phone number"
                             : "Click to call"
                         }
                       >
-                        <PhoneIcon className="h-4 w-4 mr-1" />
+                        <PhoneIcon className="h-3 w-3 mr-1" />
                         Call
                       </button>
                     </td>
@@ -479,38 +480,29 @@ const ContactsPage = () => {
           </div>
         )}
 
-        {/* Pagination Controls */}
+        {/* Compact Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-t border-gray-200">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={!hasPrevPage}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={!hasNextPage}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ml-3 relative inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
             </div>
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm text-gray-700">
-                  Showing{" "}
-                  <span className="font-medium">
-                    {((currentPage - 1) * pageSize) + 1}
-                  </span>{" "}
-                  to{" "}
-                  <span className="font-medium">
-                    {Math.min(currentPage * pageSize, totalRecords)}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-medium">{totalRecords}</span> results
+                <p className="text-xs text-gray-600">
+                  Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords}
                 </p>
               </div>
               <div>
@@ -518,13 +510,11 @@ const ContactsPage = () => {
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={!hasPrevPage}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-1 rounded-l-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">Previous</span>
-                    <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+                    <ChevronLeftIcon className="h-4 w-4" />
                   </button>
 
-                  {/* Page Numbers */}
                   {(() => {
                     const pages = [];
                     const maxVisiblePages = 5;
@@ -540,7 +530,7 @@ const ContactsPage = () => {
                         <button
                           key={i}
                           onClick={() => handlePageChange(i)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          className={`relative inline-flex items-center px-3 py-1 border text-xs font-medium ${
                             i === currentPage
                               ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
                               : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
@@ -556,10 +546,9 @@ const ContactsPage = () => {
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={!hasNextPage}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-1 rounded-r-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">Next</span>
-                    <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+                    <ChevronRightIcon className="h-4 w-4" />
                   </button>
                 </nav>
               </div>
@@ -568,95 +557,6 @@ const ContactsPage = () => {
         )}
       </div>
 
-      {/* Summary Stats from API */}
-      {traderCounts && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <UserGroupIcon className="h-8 w-8 text-indigo-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Traders</dt>
-                    <dd className="text-lg font-medium text-gray-900">{traderCounts.totalCount}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <CheckCircleIcon className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Active Traders</dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {traderCounts.statusCounts?.find(s => s.status === 'active')?.count || 0}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Inactive Traders</dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {traderCounts.statusCounts?.find(s => s.status === 'inactive')?.count || 0}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <MapPinIcon className="h-8 w-8 text-blue-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Regions</dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {traderCounts.matchedRegions?.length || 0}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Zone Breakdown */}
-      {traderCounts?.zoneCounts && traderCounts.zoneCounts.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Zone-wise Distribution</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {traderCounts.zoneCounts.map((zone) => (
-              <div key={zone.zone} className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-xl font-bold text-indigo-600">{zone.count}</div>
-                <div className="text-sm font-medium text-gray-500">{zone.zone}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

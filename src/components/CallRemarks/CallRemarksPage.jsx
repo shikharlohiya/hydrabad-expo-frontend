@@ -56,8 +56,9 @@ const CallRemarksPage = () => {
   const isCallEnded =
     callStatus === CALL_STATUS.IDLE || callStatus === CALL_STATUS.ENDED;
 
+  // Use formData.CallId (which is preserved) instead of activeCallId (which gets reset)
   const currentCallDetails = {
-    CallId: activeCallId,
+    CallId: formData?.CallId || activeCallId, // Prioritize preserved CallId from formData
     EmployeeId: userData?.EmployeeId,
     startTime: callStartTime,
     number: currentNumber,

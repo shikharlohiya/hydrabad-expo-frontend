@@ -100,10 +100,16 @@ const DialerProvider = ({ children }) => {
       const { callId } = event.detail;
       console.log(`✅ Form submission confirmed for call ${callId}`);
 
-      // Only update if it's for the current active call
-      if (String(callId) === String(activeCallId)) {
-        console.log("✅ Setting hasFormBeenSubmitted to true");
+      // Check if it matches current active call or preserved call details
+      const currentCallId = activeCallId || callDetailsForForm?.CallId;
+      if (String(callId) === String(currentCallId)) {
+        console.log("✅ Setting hasFormBeenSubmitted to true and resetting call state");
         setHasFormBeenSubmitted(true);
+        
+        // Reset call state after successful form submission
+        setTimeout(() => {
+          resetCallState();
+        }, 1500);
       }
     };
 
@@ -112,7 +118,7 @@ const DialerProvider = ({ children }) => {
     return () => {
       window.removeEventListener("formSubmitted", handleFormSubmitted);
     };
-  }, [activeCallId]);
+  }, [activeCallId, callDetailsForForm]);
 
   // Register socket event handlers on mount
   // Updated DialerProvider.jsx - Replace your event handlers with these:
@@ -121,12 +127,24 @@ const DialerProvider = ({ children }) => {
     registerCallEventHandlers({
       onCallInitiated: (data) => {
         console.log("📞 Call initiated event:", data);
-        if (data.callId) {
+        
+        // Check if this is for the current user (outgoing call filtering)
+        const isForCurrentUser = data.apartyno === userData.EmployeePhone;
+        console.log("🔍 Checking if outgoing call is for current user:", {
+          eventApartyno: data.apartyno,
+          userPhone: userData.EmployeePhone,
+          isForCurrentUser: isForCurrentUser
+        });
+        
+        if (isForCurrentUser && data.callId) {
+          console.log("✅ Processing call-initiated event for current user");
           setActiveCallId(data.callId);
           setCallStatus(CALL_STATUS.RINGING);
           setCallDirection("outgoing");
           setHasFormBeenSubmitted(false);
           setCallDetailsForForm(null);
+        } else {
+          console.log("❌ Ignoring call-initiated event - not for current user");
         }
       },
 
@@ -702,7 +720,10 @@ const DialerProvider = ({ children }) => {
       reference_id: `123`,
       dtmfflag: 0,
       recordingflag: 0,
+      employeeId: userData.EmployeeId, // Add employeeId to identify the specific user
     };
+    
+    console.log("📞 Initiating call with employeeId:", userData.EmployeeId);
 
     try {
       setIsLoading(true);
@@ -922,15 +943,18 @@ const DialerProvider = ({ children }) => {
     // Preserve call details for form submission BEFORE resetting state
     if (callStartTime || activeCallId) {
       const callDetails = {
-        callId: activeCallId,
+        CallId: activeCallId, // Use CallId (capital C) to match form expectations
+        callId: activeCallId, // Keep both for compatibility
+        EmployeeId: userData.EmployeeId,
         number: currentNumber,
         contactName: contactName,
         callDirection: callDirection,
+        callType: callDirection,
         callDuration: callDuration,
         startTime: callStartTime ? new Date(callStartTime) : new Date(),
       };
 
-      console.log("💾 Preserving call details:", callDetails);
+      console.log("💾 Preserving call details with CallId:", callDetails);
       setCallDetailsForForm(callDetails);
     }
 
@@ -954,20 +978,19 @@ const DialerProvider = ({ children }) => {
       );
     }
 
-    // Reset the processed flag and state after a delay
-    setTimeout(
-      () => {
-        callEndProcessedRef.current = false;
-        if (!hasFormBeenSubmitted) {
-          console.log("⏰ Timeout reached, resetting call state");
-          resetCallState();
-        } else {
-          console.log("✅ Form was submitted, resetting call state");
-          resetCallState();
-        }
-      },
-      hasFormBeenSubmitted ? 1000 : 3000
-    );
+    // Only reset the processed flag after a delay, but don't reset call state yet
+    // Let the form submission or form close trigger the reset instead
+    setTimeout(() => {
+      callEndProcessedRef.current = false;
+    }, 1000);
+    
+    // Set a longer timeout as a fallback to prevent hanging state
+    setTimeout(() => {
+      if (!hasFormBeenSubmitted) {
+        console.log("⏰ Fallback timeout reached, resetting call state");
+        resetCallState();
+      }
+    }, 30000); // 30 second fallback timeout
   };
 
   const handleIncomingCallEnded = (data) => {
@@ -1195,6 +1218,7 @@ const DialerProvider = ({ children }) => {
 
   // Reset call state
   const resetCallState = () => {
+    console.log("🔄 resetCallState() called - clearing activeCallId:", activeCallId);
     setCallStatus(CALL_STATUS.IDLE);
     setCallDuration(0);
     setCallStartTime(null);
