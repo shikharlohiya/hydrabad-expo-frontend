@@ -100,12 +100,15 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
     };
   }, []);
 
-  // Handle ringing sound
+  // Handle ringing sound - MODIFIED to exclude outgoing calls
   useEffect(() => {
     if (!ringingAudioRef.current || !isRingingSoundEnabled) return;
 
+    // Only play ringing for incoming calls, not outgoing calls
     const shouldPlayRinging =
-      isIncomingCall || callStatus === CALL_STATUS.INCOMING_CALL;
+      isIncomingCall ||
+      callStatus === CALL_STATUS.INCOMING_CALL ||
+      (callStatus === CALL_STATUS.RINGING && callDirection === "incoming");
 
     if (shouldPlayRinging) {
       ringingAudioRef.current.currentTime = 0;
@@ -121,7 +124,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
         ringingAudioRef.current.currentTime = 0;
       }
     };
-  }, [callStatus, isRingingSoundEnabled, isIncomingCall]);
+  }, [callStatus, isRingingSoundEnabled, isIncomingCall, callDirection]); // Added callDirection dependency
 
   // Handle error display
   useEffect(() => {
@@ -215,7 +218,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
   const handleCall = async () => {
     const digitsOnly = displayNumber.replace(/\D/g, "");
     if (isValidPhoneNumber(displayNumber)) {
-      await playSound(dialToneAudioRef);
+      // await playSound(dialToneAudioRef);
       await initiateCall(digitsOnly, { name: contactName });
     }
   };
