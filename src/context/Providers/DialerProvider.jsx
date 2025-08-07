@@ -1121,7 +1121,7 @@ const DialerProvider = ({ children }) => {
         console.log("⏰ Fallback timeout reached, resetting call state");
         resetCallState();
       }
-    }, 30000); // 30 second fallback timeout
+    }, 3000); // 30 second fallback timeout
   };
 
   const handleIncomingCallEnded = (data) => {
