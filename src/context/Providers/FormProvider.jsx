@@ -11,27 +11,49 @@ export const FORM_STATUS = {
   ERROR: "error",
 };
 
-const FormProvider = ({ children }) => {
-  // Form state management
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formStatus, setFormStatus] = useState(FORM_STATUS.IDLE);
-  const [currentCallDetails, setCurrentCallDetails] = useState(null);
+// Helper function to get persisted form state
+const getPersistedFormState = () => {
+  try {
+    const persistedState = localStorage.getItem("formState");
+    return persistedState ? JSON.parse(persistedState) : null;
+  } catch (error) {
+    console.error("Error loading persisted form state:", error);
+    return null;
+  }
+};
 
-  // Form data state
-  const [formData, setFormData] = useState({
-    CallId: "",
-    EmployeeId: "",
-    callDateTime: "",
-    callType: "",
-    supportTypeId: "",
-    inquiryNumber: "",
-    processTypeId: "",
-    queryTypeId: "",
-    remarks: "",
-    attachments: [],
-    status: "closed",
-    followUpDate: "",
-  });
+const FormProvider = ({ children }) => {
+  // Load persisted state on mount
+  const persistedFormState = getPersistedFormState();
+  
+  // Form state management - initialize with persisted values if available
+  const [isFormOpen, setIsFormOpen] = useState(
+    persistedFormState?.isFormOpen || false
+  );
+  const [formStatus, setFormStatus] = useState(
+    persistedFormState?.formStatus || FORM_STATUS.IDLE
+  );
+  const [currentCallDetails, setCurrentCallDetails] = useState(
+    persistedFormState?.currentCallDetails || null
+  );
+
+  // Form data state - initialize with persisted values if available
+  const [formData, setFormData] = useState(
+    persistedFormState?.formData || {
+      CallId: "",
+      EmployeeId: "",
+      callDateTime: "",
+      callType: "",
+      supportTypeId: "",
+      inquiryNumber: "",
+      processTypeId: "",
+      queryTypeId: "",
+      remarks: "",
+      attachments: [],
+      status: "closed",
+      followUpDate: "",
+    }
+  );
 
   // Dropdown options state
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -46,19 +68,31 @@ const FormProvider = ({ children }) => {
     queryTypes: false,
   });
 
-  // Customer data state
-  const [customerData, setCustomerData] = useState(null);
-  const [orderData, setOrderData] = useState(null);
-  const [callHistory, setCallHistory] = useState([]);
+  // Customer data state - initialize with persisted values if available
+  const [customerData, setCustomerData] = useState(
+    persistedFormState?.customerData || null
+  );
+  const [orderData, setOrderData] = useState(
+    persistedFormState?.orderData || null
+  );
+  const [callHistory, setCallHistory] = useState(
+    persistedFormState?.callHistory || []
+  );
 
-  // Customer search state
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState(null);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Customer search state - initialize with persisted values if available
+  const [isSearching, setIsSearching] = useState(false); // Don't persist loading states
+  const [searchError, setSearchError] = useState(null); // Don't persist errors
+  const [hasSearched, setHasSearched] = useState(
+    persistedFormState?.hasSearched || false
+  );
 
-  // UI state
-  const [showCustomerPanel, setShowCustomerPanel] = useState(false);
-  const [activeTab, setActiveTab] = useState("info");
+  // UI state - initialize with persisted values if available
+  const [showCustomerPanel, setShowCustomerPanel] = useState(
+    persistedFormState?.showCustomerPanel || false
+  );
+  const [activeTab, setActiveTab] = useState(
+    persistedFormState?.activeTab || "info"
+  );
 
   // Error handling
   const [errors, setErrors] = useState({});
@@ -73,6 +107,74 @@ const FormProvider = ({ children }) => {
       return {};
     }
   });
+
+  // Function to persist form state to localStorage
+  const persistFormState = () => {
+    try {
+      const stateToSave = {
+        isFormOpen,
+        formStatus,
+        currentCallDetails,
+        formData: {
+          ...formData,
+          attachments: [], // Don't persist file objects
+        },
+        customerData,
+        orderData,
+        callHistory,
+        hasSearched,
+        showCustomerPanel,
+        activeTab,
+        timestamp: Date.now(), // Add timestamp for expiry check
+      };
+      
+      localStorage.setItem("formState", JSON.stringify(stateToSave));
+      console.log("📝 Form state persisted:", stateToSave);
+    } catch (error) {
+      console.error("❌ Error persisting form state:", error);
+    }
+  };
+
+  // Auto-persist form state whenever it changes
+  useEffect(() => {
+    // Only persist if form is open or has meaningful data
+    if (isFormOpen || formData.CallId || formData.remarks || customerData) {
+      persistFormState();
+    }
+  }, [
+    isFormOpen,
+    formStatus,
+    currentCallDetails,
+    formData,
+    customerData,
+    orderData,
+    callHistory,
+    hasSearched,
+    showCustomerPanel,
+    activeTab,
+  ]);
+
+  // Clear expired persisted form state on mount and handle recovery
+  useEffect(() => {
+    if (persistedFormState?.timestamp) {
+      const now = Date.now();
+      const stateAge = now - persistedFormState.timestamp;
+      const maxAge = 30 * 60 * 1000; // 30 minutes
+      
+      if (stateAge > maxAge) {
+        console.log("🧹 Clearing expired form state");
+        localStorage.removeItem("formState");
+      } else {
+        console.log("📝 Restored form state from localStorage:", persistedFormState);
+        
+        // If the form was open before refresh and we have call details, keep it open
+        if (persistedFormState.isFormOpen && persistedFormState.currentCallDetails) {
+          console.log("🔄 Form was open before refresh, keeping it open");
+          // Form state is already restored through initialization
+        }
+      }
+    }
+  }, []);
 
   // Mock customer database - replace with actual API
   const mockCustomerDatabase = {
@@ -207,6 +309,10 @@ const FormProvider = ({ children }) => {
     setErrors({});
     setSubmissionError(null);
     setLastError(null);
+    
+    // Clear persisted form state
+    localStorage.removeItem("formState");
+    console.log("🧹 Cleared persisted form state");
   };
 
   // Populate form with call details
@@ -215,24 +321,47 @@ const FormProvider = ({ children }) => {
       ? new Date(callDetails.startTime).toISOString().slice(0, 16)
       : new Date().toISOString().slice(0, 16);
 
-    const callType =
-      callDetails?.callType === "incoming" ? "InBound" : "OutBound";
+    // Debug logging to identify the issue
+    console.log("📝 PopulateFormData - callDetails.callType:", callDetails?.callType);
+    console.log("📝 PopulateFormData - callDetails.type:", callDetails?.type);
+    console.log("📝 PopulateFormData - callDetails.direction:", callDetails?.direction);
+    console.log("📝 PopulateFormData - callDetails.callDirection:", callDetails?.callDirection);
+    console.log("📝 PopulateFormData - Full callDetails:", callDetails);
+
+    // Check multiple possible property names for call type
+    const rawCallType = callDetails?.callType || callDetails?.callDirection || callDetails?.type || callDetails?.direction;
+    
+    let callType = "OutBound"; // Default
+    if (rawCallType === "incoming" || rawCallType === "inbound" || rawCallType === "InBound") {
+      callType = "InBound";
+    } else if (rawCallType === "outgoing" || rawCallType === "outbound" || rawCallType === "OutBound") {
+      callType = "OutBound";
+    }
+    
+    console.log("📝 PopulateFormData - Raw call type:", rawCallType, "-> Final call type:", callType);
+    
     const inquiryNumber = orderData?.orderId || customerData?.accountId || "";
 
     // Extract CallId from multiple possible sources
     const callId = callDetails?.CallId || callDetails?.callId || "";
     
     console.log("📝 PopulateFormData - CallId being set:", callId);
-    console.log("📝 PopulateFormData - Full callDetails:", callDetails);
 
-    setFormData((prev) => ({
-      ...prev,
-      CallId: callId,
-      EmployeeId: userData?.EmployeeId || callDetails?.EmployeeId || "",
-      callDateTime: callDateTime,
-      callType: callType,
-      inquiryNumber: inquiryNumber,
-    }));
+    console.log("📝 Setting formData with callType:", callType);
+    setFormData((prev) => {
+      console.log("📝 Previous formData.callType:", prev.callType);
+      const newFormData = {
+        ...prev,
+        CallId: callId,
+        EmployeeId: userData?.EmployeeId || callDetails?.EmployeeId || "",
+        callDateTime: callDateTime,
+        callType: callType,
+        inquiryNumber: inquiryNumber,
+      };
+      console.log("📝 New formData.callType:", newFormData.callType);
+      console.log("📝 FIXED: Ensuring callType is properly set to:", callType);
+      return newFormData;
+    });
   };
 
   // Reset form data to initial state
@@ -268,6 +397,9 @@ const FormProvider = ({ children }) => {
   // Handle form input changes
   const updateFormData = useCallback(
     (name, value) => {
+      if (name === "callType") {
+        console.log("📝 updateFormData - callType being changed to:", value);
+      }
       setFormData((prev) => ({
         ...prev,
         [name]: value,
@@ -452,6 +584,8 @@ const FormProvider = ({ children }) => {
 
       console.log("📝 Enhanced form data:", enhancedFormData);
       console.log("📝 CallId being submitted:", enhancedFormData.CallId);
+      console.log("📝 CallType being submitted:", enhancedFormData.callType);
+      console.log("📝 Current formData.callType:", formData.callType);
       
       if (!enhancedFormData.CallId) {
         console.error("❌ WARNING: CallId is missing from form submission!");
@@ -489,6 +623,10 @@ const FormProvider = ({ children }) => {
           enhancedFormData[key] !== undefined
         ) {
           submissionData.append(key, enhancedFormData[key]);
+          // Log callType specifically
+          if (key === "callType") {
+            console.log("📝 Adding callType to FormData:", enhancedFormData[key]);
+          }
         }
       });
 

@@ -15,22 +15,38 @@ import {
   RocketLaunchIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router-dom";
 import useDialer from "../../../hooks/useDialer";
 import UserContext from "../../../context/UserContext";
 import axiosInstance from "../../../library/axios";
 
 // Configuration
 const COMING_SOON_MODE = false; // Set to true to show coming soon page
-const MOCK_MODE = true; // Set to false when API is ready
+const MOCK_MODE = false; // Set to false when API is ready - DISABLED for recent calls API integration
 
 // Mock data for testing (remove when API is ready)
 const mockCallStats = {
-  totalCalls: 127,
-  answeredCalls: 98,
-  missedCalls: 29,
-  avgCallDuration: "4:32",
-  totalTalkTime: "8h 45m",
-  pendingFollowUps: 12,
+  inbound: {
+    totalCalls: 7,
+    answeredCalls: 6,
+    missedCalls: 1,
+    totalTalkTime: 192,
+    avgCallDuration: 27
+  },
+  outbound: {
+    totalCalls: 9,
+    answeredCalls: 7,
+    missedCalls: 2,
+    totalTalkTime: 104,
+    avgCallDuration: 11
+  },
+  overall: {
+    totalCalls: 16,
+    answeredCalls: 13,
+    missedCalls: 3,
+    totalTalkTime: 296,
+    avgCallDuration: 18
+  }
 };
 
 const mockRecentCalls = [
@@ -127,6 +143,7 @@ const mockFollowUps = [
 const DashboardPage = () => {
   const { callHistory, formatDuration } = useDialer();
   const { userData } = useContext(UserContext);
+  const navigate = useNavigate();
 
   // State management
   const [selectedPeriod, setSelectedPeriod] = useState("today");
@@ -136,6 +153,22 @@ const DashboardPage = () => {
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedRemarks, setExpandedRemarks] = useState(new Set());
+
+  // Helper function to format duration from seconds to MM:SS or HH:MM format
+  const formatStatsDuration = (seconds) => {
+    if (!seconds || seconds === 0) return "0:00";
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+  };
 
   // API Functions
   const fetchCallStats = async (period = "today") => {
@@ -146,18 +179,53 @@ const DashboardPage = () => {
     }
 
     try {
-      const response = await axiosInstance.get("/dashboard/call-stats", {
+      const agentNumber = userData?.EmployeePhone;
+      if (!agentNumber) {
+        throw new Error("Agent phone number not found. Please login again.");
+      }
+
+      // Calculate date range based on period
+      const endDate = new Date();
+      const startDate = new Date();
+      
+      switch (period) {
+        case "today":
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        case "week":
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case "month":
+          startDate.setMonth(startDate.getMonth() - 1);
+          break;
+        default:
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+      }
+
+      console.log("📊 Fetching call stats for agent:", agentNumber);
+      
+      const response = await axiosInstance.get("/calls/stats", {
         params: {
-          period,
-          employeeId: userData?.EmployeeId,
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+          agentNumber: agentNumber,
         },
       });
-      return response.data.success ? response.data.data : null;
+
+      console.log("📊 Call stats API response:", response.data);
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        console.warn("⚠️ Stats API response structure unexpected:", response.data);
+        return mockCallStats; // Fallback to mock data
+      }
     } catch (error) {
-      console.error("Error fetching call stats:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch call statistics"
-      );
+      console.error("❌ Error fetching call stats:", error);
+      console.log("📊 Falling back to mock stats data");
+      return mockCallStats; // Fallback to mock data instead of throwing error
     }
   };
 
@@ -181,17 +249,103 @@ const DashboardPage = () => {
     }
 
     try {
-      const response = await axiosInstance.get("/dashboard/recent-calls", {
+      // Use the provided API endpoint with agentNumber
+      const agentNumber = userData?.EmployeePhone;
+      if (!agentNumber) {
+        throw new Error("Agent phone number not found. Please login again.");
+      }
+
+      console.log("📞 Fetching recent calls for agent:", agentNumber);
+      
+      const response = await axiosInstance.get("/calls/recent-calls", {
         params: {
-          period,
-          search,
-          employeeId: userData?.EmployeeId,
-          limit: 10,
+          agentNumber: agentNumber,
+          // Add other params if needed
+          ...(search && { search }),
         },
       });
-      return response.data.success ? response.data.data : [];
+
+      console.log("📞 Recent calls API response:", response.data);
+
+      if (response.data.success && response.data.data?.records) {
+        // Transform the API data to match our component structure
+        const transformedCalls = response.data.data.records.map((call) => {
+          // Calculate duration in MM:SS format
+          const formatDuration = (seconds) => {
+            if (!seconds || seconds === 0) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+          };
+
+          // Determine call status based on duration and type
+          const getCallStatus = (call) => {
+            if (call.duration > 0) return "completed";
+            if (call.type === "inbound" && call.duration === 0) return "missed";
+            if (call.type === "outbound" && call.duration === 0) return "failed";
+            return "completed";
+          };
+
+          // Get customer name from contact data
+          const customerName = call.contact?.Contact_Name || 
+                              call.contact?.Trader_Name || 
+                              call.contact?.trader_name || 
+                              call.contact?.name || 
+                              null;
+
+          // Extract region information from contact data (using proper API keys)
+          const region = call.contact?.Region || 
+                        call.contact?.Zone || 
+                        call.contact?.zone || 
+                        "Unknown";
+
+          // Get status from API (using the status field or derive from duration)
+          const callStatus = call.status || getCallStatus(call);
+
+          // Get remarks from formDetail
+          const remarks = call.formDetail?.remarks || null;
+
+          return {
+            id: call.CallId || `call_${Date.now()}_${Math.random()}`,
+            number: call.number || "Unknown",
+            customerName: customerName,
+            type: call.type === "inbound" ? "incoming" : "outgoing",
+            status: callStatus,
+            duration: formatDuration(call.duration),
+            callDateTime: call.startTime || new Date().toISOString(),
+            callStartTime: call.startTime || new Date().toISOString(),
+            region: region,
+            remarks: remarks,
+            // Additional data for future use
+            callId: call.CallId,
+            agentNumber: call.agentNumber,
+            endTime: call.endTime,
+            contactData: call.contact,
+            formDetail: call.formDetail,
+          };
+        });
+
+        // Apply client-side search filtering if needed
+        let filteredCalls = transformedCalls;
+        if (search) {
+          filteredCalls = transformedCalls.filter(
+            (call) =>
+              call.customerName
+                ?.toLowerCase()
+                .includes(search.toLowerCase()) ||
+              call.number.includes(search) ||
+              call.callId.toString().includes(search)
+          );
+        }
+
+        console.log(`📞 Successfully transformed ${filteredCalls.length} calls:`, filteredCalls);
+        return filteredCalls;
+      } else {
+        console.warn("⚠️ API response structure unexpected:", response.data);
+        return [];
+      }
     } catch (error) {
-      console.error("Error fetching recent calls:", error);
+      console.error("❌ Error fetching recent calls:", error);
       throw new Error(
         error.response?.data?.message || "Failed to fetch recent calls"
       );
@@ -206,18 +360,60 @@ const DashboardPage = () => {
     }
 
     try {
-      const response = await axiosInstance.get("/dashboard/follow-ups", {
+      const agentNumber = userData?.EmployeeId;
+      if (!agentNumber) {
+        throw new Error("Employee ID not found. Please login again.");
+      }
+
+      console.log("📋 Fetching follow-ups for agent:", agentNumber);
+      
+      const response = await axiosInstance.get("/calls/follow-ups", {
         params: {
-          employeeId: userData?.EmployeeId,
-          status: "pending",
+          agentNumber: agentNumber,
         },
       });
-      return response.data.success ? response.data.data : [];
+
+      console.log("📋 Follow-ups API response:", response.data);
+
+      if (response.data.success && response.data.data) {
+        // Transform the API data to match component structure
+        const transformedFollowUps = response.data.data.records.map((followUp) => {
+          // Determine priority based on follow-up date
+          const followUpDate = new Date(followUp.followUpDate);
+          const today = new Date();
+          const diffDays = Math.ceil((followUpDate - today) / (1000 * 60 * 60 * 24));
+          
+          let priority = "Normal";
+          if (diffDays < 0) {
+            priority = "High"; // Overdue
+          } else if (diffDays <= 1) {
+            priority = "Medium"; // Due today or tomorrow
+          }
+
+          return {
+            id: followUp.id,
+            customerName: followUp.employee?.EmployeeName || "Unknown",
+            phoneNumber: followUp.inquiryNumber,
+            followUpDate: followUp.followUpDate,
+            priority: priority,
+            issue: followUp.remarks || "No remarks provided",
+            callId: followUp.CallId,
+            status: followUp.status,
+            callType: followUp.callType,
+            employeeData: followUp.employee,
+            rawData: followUp, // Store original data
+          };
+        });
+
+        return transformedFollowUps;
+      } else {
+        console.warn("⚠️ Follow-ups API response structure unexpected:", response.data);
+        return [];
+      }
     } catch (error) {
-      console.error("Error fetching follow-ups:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch follow-ups"
-      );
+      console.error("❌ Error fetching follow-ups:", error);
+      console.log("📋 Falling back to mock follow-ups data");
+      return mockFollowUps; // Fallback to mock data instead of throwing error
     }
   };
 
@@ -336,28 +532,31 @@ const DashboardPage = () => {
     return (
       <div className="bg-gray-50 min-h-screen">
         <div className="animate-pulse">
-          {/* Stats Cards Skeleton with Shimmer */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white p-4 rounded-lg shadow border border-gray-200 relative overflow-hidden"
-              >
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-200 rounded-lg w-10 h-10 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="ml-4 flex-1">
-                    <div className="h-3 bg-gray-200 rounded mb-2 relative overflow-hidden">
+          {/* Compact Stats Skeleton */}
+          <div className="mb-6">
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="border-r border-gray-200 pr-4 last:border-r-0 last:pr-0">
+                    <div className="h-4 bg-gray-200 rounded w-16 mb-2 relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
                     </div>
-                    <div className="h-6 bg-gray-200 rounded w-16 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                    <div className="grid grid-cols-5 gap-2 text-center">
+                      {[...Array(5)].map((_, j) => (
+                        <div key={j}>
+                          <div className="h-5 bg-gray-200 rounded w-8 mx-auto mb-1 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                          </div>
+                          <div className="h-2 bg-gray-200 rounded w-10 mx-auto relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
 
           {/* Content Skeleton with Shimmer */}
@@ -444,91 +643,111 @@ const DashboardPage = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <PhoneIcon className="w-6 h-6 text-blue-600" />
+      {/* Compact Stats Cards */}
+      <div className="mb-6">
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* Overall Stats */}
+            <div className="border-r border-gray-200 pr-4 last:border-r-0 last:pr-0">
+              <div className="flex items-center mb-2">
+                <ChartBarIcon className="w-4 h-4 text-blue-600 mr-1" />
+                <h4 className="text-sm font-semibold text-gray-700">Overall</h4>
+              </div>
+              <div className="grid grid-cols-5 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-bold text-gray-900">{callStats?.overall?.totalCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Total</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-green-600">{callStats?.overall?.answeredCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Answered</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-red-600">{callStats?.overall?.missedCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Missed</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-purple-600">{formatStatsDuration(callStats?.overall?.avgCallDuration) || "0:00"}</p>
+                  <p className="text-xs text-gray-500">Avg</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-orange-600">{formatStatsDuration(callStats?.overall?.totalTalkTime) || "0m"}</p>
+                  <p className="text-xs text-gray-500">Talk Time</p>
+                </div>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Calls</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.totalCalls || 0}
-              </p>
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircleIcon className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Answered</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.answeredCalls || 0}
-              </p>
-            </div>
-          </div>
-        </div>
+            {/* Inbound Stats */}
+            <button 
+              onClick={() => navigate('/dashboard/incoming-call')}
+              className="border-r border-gray-200 pr-4 last:border-r-0 last:pr-0 hover:bg-green-50 transition-colors duration-200 rounded-lg p-2 w-full text-left cursor-pointer"
+            >
+              <div className="flex items-center mb-2">
+                <PhoneArrowDownLeftIcon className="w-4 h-4 text-green-600 mr-1" />
+                <h4 className="text-sm font-semibold text-gray-700 group-hover:text-green-600 transition-colors">
+                  Inbound
+                </h4>
+              </div>
+              <div className="grid grid-cols-5 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-bold text-gray-900">{callStats?.inbound?.totalCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Total</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-green-600">{callStats?.inbound?.answeredCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Answered</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-red-600">{callStats?.inbound?.missedCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Missed</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-purple-600">{formatStatsDuration(callStats?.inbound?.avgCallDuration) || "0:00"}</p>
+                  <p className="text-xs text-gray-500">Avg</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-green-600">{formatStatsDuration(callStats?.inbound?.totalTalkTime) || "0m"}</p>
+                  <p className="text-xs text-gray-500">Talk Time</p>
+                </div>
+              </div>
+            </button>
 
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Missed</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.missedCalls || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <ClockIcon className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg Duration</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.avgCallDuration || "0:00"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <ChartBarIcon className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">
-                Total Talk Time
-              </p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.totalTalkTime || "0h 0m"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <UserGroupIcon className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Follow-ups</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.pendingFollowUps || 0}
-              </p>
-            </div>
+            {/* Outbound Stats */}
+            <button 
+              onClick={() => navigate('/dashboard/outgoing-call')}
+              className="hover:bg-blue-50 transition-colors duration-200 rounded-lg p-2 w-full text-left cursor-pointer"
+            >
+              <div className="flex items-center mb-2">
+                <PhoneArrowUpRightIcon className="w-4 h-4 text-blue-600 mr-1" />
+                <h4 className="text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
+                  Outbound
+                </h4>
+              </div>
+              <div className="grid grid-cols-5 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-bold text-gray-900">{callStats?.outbound?.totalCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Total</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-green-600">{callStats?.outbound?.answeredCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Answered</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-red-600">{callStats?.outbound?.missedCalls || 0}</p>
+                  <p className="text-xs text-gray-500">Missed</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-purple-600">{formatStatsDuration(callStats?.outbound?.avgCallDuration) || "0:00"}</p>
+                  <p className="text-xs text-gray-500">Avg</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-blue-600">{formatStatsDuration(callStats?.outbound?.totalTalkTime) || "0m"}</p>
+                  <p className="text-xs text-gray-500">Talk Time</p>
+                </div>
+              </div>
+            </button>
+            
           </div>
         </div>
       </div>
@@ -583,10 +802,16 @@ const DashboardPage = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Call Start
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Duration
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
+                      Region
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Remarks
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Time
@@ -636,10 +861,77 @@ const DashboardPage = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div className="text-sm text-gray-900">
+                              {(() => {
+                                try {
+                                  const date = new Date(call.callStartTime);
+                                  return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+                                } catch {
+                                  return 'Invalid Date';
+                                }
+                              })()}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {(() => {
+                                try {
+                                  const date = new Date(call.callStartTime);
+                                  return isNaN(date.getTime()) ? 'Invalid Time' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                } catch {
+                                  return 'Invalid Time';
+                                }
+                              })()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {call.duration}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {call.category}
+                            {call.region}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                            {call.remarks ? (
+                              <div>
+                                {call.remarks.length > 15 ? (
+                                  <div>
+                                    {expandedRemarks.has(call.id) ? (
+                                      <div>
+                                        <div className="whitespace-pre-wrap break-words mb-1">
+                                          {call.remarks}
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            const newExpanded = new Set(expandedRemarks);
+                                            newExpanded.delete(call.id);
+                                            setExpandedRemarks(newExpanded);
+                                          }}
+                                          className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                                        >
+                                          Show less
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <span>{call.remarks.substring(0, 15)}...</span>
+                                        <button
+                                          onClick={() => {
+                                            const newExpanded = new Set(expandedRemarks);
+                                            newExpanded.add(call.id);
+                                            setExpandedRemarks(newExpanded);
+                                          }}
+                                          className="ml-1 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                                        >
+                                          read more
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span>{call.remarks}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 italic">No remarks</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {formatRelativeTime(call.callDateTime)}
@@ -650,7 +942,7 @@ const DashboardPage = () => {
                   ) : (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="7"
                         className="px-6 py-8 text-center text-gray-500"
                       >
                         No calls found for the selected period

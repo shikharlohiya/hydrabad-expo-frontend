@@ -16,24 +16,62 @@ export const CALL_STATUS = {
   INCOMING_CALL: "incoming_call", // Added specific status for incoming calls
 };
 
+// Helper function to get persisted dialer state
+const getPersistedDialerState = () => {
+  try {
+    const persistedState = localStorage.getItem("dialerState");
+    return persistedState ? JSON.parse(persistedState) : null;
+  } catch (error) {
+    console.error("Error loading persisted dialer state:", error);
+    return null;
+  }
+};
+
 const DialerProvider = ({ children }) => {
   const baseURL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
 
-  // Core call state
-  const [callStatus, setCallStatus] = useState(CALL_STATUS.IDLE);
-  const [currentNumber, setCurrentNumber] = useState("");
-  const [callDuration, setCallDuration] = useState(0);
-  const [callStartTime, setCallStartTime] = useState(null);
-  const [isOnHold, setIsOnHold] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [activeCallId, setActiveCallId] = useState(null);
-  const [contactName, setContactName] = useState(null);
-  const [callDirection, setCallDirection] = useState("outgoing");
+  // Load persisted state on mount
+  const persistedState = getPersistedDialerState();
+  
+  // Core call state - initialize with persisted values if available
+  const [callStatus, setCallStatus] = useState(
+    persistedState?.callStatus || CALL_STATUS.IDLE
+  );
+  const [currentNumber, setCurrentNumber] = useState(
+    persistedState?.currentNumber || ""
+  );
+  const [callDuration, setCallDuration] = useState(
+    persistedState?.callDuration || 0
+  );
+  const [callStartTime, setCallStartTime] = useState(
+    persistedState?.callStartTime || null
+  );
+  const [isOnHold, setIsOnHold] = useState(
+    persistedState?.isOnHold || false
+  );
+  const [isMuted, setIsMuted] = useState(
+    persistedState?.isMuted || false
+  );
+  const [activeCallId, setActiveCallId] = useState(
+    persistedState?.activeCallId || null
+  );
+  const [contactName, setContactName] = useState(
+    persistedState?.contactName || null
+  );
+  const [callDirection, setCallDirection] = useState(
+    persistedState?.callDirection || "outgoing"
+  );
 
   // Incoming call state
-  const [incomingCallData, setIncomingCallData] = useState(null);
-  const [isIncomingCall, setIsIncomingCall] = useState(false);
-  const [incomingCallTimer, setIncomingCallTimer] = useState(0);
+  const [incomingCallData, setIncomingCallData] = useState(
+    persistedState?.incomingCallData || null
+  );
+  const [isIncomingCall, setIsIncomingCall] = useState(
+    persistedState?.isIncomingCall || false
+  );
+  const [incomingCallTimer, setIncomingCallTimer] = useState(
+    persistedState?.incomingCallTimer || 0
+  );
 
   // API state
   const [bearerToken, setBearerToken] = useState(
@@ -61,10 +99,96 @@ const DialerProvider = ({ children }) => {
   const [lastError, setLastError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [hasFormBeenSubmitted, setHasFormBeenSubmitted] = useState(false);
-  const [callDetailsForForm, setCallDetailsForForm] = useState(null);
+  const [hasFormBeenSubmitted, setHasFormBeenSubmitted] = useState(
+    persistedState?.hasFormBeenSubmitted || false
+  );
+  const [callDetailsForForm, setCallDetailsForForm] = useState(
+    persistedState?.callDetailsForForm || null
+  );
 
   const callEndProcessedRef = useRef(false);
+
+  // Function to persist dialer state to localStorage
+  const persistDialerState = () => {
+    try {
+      const stateToSave = {
+        callStatus,
+        currentNumber,
+        callDuration,
+        callStartTime,
+        isOnHold,
+        isMuted,
+        activeCallId,
+        contactName,
+        callDirection,
+        incomingCallData,
+        isIncomingCall,
+        incomingCallTimer,
+        hasFormBeenSubmitted,
+        callDetailsForForm,
+        timestamp: Date.now(), // Add timestamp for expiry check
+      };
+      
+      localStorage.setItem("dialerState", JSON.stringify(stateToSave));
+      console.log("💾 Dialer state persisted:", stateToSave);
+    } catch (error) {
+      console.error("❌ Error persisting dialer state:", error);
+    }
+  };
+
+  // Auto-persist state whenever it changes
+  useEffect(() => {
+    // Only persist if there's meaningful state to save
+    if (activeCallId || callStatus !== CALL_STATUS.IDLE || currentNumber || isIncomingCall) {
+      persistDialerState();
+    }
+  }, [
+    callStatus,
+    currentNumber,
+    callDuration,
+    callStartTime,
+    isOnHold,
+    isMuted,
+    activeCallId,
+    contactName,
+    callDirection,
+    incomingCallData,
+    isIncomingCall,
+    incomingCallTimer,
+    hasFormBeenSubmitted,
+    callDetailsForForm,
+  ]);
+
+  // Clear expired persisted state on mount and handle recovery
+  useEffect(() => {
+    if (persistedState?.timestamp) {
+      const now = Date.now();
+      const stateAge = now - persistedState.timestamp;
+      const maxAge = 30 * 60 * 1000; // 30 minutes
+      
+      if (stateAge > maxAge) {
+        console.log("🧹 Clearing expired dialer state");
+        localStorage.removeItem("dialerState");
+      } else {
+        console.log("🔄 Restored dialer state from localStorage:", persistedState);
+        
+        // If there was an active call before refresh, log for debugging
+        if (persistedState.activeCallId && persistedState.callStatus !== CALL_STATUS.IDLE) {
+          console.log("🔄 Active call state recovered:", {
+            callId: persistedState.activeCallId,
+            status: persistedState.callStatus,
+            number: persistedState.currentNumber,
+            duration: persistedState.callDuration
+          });
+          
+          // If call was connected, restart the timer
+          if (persistedState.callStatus === CALL_STATUS.CONNECTED && persistedState.callStartTime) {
+            console.log("🔄 Restarting call timer after refresh");
+          }
+        }
+      }
+    }
+  }, []);
 
   // User data from localStorage
   const [userData] = useState(() => {
@@ -509,13 +633,20 @@ const DialerProvider = ({ children }) => {
     resetCallState();
   };
 
-  // Timer effect for call duration
+  // Timer effect for call duration - with recovery for page refresh
   useEffect(() => {
     if (callStatus === CALL_STATUS.CONNECTED && callStartTime) {
       timerIntervalRef.current = setInterval(() => {
         const duration = Math.floor((Date.now() - callStartTime) / 1000);
         setCallDuration(duration);
       }, 1000);
+
+      // Initial calculation for restored state (after page refresh)
+      if (callDuration === 0) {
+        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+        setCallDuration(elapsed);
+        console.log("🔄 Recovered call duration after refresh:", elapsed);
+      }
     } else {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
@@ -1007,10 +1138,12 @@ const DialerProvider = ({ children }) => {
       // Preserve call details for form submission BEFORE resetting state
       if (callStartTime || activeCallId) {
         setCallDetailsForForm({
-          callId: activeCallId || callId,
+          CallId: activeCallId || callId, // Use CallId (capital C) to match form expectations
+          callId: activeCallId || callId, // Keep both for compatibility
           number: currentNumber || callerNumber,
           contactName: contactName,
           callDirection: callDirection,
+          callType: callDirection, // Add callType property
           callDuration: callDuration,
           startTime: callStartTime ? new Date(callStartTime) : new Date(),
         });
@@ -1048,7 +1181,8 @@ const DialerProvider = ({ children }) => {
       startTime: callStartTime ? new Date(callStartTime) : new Date(),
       number: currentNumber,
       contactName: contactName,
-      callType: callDirection,
+      callType: callDirection, // This will be 'incoming' or 'outgoing'
+      callDirection: callDirection, // Add explicit callDirection property
       callDuration: callDuration,
     };
 
@@ -1063,10 +1197,13 @@ const DialerProvider = ({ children }) => {
       contactName: callDetails.contactName || contactName,
       callType:
         callDetails.callDirection || callDetails.callType || callDirection,
+      callDirection: callDetails.callDirection || callDirection, // Ensure callDirection is always passed
       callDuration: callDetails.callDuration || callDuration,
     };
 
     console.log("📋 Opening form with call details:", formData);
+    console.log("📋 Call direction being passed:", formData.callDirection);
+    console.log("📋 Call type being passed:", formData.callType);
     openForm(formData);
   };
 
@@ -1235,6 +1372,10 @@ const DialerProvider = ({ children }) => {
     setCallDetailsForForm(null);
     callEndProcessedRef.current = false;
     stopIncomingCallTimer();
+    
+    // Clear persisted dialer state
+    localStorage.removeItem("dialerState");
+    console.log("🧹 Cleared persisted dialer state");
   };
 
   // Helper functions

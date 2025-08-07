@@ -214,8 +214,194 @@ const ContactsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="space-y-4">
+        <div className="animate-pulse">
+          {/* Header Skeleton with Shimmer */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="h-6 bg-gray-200 rounded w-48 mb-2 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-4 bg-gray-200 rounded w-64 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <div className="h-10 bg-gray-200 rounded w-32 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded w-32 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Cards Skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-gray-50 rounded-lg p-4">
+                    <div className="h-4 bg-gray-200 rounded w-20 mb-2 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                    </div>
+                    <div className="h-8 bg-gray-200 rounded w-12 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Search and Filters Skeleton */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="h-10 bg-gray-200 rounded w-80 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                </div>
+                <div className="flex space-x-2">
+                  <div className="h-10 bg-gray-200 rounded w-24 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded w-32 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded w-28 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Skeleton with Shimmer */}
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            {/* Table Header */}
+            <div className="bg-gray-50 px-6 py-3">
+              <div className="grid grid-cols-12 gap-4">
+                <div className="col-span-3">
+                  <div className="h-4 bg-gray-200 rounded w-20 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className="h-4 bg-gray-200 rounded w-16 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className="h-4 bg-gray-200 rounded w-14 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className="h-4 bg-gray-200 rounded w-18 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+                <div className="col-span-1">
+                  <div className="h-4 bg-gray-200 rounded w-12 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className="h-4 bg-gray-200 rounded w-16 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Table Rows */}
+            <div className="divide-y divide-gray-200">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="px-6 py-4">
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-200 rounded-full relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                        </div>
+                        <div>
+                          <div className="h-4 bg-gray-200 rounded w-32 mb-1 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                          </div>
+                          <div className="h-3 bg-gray-200 rounded w-24 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="h-4 bg-gray-200 rounded w-20 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="h-4 bg-gray-200 rounded w-16 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="h-4 bg-gray-200 rounded w-24 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                      </div>
+                    </div>
+                    <div className="col-span-1">
+                      <div className="h-6 bg-gray-200 rounded-full w-16 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="h-8 bg-gray-200 rounded w-20 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pagination Skeleton */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="h-4 bg-gray-200 rounded w-40 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                </div>
+                <div className="flex space-x-2">
+                  <div className="h-10 bg-gray-200 rounded w-20 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded w-8 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded w-8 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded w-20 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Add custom shimmer animation styles */}
+        <style jsx>{`
+          @keyframes shimmer {
+            0% {
+              transform: translateX(-100%);
+            }
+            100% {
+              transform: translateX(100%);
+            }
+          }
+
+          .animate-shimmer {
+            animation: shimmer 1.5s infinite;
+          }
+        `}</style>
       </div>
     );
   }
@@ -245,8 +431,8 @@ const ContactsPage = () => {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Traders Directory</h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <h1 className="text-xl font-semibold text-gray-900">Traders Directory</h1>
+              <p className="text-sm text-gray-500 mt-1">
                 {searchTerm ? `${filteredTraders.length} filtered` : `${traders.length}`} of {totalRecords} traders
                 {pagination && (
                   <span className="ml-2">
@@ -266,26 +452,26 @@ const ContactsPage = () => {
           {traderCounts && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
               <div className="text-center">
-                <div className="text-2xl font-bold text-indigo-600">{traderCounts.totalCount}</div>
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total</div>
+                <div className="text-base font-semibold text-indigo-600">{traderCounts.totalCount}</div>
+                <div className="text-xs text-gray-500">Total</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-base font-semibold text-green-600">
                   {traderCounts.statusCounts?.find(s => s.status === 'active')?.count || 0}
                 </div>
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Active</div>
+                <div className="text-xs text-gray-500">Active</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-base font-semibold text-red-600">
                   {traderCounts.statusCounts?.find(s => s.status === 'inactive')?.count || 0}
                 </div>
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Inactive</div>
+                <div className="text-xs text-gray-500">Inactive</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-base font-semibold text-blue-600">
                   {traderCounts.matchedRegions?.length || 0}
                 </div>
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Regions</div>
+                <div className="text-xs text-gray-500">Regions</div>
               </div>
             </div>
           )}
