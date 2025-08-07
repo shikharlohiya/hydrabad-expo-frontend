@@ -468,14 +468,14 @@ const CallRemarksForm = ({
 
         {/* Form Actions */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
-          <button
+          {/* <button
             type="button"
             onClick={handleCancel}
             disabled={isSubmitting}
             className="px-6 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-2 sm:order-1"
           >
             Cancel
-          </button>
+          </button> */}
           <button
             type="button"
             onClick={handleSubmit}
