@@ -78,6 +78,9 @@ const DialerProvider = ({ children }) => {
     localStorage.getItem("clickToCallToken")
   );
 
+  // Track if current user initiated the call to prevent duplicate socket processing
+  const [userInitiatedCall, setUserInitiatedCall] = useState(false);
+
   useEffect(() => {
     const fetchToken = async () => {
       try {
@@ -252,15 +255,40 @@ const DialerProvider = ({ children }) => {
       onCallInitiated: (data) => {
         console.log("📞 Call initiated event:", data);
         
+        // Normalize phone numbers for comparison (remove spaces, handle different formats)
+        const normalizePhone = (phone) => {
+          if (!phone) return '';
+          return String(phone).replace(/[\s\-\+]/g, '').trim();
+        };
+        
+        const eventPhone = normalizePhone(data.apartyno);
+        const userPhone = normalizePhone(userData.EmployeePhone);
+        
         // Check if this is for the current user (outgoing call filtering)
-        const isForCurrentUser = data.apartyno === userData.EmployeePhone;
+        const isForCurrentUser = eventPhone === userPhone;
+        
         console.log("🔍 Checking if outgoing call is for current user:", {
           eventApartyno: data.apartyno,
+          normalizedEventPhone: eventPhone,
           userPhone: userData.EmployeePhone,
+          normalizedUserPhone: userPhone,
           isForCurrentUser: isForCurrentUser
         });
         
         if (isForCurrentUser && data.callId) {
+          // Additional check: Don't process if we already have an active call
+          if (activeCallId && activeCallId !== data.callId) {
+            console.log("⚠️ Ignoring call-initiated - already have active call:", activeCallId);
+            return;
+          }
+          
+          // Don't process socket event if user initiated the call themselves
+          // (they already got the status from the initiateCall function)
+          if (userInitiatedCall && activeCallId === data.callId) {
+            console.log("⚠️ Ignoring call-initiated socket event - user initiated this call");
+            return;
+          }
+          
           console.log("✅ Processing call-initiated event for current user");
           setActiveCallId(data.callId);
           setCallStatus(CALL_STATUS.RINGING);
@@ -441,6 +469,7 @@ const DialerProvider = ({ children }) => {
     hasFormBeenSubmitted,
     callDetailsForForm,
     callStatus,
+    userInitiatedCall,
   ]);
 
   // Helper function to parse webhook time format
@@ -880,6 +909,7 @@ const DialerProvider = ({ children }) => {
       if (status === 1 && message?.Response === "success" && message?.callid) {
         setActiveCallId(message.callid);
         setCallStatus(CALL_STATUS.RINGING);
+        setUserInitiatedCall(true); // Mark that current user initiated this call
 
         if (isConnected()) {
           emitCallEvent("call-initiated", {
@@ -1370,6 +1400,7 @@ const DialerProvider = ({ children }) => {
     setIsIncomingCall(false);
     setHasFormBeenSubmitted(false);
     setCallDetailsForForm(null);
+    setUserInitiatedCall(false); // Reset user initiated call flag
     callEndProcessedRef.current = false;
     stopIncomingCallTimer();
     

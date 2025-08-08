@@ -179,48 +179,72 @@ const DashboardPage = () => {
     }
 
     try {
+      const userRole = userData?.EmployeeRole;
+      const employeeId = userData?.EmployeeId;
       const agentNumber = userData?.EmployeePhone;
-      if (!agentNumber) {
-        throw new Error("Agent phone number not found. Please login again.");
-      }
 
-      // Calculate date range based on period
-      const endDate = new Date();
-      const startDate = new Date();
-      
-      switch (period) {
-        case "today":
-          startDate.setHours(0, 0, 0, 0);
-          endDate.setHours(23, 59, 59, 999);
-          break;
-        case "week":
-          startDate.setDate(startDate.getDate() - 7);
-          break;
-        case "month":
-          startDate.setMonth(startDate.getMonth() - 1);
-          break;
-        default:
-          startDate.setHours(0, 0, 0, 0);
-          endDate.setHours(23, 59, 59, 999);
-      }
+      // Check if user is a manager (EmployeeRole = 2) or agent (EmployeeRole = 1)
+      if (userRole === 2) {
+        // Manager - fetch combined statistics
+        if (!employeeId) {
+          throw new Error("Manager ID not found. Please login again.");
+        }
 
-      console.log("📊 Fetching call stats for agent:", agentNumber);
-      
-      const response = await axiosInstance.get("/calls/stats", {
-        params: {
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          agentNumber: agentNumber,
-        },
-      });
+        console.log("📊 Fetching manager call stats for:", employeeId);
+        
+        const response = await axiosInstance.get(`/calls/manager-call-stats/${employeeId}`);
+        console.log("📊 Manager stats API response:", response.data);
 
-      console.log("📊 Call stats API response:", response.data);
-
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        } else {
+          console.warn("⚠️ Manager stats API response structure unexpected:", response.data);
+          return mockCallStats; // Fallback to mock data
+        }
       } else {
-        console.warn("⚠️ Stats API response structure unexpected:", response.data);
-        return mockCallStats; // Fallback to mock data
+        // Agent - fetch individual agent statistics
+        if (!agentNumber) {
+          throw new Error("Agent phone number not found. Please login again.");
+        }
+
+        // Calculate date range based on period
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        switch (period) {
+          case "today":
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+          case "week":
+            startDate.setDate(startDate.getDate() - 7);
+            break;
+          case "month":
+            startDate.setMonth(startDate.getMonth() - 1);
+            break;
+          default:
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+        }
+
+        console.log("📊 Fetching call stats for agent:", agentNumber);
+        
+        const response = await axiosInstance.get("/calls/stats", {
+          params: {
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+            agentNumber: agentNumber,
+          },
+        });
+
+        console.log("📊 Agent stats API response:", response.data);
+
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        } else {
+          console.warn("⚠️ Agent stats API response structure unexpected:", response.data);
+          return mockCallStats; // Fallback to mock data
+        }
       }
     } catch (error) {
       console.error("❌ Error fetching call stats:", error);
@@ -249,23 +273,38 @@ const DashboardPage = () => {
     }
 
     try {
-      // Use the provided API endpoint with agentNumber
+      const userRole = userData?.EmployeeRole;
+      const employeeId = userData?.EmployeeId;
       const agentNumber = userData?.EmployeePhone;
-      if (!agentNumber) {
-        throw new Error("Agent phone number not found. Please login again.");
-      }
 
-      console.log("📞 Fetching recent calls for agent:", agentNumber);
-      
-      const response = await axiosInstance.get("/calls/recent-calls", {
-        params: {
-          agentNumber: agentNumber,
-          // Add other params if needed
-          ...(search && { search }),
-        },
-      });
+      // Determine API call based on user role
+      const response = userRole === 2 
+        ? await (async () => {
+            if (!employeeId) {
+              throw new Error("Manager ID not found. Please login again.");
+            }
+            console.log("📞 Fetching recent calls for manager:", employeeId);
+            return await axiosInstance.get("/calls/recent-calls", {
+              params: {
+                managerId: employeeId,
+                ...(search && { search }),
+              },
+            });
+          })()
+        : await (async () => {
+            if (!agentNumber) {
+              throw new Error("Agent phone number not found. Please login again.");
+            }
+            console.log("📞 Fetching recent calls for agent:", agentNumber);
+            return await axiosInstance.get("/calls/recent-calls", {
+              params: {
+                agentNumber: agentNumber,
+                ...(search && { search }),
+              },
+            });
+          })();
 
-      console.log("📞 Recent calls API response:", response.data);
+      console.log(`📞 ${userRole === 2 ? 'Manager' : 'Agent'} recent calls API response:`, response.data);
 
       if (response.data.success && response.data.data?.records) {
         // Transform the API data to match our component structure
@@ -305,6 +344,10 @@ const DashboardPage = () => {
           // Get remarks from formDetail
           const remarks = call.formDetail?.remarks || null;
 
+          // Get agent information (for manager view)
+          const agentName = call.employee?.EmployeeName || call.agent?.name || null;
+          const agentId = call.employee?.EmployeeId || call.agent?.id || null;
+
           return {
             id: call.CallId || `call_${Date.now()}_${Math.random()}`,
             number: call.number || "Unknown",
@@ -316,6 +359,9 @@ const DashboardPage = () => {
             callStartTime: call.startTime || new Date().toISOString(),
             region: region,
             remarks: remarks,
+            // Agent information (for manager view)
+            agentName: agentName,
+            agentId: agentId,
             // Additional data for future use
             callId: call.CallId,
             agentNumber: call.agentNumber,
@@ -334,7 +380,9 @@ const DashboardPage = () => {
                 ?.toLowerCase()
                 .includes(search.toLowerCase()) ||
               call.number.includes(search) ||
-              call.callId.toString().includes(search)
+              call.callId.toString().includes(search) ||
+              // For managers, also search by agent name
+              (userData?.EmployeeRole === 2 && call.agentName?.toLowerCase().includes(search.toLowerCase()))
           );
         }
 
@@ -360,20 +408,23 @@ const DashboardPage = () => {
     }
 
     try {
-      const agentNumber = userData?.EmployeeId;
-      if (!agentNumber) {
+      const userRole = userData?.EmployeeRole;
+      const employeeId = userData?.EmployeeId;
+
+      if (!employeeId) {
         throw new Error("Employee ID not found. Please login again.");
       }
 
-      console.log("📋 Fetching follow-ups for agent:", agentNumber);
+      // Use the same parameter name but different context based on role
+      console.log(`📋 Fetching follow-ups for ${userRole === 2 ? 'manager' : 'agent'}:`, employeeId);
       
       const response = await axiosInstance.get("/calls/follow-ups", {
         params: {
-          agentNumber: agentNumber,
+          agentNumber: employeeId, // For managers, this will fetch follow-ups for all their agents
         },
       });
 
-      console.log("📋 Follow-ups API response:", response.data);
+      console.log(`📋 ${userRole === 2 ? 'Manager' : 'Agent'} follow-ups API response:`, response.data);
 
       if (response.data.success && response.data.data) {
         // Transform the API data to match component structure
@@ -643,9 +694,46 @@ const DashboardPage = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {/* Dashboard Header with Role Indicator */}
+      <div className="mb-4">
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {userData?.EmployeeRole === 2 ? 'Manager Dashboard' : 'Agent Dashboard'}
+              </h1>
+              {userData?.EmployeeRole === 2 && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  <UserGroupIcon className="w-4 h-4 mr-1" />
+                  Manager View
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Welcome back,</p>
+              <p className="text-lg font-semibold text-gray-900">{userData?.EmployeeName}</p>
+              <p className="text-xs text-gray-500">
+                {userData?.EmployeeRole === 2 ? 'Manager' : 'Agent'} • {userData?.EmployeeRegion}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Compact Stats Cards */}
       <div className="mb-6">
         <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+          <div className="mb-3">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {userData?.EmployeeRole === 2 ? 'Team Call Statistics' : 'Your Call Statistics'}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {userData?.EmployeeRole === 2 
+                ? 'Combined statistics for all agents under your supervision' 
+                : 'Your individual call performance metrics'
+              }
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
             {/* Overall Stats */}
@@ -760,7 +848,7 @@ const DashboardPage = () => {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  Recent Calls
+                  {userData?.EmployeeRole === 2 ? 'Recent Team Calls' : 'Recent Calls'}
                 </h2>
                 <div className="flex items-center space-x-3">
                   <select
@@ -783,7 +871,7 @@ const DashboardPage = () => {
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search calls by name or number..."
+                  placeholder={userData?.EmployeeRole === 2 ? "Search team calls by name, number, or agent..." : "Search calls by name or number..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
@@ -807,6 +895,11 @@ const DashboardPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Duration
                     </th>
+                    {userData?.EmployeeRole === 2 && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Agent
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Region
                     </th>
@@ -885,6 +978,12 @@ const DashboardPage = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {call.duration}
                           </td>
+                          {userData?.EmployeeRole === 2 && (
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <div className="text-sm text-gray-900">{call.agentName || 'Unknown'}</div>
+                              <div className="text-xs text-gray-500">{call.agentNumber || call.agentId || 'N/A'}</div>
+                            </td>
+                          )}
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {call.region}
                           </td>
@@ -942,7 +1041,7 @@ const DashboardPage = () => {
                   ) : (
                     <tr>
                       <td
-                        colSpan="7"
+                        colSpan={userData?.EmployeeRole === 2 ? "8" : "7"}
                         className="px-6 py-8 text-center text-gray-500"
                       >
                         No calls found for the selected period
@@ -961,7 +1060,7 @@ const DashboardPage = () => {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Pending Follow-ups
+                  {userData?.EmployeeRole === 2 ? 'Team Pending Follow-ups' : 'Pending Follow-ups'}
                 </h3>
                 <CalendarIcon className="w-5 h-5 text-gray-400" />
               </div>

@@ -65,12 +65,15 @@ export default function Login() {
         setUser(response.data.employee);
 
         // Show a welcome message and navigate to the dashboard
+        // Navigate immediately to dashboard after successful login
+        navigate("/dashboard", { replace: true });
+
+        // Show success toast with custom styling
         toast.success(
           `🎉 Welcome back, ${response.data.employee.EmployeeName}!`,
           {
             position: "top-right",
-            autoClose: 1000,
-            onClose: () => navigate("/dashboard"),
+            autoClose: 2000,
           }
         );
       } else {

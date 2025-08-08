@@ -20,12 +20,17 @@ import {
   XMarkIcon,
   DocumentTextIcon,
   PlayIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
 
 const IncomingCallPage = () => {
   const { userData } = useContext(UserContext);
+  
+  // Role-based management: Check if user is manager (EmployeeRole = 2)
+  const isManager = userData?.EmployeeRole === 2;
+  const managerId = userData?.EmployeeId;
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -41,6 +46,18 @@ const IncomingCallPage = () => {
   const [selectedCall, setSelectedCall] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [expandedRemarks, setExpandedRemarks] = useState(new Set());
+
+  // Manager-specific state
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [connectedFilter, setConnectedFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [availableAgents, setAvailableAgents] = useState([]);
+  
+  // Manager Excel Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportError, setExportError] = useState(null);
 
   // Helper function to format duration from seconds
   const formatDurationFromSeconds = (seconds) => {
@@ -63,76 +80,159 @@ const IncomingCallPage = () => {
     }
   };
 
-  // Fetch incoming calls from API
+  // Fetch incoming calls from API (Agent or Manager based)
   const fetchIncomingCalls = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const agentNumber = userData?.EmployeePhone;
-      if (!agentNumber) {
-        throw new Error("Agent phone number not found. Please login again.");
-      }
-
-      // Static date range - as requested
-      const startDate = "2025-08-06";
-      const endDate = "2025-08-07";
-
-      console.log("📞 Fetching incoming calls for agent:", agentNumber);
+      let response;
       
-      const response = await axiosInstance.get("/calls/incoming", {
-        params: {
-          page: currentPage,
-          limit: 10,
-          startDate: startDate,
-          endDate: endDate,
-          agentNumber: agentNumber,
-        },
-      });
-
-      console.log("📞 Incoming calls API response:", response.data);
-
-      if (response.data.success && response.data.data) {
-        const { stats, pagination, records } = response.data.data;
+      if (isManager) {
+        // Manager API: /api/calls/employees-under-manager/{managerId}
+        console.log("📞 Fetching incoming calls for manager:", managerId);
         
-        // Transform the data to match component structure
-        const transformedCalls = records.map((call) => {
-          const callerName = call.contactDetails?.Contact_Name || "Unknown Caller";
-          const region = call.contactDetails?.Region || "Unknown";
-          const zone = call.contactDetails?.Zone || "Unknown";
-          const agentName = call.agentDetails?.EmployeeName || "Unknown Agent";
+        const params = {
+          page: currentPage,
+          limit: 50,
+        };
+        
+        // Add date filters if set
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        if (selectedAgent) params.agentId = selectedAgent;
+        if (connectedFilter) params.connected = connectedFilter === 'true';
+        
+        response = await axiosInstance.get(`/calls/employees-under-manager/${managerId}`, {
+          params
+        });
+        
+        console.log("📞 Manager incoming calls API response:", response.data);
+        
+        if (response.data.success && response.data.data) {
+          const { stats, pagination, groupedRecords } = response.data.data;
           
-          // Determine status based on ogCallStatus and duration
-          let status = "missed";
-          if (call.ogCallStatus === "Connected" && call.totalCallDuration > 0) {
-            status = "answered";
-          }
+          // Extract all agents for the dropdown
+          const agents = groupedRecords.map(group => ({
+            id: group.agentDetails.EmployeeId,
+            name: group.agentDetails.EmployeeName,
+            phone: group.agentDetails.EmployeePhone
+          }));
+          setAvailableAgents(agents);
           
-          return {
-            id: call.CallId,
-            callId: call.CallId,
-            callerName: callerName,
-            callerNumber: call.callerNumber,
-            region: region,
-            zone: zone,
-            callDateTime: call.callStartTime,
-            duration: formatDurationFromSeconds(call.totalCallDuration),
-            status: status,
-            agentName: agentName,
-            remarks: call.formDetails?.remarks || null,
-            rawData: call, // Store original data for details modal
-          };
+          // Flatten calls from all agents
+          const transformedCalls = [];
+          groupedRecords.forEach((group) => {
+            group.calls.forEach((call) => {
+              const callerName = call.contactDetails?.Contact_Name || "Unknown Caller";
+              const region = call.contactDetails?.Region || "Unknown";
+              const zone = call.contactDetails?.Zone || "Unknown";
+              const agentName = group.agentDetails?.EmployeeName || "Unknown Agent";
+              
+              // Determine status based on ogCallStatus and duration
+              let status = "missed";
+              if (call.ogCallStatus === "Connected" && call.totalCallDuration > 0) {
+                status = "answered";
+              }
+              
+              transformedCalls.push({
+                id: call.CallId,
+                callId: call.CallId,
+                callerName: callerName,
+                callerNumber: call.callerNumber,
+                region: region,
+                zone: zone,
+                callDateTime: call.callStartTime,
+                duration: formatDurationFromSeconds(call.totalCallDuration),
+                status: status,
+                agentName: agentName,
+                agentPhone: group.agentDetails?.EmployeePhone,
+                agentId: group.agentDetails?.EmployeeId,
+                remarks: call.formDetails?.remarks || null,
+                rawData: call, // Store original data for details modal
+                agentDetails: group.agentDetails, // Store agent details
+              });
+            });
+          });
+
+          setIncomingCalls(transformedCalls);
+          setStats({
+            total: stats.totalCalls || 0,
+            missed: stats.missedCalls || 0,
+            answered: stats.connectedCalls || 0,
+            totalTalkTime: formatTotalTalkTime(stats.totalTalkTime || 0)
+          });
+          setPagination(pagination);
+        }
+      } else {
+        // Agent API: /calls/incoming
+        const agentNumber = userData?.EmployeePhone;
+        if (!agentNumber) {
+          throw new Error("Agent phone number not found. Please login again.");
+        }
+
+        // Static date range - as requested
+        const staticStartDate = "2025-08-06";
+        const staticEndDate = "2025-08-07";
+
+        console.log("📞 Fetching incoming calls for agent:", agentNumber);
+        
+        response = await axiosInstance.get("/calls/incoming", {
+          params: {
+            page: currentPage,
+            limit: 10,
+            startDate: staticStartDate,
+            endDate: staticEndDate,
+            agentNumber: agentNumber,
+          },
         });
 
-        setIncomingCalls(transformedCalls);
-        setStats({
-          total: stats.totalCalls || 0,
-          missed: stats.missedCalls || 0,
-          answered: (stats.totalCalls || 0) - (stats.missedCalls || 0),
-          totalTalkTime: formatTotalTalkTime(stats.totalTalkTime || 0)
-        });
-        setPagination(pagination);
-      } else {
+        console.log("📞 Agent incoming calls API response:", response.data);
+
+        if (response.data.success && response.data.data) {
+          const { stats, pagination, records } = response.data.data;
+          
+          // Transform the data to match component structure
+          const transformedCalls = records.map((call) => {
+            const callerName = call.contactDetails?.Contact_Name || "Unknown Caller";
+            const region = call.contactDetails?.Region || "Unknown";
+            const zone = call.contactDetails?.Zone || "Unknown";
+            const agentName = call.agentDetails?.EmployeeName || "Unknown Agent";
+            
+            // Determine status based on ogCallStatus and duration
+            let status = "missed";
+            if (call.ogCallStatus === "Connected" && call.totalCallDuration > 0) {
+              status = "answered";
+            }
+            
+            return {
+              id: call.CallId,
+              callId: call.CallId,
+              callerName: callerName,
+              callerNumber: call.callerNumber,
+              region: region,
+              zone: zone,
+              callDateTime: call.callStartTime,
+              duration: formatDurationFromSeconds(call.totalCallDuration),
+              status: status,
+              agentName: agentName,
+              remarks: call.formDetails?.remarks || null,
+              rawData: call, // Store original data for details modal
+            };
+          });
+
+          setIncomingCalls(transformedCalls);
+          setStats({
+            total: stats.totalCalls || 0,
+            missed: stats.missedCalls || 0,
+            answered: (stats.totalCalls || 0) - (stats.missedCalls || 0),
+            totalTalkTime: formatTotalTalkTime(stats.totalTalkTime || 0)
+          });
+          setPagination(pagination);
+        }
+      }
+      
+      if (!response.data.success || !response.data.data) {
         console.warn("⚠️ API response structure unexpected:", response.data);
         setIncomingCalls([]);
         setStats({ total: 0, missed: 0, answered: 0, totalTalkTime: "0m" });
@@ -147,19 +247,120 @@ const IncomingCallPage = () => {
     }
   };
 
+  // Manager Excel Export function
+  const handleExcelExport = async () => {
+    if (!isManager) {
+      console.error("❌ Excel export is only available for managers");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      setExportProgress(0);
+      setExportError(null);
+
+      console.log("📊 Starting Excel export for manager:", managerId);
+
+      // Prepare export parameters
+      const exportParams = {};
+      if (startDate) exportParams.startDate = startDate;
+      if (endDate) exportParams.endDate = endDate;
+      if (selectedAgent) exportParams.agentId = selectedAgent;
+      if (connectedFilter) exportParams.connected = connectedFilter === 'true';
+
+      console.log("📊 Export parameters:", exportParams);
+
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setExportProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      // Make API call for Excel export
+      const response = await axiosInstance.get(
+        `/reports/manager-incoming-calls/${managerId}/download`,
+        {
+          params: exportParams,
+          responseType: 'blob',
+          timeout: 120000, // 2 minutes timeout
+        }
+      );
+
+      // Clear progress interval and complete
+      clearInterval(progressInterval);
+      setExportProgress(100);
+
+      // Create blob and download file
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+      link.download = `incoming-calls-report-${timestamp}.xlsx`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log("✅ Excel export completed successfully");
+      
+      // Show success message briefly
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportProgress(0);
+      }, 1000);
+
+    } catch (error) {
+      console.error("❌ Excel export failed:", error);
+      
+      let errorMessage = "Export failed. Please try again.";
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = "Export timed out. Please try with a smaller date range.";
+      } else if (error.response?.status === 403) {
+        errorMessage = "You don't have permission to export data.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Export service not available. Please contact support.";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setExportError(errorMessage);
+      
+      // Clear error after 5 seconds
+      setTimeout(() => {
+        setExportError(null);
+        setIsExporting(false);
+        setExportProgress(0);
+      }, 5000);
+    }
+  };
+
   // Load data when component mounts or filters change
   useEffect(() => {
-    if (userData?.EmployeePhone) {
+    if (isManager || userData?.EmployeePhone) {
       fetchIncomingCalls();
     }
-  }, [dateFilter, currentPage, userData]);
+  }, [dateFilter, currentPage, userData, selectedAgent, connectedFilter, startDate, endDate]);
 
   // Filter calls based on search and status
   const filteredCalls = incomingCalls.filter((call) => {
     const matchesSearch = 
       call.callerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       call.callerNumber.includes(searchTerm) ||
-      call.callId.toString().includes(searchTerm);
+      call.callId.toString().includes(searchTerm) ||
+      (isManager && call.agentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (isManager && call.agentPhone?.includes(searchTerm));
 
     const matchesStatus = statusFilter === "all" || call.status === statusFilter;
 
@@ -217,10 +418,13 @@ const IncomingCallPage = () => {
             <div>
               <h1 className="text-xl font-semibold text-gray-900 flex items-center">
                 <PhoneArrowDownLeftIcon className="w-5 h-5 text-green-600 mr-2" />
-                Incoming Calls
+                {isManager ? 'Incoming Calls - Manager View' : 'Incoming Calls'}
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Track and manage all incoming calls from traders
+                {isManager 
+                  ? 'Monitor and analyze incoming calls across your team' 
+                  : 'Track and manage all incoming calls from traders'
+                }
               </p>
             </div>
             <button
@@ -331,68 +535,182 @@ const IncomingCallPage = () => {
       {/* Filters Section */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            {/* Search */}
-            <div className="md:col-span-2">
-              <div className="relative">
-                <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search calls..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                />
+          {isManager ? (
+            /* Manager Filters */
+            <div className="space-y-4">
+              {/* Manager Filter Row 1: Date Range */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Agent</label>
+                  <select
+                    value={selectedAgent}
+                    onChange={(e) => setSelectedAgent(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  >
+                    <option value="">All Agents</option>
+                    {availableAgents.map((agent) => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.name} ({agent.phone})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Connection Status</label>
+                  <select
+                    value={connectedFilter}
+                    onChange={(e) => setConnectedFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  >
+                    <option value="">All Calls</option>
+                    <option value="true">Connected Only</option>
+                    <option value="false">Missed Only</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Manager Filter Row 2: Search and Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div className="md:col-span-2">
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search calls, agents..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    />
+                  </div>
+                </div>
+                
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                >
+                  <option value="all">All Status</option>
+                  <option value="answered">Answered</option>
+                  <option value="missed">Missed</option>
+                </select>
+                
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("all");
+                    setSelectedAgent("");
+                    setConnectedFilter("");
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Clear Filters
+                </button>
+                
+                {/* Excel Export Button for Manager */}
+                <button
+                  onClick={handleExcelExport}
+                  disabled={isExporting}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isExporting ? (
+                    <>
+                      <ArrowPathIcon className="w-4 h-4 animate-spin mr-2" />
+                      Exporting... {exportProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                      Export Excel
+                    </>
+                  )}
+                </button>
               </div>
             </div>
+          ) : (
+            /* Agent Filters */
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              {/* Search */}
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search calls..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
 
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">All Status</option>
-              <option value="answered">Answered</option>
-              <option value="missed">Missed</option>
-            </select>
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="all">All Status</option>
+                <option value="answered">Answered</option>
+                <option value="missed">Missed</option>
+              </select>
 
-            {/* Date Filter */}
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
+              {/* Date Filter */}
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
 
-            {/* Sort By */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="recent">Most Recent</option>
-              <option value="duration">Duration</option>
-              <option value="name">Caller Name</option>
-            </select>
+              {/* Sort By */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="recent">Most Recent</option>
+                <option value="duration">Duration</option>
+                <option value="name">Caller Name</option>
+              </select>
 
-            {/* Clear Filters */}
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("all");
-                setDateFilter("today");
-                setSortBy("recent");
-              }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Clear Filters
-            </button>
-          </div>
+              {/* Clear Filters */}
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                  setDateFilter("today");
+                  setSortBy("recent");
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -460,6 +778,11 @@ const IncomingCallPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Region Info
                     </th>
+                    {isManager && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Agent Info
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Call Info
                     </th>
@@ -504,6 +827,27 @@ const IncomingCallPage = () => {
                             {call.zone || 'N/A'}
                           </div>
                         </td>
+
+                        {/* Agent Info (Manager Only) */}
+                        {isManager && (
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-8 w-8">
+                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                  <UserIcon className="h-4 w-4 text-blue-600" />
+                                </div>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">{call.agentName}</div>
+                                <div className="text-xs text-gray-500 flex items-center">
+                                  <PhoneIcon className="h-3 w-3 mr-1" />
+                                  {call.agentPhone}
+                                </div>
+                                <div className="text-xs text-gray-400">ID: {call.agentId}</div>
+                              </div>
+                            </div>
+                          </td>
+                        )}
 
                         {/* Call Info */}
                         <td className="px-6 py-4">
@@ -842,6 +1186,56 @@ const IncomingCallPage = () => {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Export Progress Modal (Manager Only) */}
+      {isExporting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="text-center">
+                <ArrowDownTrayIcon className="w-12 h-12 text-green-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Exporting Incoming Calls Report
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Please wait while we generate your Excel report...
+                </p>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${exportProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-500">{exportProgress}% Complete</p>
+                
+                {exportProgress === 100 && (
+                  <div className="mt-4 flex items-center justify-center text-green-600">
+                    <CheckCircleIcon className="w-5 h-5 mr-2" />
+                    <span className="text-sm font-medium">Download started!</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Export Error Notification */}
+      {exportError && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg max-w-sm">
+            <div className="flex items-start">
+              <XCircleIcon className="w-5 h-5 text-red-400 mt-0.5 mr-3" />
+              <div>
+                <h4 className="text-sm font-medium text-red-800">Export Failed</h4>
+                <p className="text-sm text-red-600 mt-1">{exportError}</p>
               </div>
             </div>
           </div>

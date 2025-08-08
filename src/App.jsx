@@ -52,10 +52,6 @@ function App() {
             }
           />
 
-          {/* Redirect authenticated users from root to dashboard */}
-          {isAuthenticated && (
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          )}
 
           {/* Catch all route - 404 */}
           <Route path="*" element={<NotFound />} />
