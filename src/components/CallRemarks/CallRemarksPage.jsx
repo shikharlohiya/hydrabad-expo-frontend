@@ -6,7 +6,6 @@ import CallRemarksForm from "./CallRemarksForm";
 import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
-import NewCustomerForm from "./NewCustomerForm";
 import { ChevronRight } from "lucide-react";
 import UserContext from "../../context/UserContext";
 import axiosInstance from "../../library/axios";
@@ -46,10 +45,9 @@ const CallRemarksPage = () => {
   const [searchError, setSearchError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // New customer form states
+  // New customer form states - modified to store contact data
+  const [newContactData, setNewContactData] = useState(null);
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
-  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
-  const [customerCreationError, setCustomerCreationError] = useState(null);
 
   const { userData } = useContext(UserContext);
 
@@ -82,6 +80,7 @@ const CallRemarksPage = () => {
       setCallHistory([]);
       setSearchError(null);
       setShowNewCustomerForm(false);
+      setNewContactData(null); // Reset new contact data
     }
   }, [currentNumber]);
 
@@ -121,30 +120,25 @@ const CallRemarksPage = () => {
     } catch (error) {
       console.error("Trader search API error:", error);
 
+      // Handle 404 - customer not found (this is expected behavior)
       if (error.response?.status === 404) {
+        console.log(
+          "📝 Customer not found (404) - this is normal, showing add customer form"
+        );
         return { customer: null, history: [] };
       }
 
-      throw new Error(
-        error.response?.data?.message || "Failed to search trader"
-      );
-    }
-  };
-
-  // API call to create new trader
-  const createCustomerAPI = async (customerData) => {
-    try {
-      const response = await axiosInstance.post("/trader", customerData);
-
-      if (response.data.success) {
-        return response.data.data;
+      // Handle other API errors that indicate the API response contains error info
+      if (error.response?.data?.message) {
+        console.log(
+          "📝 API returned error message:",
+          error.response.data.message
+        );
+        return { customer: null, history: [] };
       }
-      throw new Error(response.data.message || "Failed to create trader");
-    } catch (error) {
-      console.error("Create trader API error:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to create trader"
-      );
+
+      // Only throw for actual network/server errors
+      throw new Error("Network error - please check your connection");
     }
   };
 
@@ -158,6 +152,7 @@ const CallRemarksPage = () => {
     setSearchError(null);
     setHasSearched(true);
     setShowNewCustomerForm(false);
+    setNewContactData(null); // Reset new contact data
 
     try {
       const { customer, history } = await searchCustomerAPI(searchTerm.trim());
@@ -168,12 +163,13 @@ const CallRemarksPage = () => {
         setShowCustomerPanel(true);
         setSearchError(null);
         setShowNewCustomerForm(false);
+        setNewContactData(null); // Clear new contact data if existing customer found
       } else {
         setCustomerData(null);
         setCallHistory([]);
         setShowCustomerPanel(false);
         setShowNewCustomerForm(true);
-        setSearchError("Trader not found. You can add them below (optional).");
+        setSearchError("Trader not found. You can add them below.");
       }
     } catch (error) {
       console.error("Search error:", error);
@@ -182,40 +178,31 @@ const CallRemarksPage = () => {
       setCallHistory([]);
       setShowCustomerPanel(false);
       setShowNewCustomerForm(false);
+      setNewContactData(null);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const handleCreateCustomer = async (newCustomerData) => {
-    setIsCreatingCustomer(true);
-    setCustomerCreationError(null);
-
-    try {
-      const createdCustomer = await createCustomerAPI(newCustomerData);
-
-      setCustomerData(createdCustomer);
-      setCallHistory([]);
-      setShowCustomerPanel(true);
-      setShowNewCustomerForm(false);
-      setSearchError(null);
-    } catch (error) {
-      console.error("Error creating trader:", error);
-      setCustomerCreationError(error.message);
-    } finally {
-      setIsCreatingCustomer(false);
-    }
-  };
-
-  const handleSkipNewCustomer = () => {
-    setShowNewCustomerForm(false);
-    setCustomerCreationError(null);
-  };
-
+  // Modified submit handler to include contact data
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmissionError(null);
+
+      // If we have new contact data, include it in the form submission
+      if (newContactData) {
+        // Add contact fields to formData
+        updateFormData("Contact_Name", newContactData.Contact_Name);
+        updateFormData("Region", newContactData.Region);
+        updateFormData("Type", newContactData.Type);
+      } else if (customerData && customerData.name) {
+        // If we have existing customer data, include it
+        updateFormData("Contact_Name", customerData.name);
+        updateFormData("Region", customerData.region || "");
+        updateFormData("Type", "Trader");
+      }
+
       await submitForm();
       setIsSubmitted(true);
     } catch (error) {
@@ -301,19 +288,6 @@ const CallRemarksPage = () => {
                 </div>
               </div>
 
-              {/* New Customer Form */}
-              {showNewCustomerForm && (
-                <div className="border-b border-gray-200">
-                  <NewCustomerForm
-                    phoneNumber={currentNumber}
-                    onSubmit={handleCreateCustomer}
-                    onCancel={handleSkipNewCustomer}
-                    isSubmitting={isCreatingCustomer}
-                    error={customerCreationError}
-                  />
-                </div>
-              )}
-
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto">
                 {isSubmitted ? (
@@ -371,6 +345,8 @@ const CallRemarksPage = () => {
                     callDuration={callDuration}
                     activeCallId={activeCallId}
                     userData={userData}
+                    showNewCustomerForm={showNewCustomerForm}
+                    searchError={searchError}
                   />
                 )}
               </div>

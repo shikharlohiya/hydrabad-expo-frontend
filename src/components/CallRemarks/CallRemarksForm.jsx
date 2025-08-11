@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axiosInstance from "../../library/axios";
+import { User, Phone, MapPin } from "lucide-react";
+import useForm from "../../hooks/useForm";
 
 const CallRemarksForm = ({
   currentNumber,
   currentCallDetails,
   customerData,
-  orderData, // Add this prop for order data
   formData,
   updateFormData,
   errors,
@@ -14,27 +15,16 @@ const CallRemarksForm = ({
   isSubmitting,
   isCallEnded,
   submissionError,
-  // Add these props from your DialerProvider
   callDirection,
   callStartTime,
   callDuration,
   activeCallId,
   userData,
+  // New props for customer form
+  showNewCustomerForm,
+  searchError,
 }) => {
-  // const [formData, setFormData] = useState({
-  //   CallId: "",
-  //   EmployeeId: "",
-  //   callDateTime: "",
-  //   callType: "",
-  //   supportTypeId: "",
-  //   inquiryNumber: "",
-  //   processTypeId: "",
-  //   queryTypeId: "",
-  //   remarks: "",
-  //   attachments: [],
-  //   status: "closed",
-  //   followUpDate: "",
-  // });
+  const { traderNotFoundData, setTraderNotFoundData } = useForm();
 
   const [dropdownOptions, setDropdownOptions] = useState({
     supportTypes: [],
@@ -48,23 +38,32 @@ const CallRemarksForm = ({
     queryTypes: false,
   });
 
-  // const [errors, setErrors] = useState({});
+  // Common regions
+  const regions = [
+    { value: "Rajnandgaon", label: "Rajnandgaon" },
+    { value: "Raipur", label: "Raipur" },
+    { value: "Bilaspur", label: "Bilaspur" },
+    { value: "Durg", label: "Durg" },
+    { value: "Korba", label: "Korba" },
+    { value: "Bhilai", label: "Bhilai" },
+    { value: "Other", label: "Other" },
+  ];
+
+  const typeOptions = [
+    { value: "Trader", label: "Trader" },
+    { value: "Non-Trader", label: "Non-Trader" },
+  ];
 
   // Auto-populate form data with actual call information
   useEffect(() => {
     const populateCallData = () => {
-      // Calculate call date and time
       const callDateTime = callStartTime
         ? new Date(callStartTime).toISOString().slice(0, 16)
         : new Date().toISOString().slice(0, 16);
 
-      // Determine call type from direction
       const callType = callDirection === "incoming" ? "InBound" : "OutBound";
+      const inquiryNumber = currentNumber || "";
 
-      // Auto-populate inquiry number with phone number
-      const inquiryNumber = currentCallDetails?.number || "";
-
-      // Use updateFormData for each field instead of setFormData
       updateFormData(
         "CallId",
         activeCallId || currentCallDetails?.CallId || ""
@@ -80,17 +79,22 @@ const CallRemarksForm = ({
 
     populateCallData();
   }, [
-    // Only include primitive values and IDs to prevent infinite loops
     activeCallId,
     currentCallDetails?.CallId,
     currentCallDetails?.EmployeeId,
     userData?.EmployeeId,
     callStartTime,
     callDirection,
-    orderData?.orderId,
-    customerData?.accountId,
-    // Remove updateFormData from dependencies to prevent infinite loops
+    currentNumber,
+    updateFormData,
   ]);
+
+  useEffect(() => {
+    setTraderNotFoundData((prev) => ({
+      ...prev,
+      phoneNumber: currentNumber || "",
+    }));
+  }, [currentNumber, setTraderNotFoundData]);
 
   // Fetch dropdown options from APIs
   useEffect(() => {
@@ -147,26 +151,6 @@ const CallRemarksForm = ({
     fetchDropdownOptions();
   }, []);
 
-  const formatDuration = (seconds) => {
-    if (!seconds) return "00:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
-  const formatDateTime = (dateTime) => {
-    if (!dateTime) return "";
-    const date = new Date(dateTime);
-    return date.toLocaleString();
-  };
-
-  const callTypes = [
-    { value: "InBound", label: "Inbound Call" },
-    { value: "OutBound", label: "Outbound Call" },
-  ];
-
   const statusOptions = [
     { value: "closed", label: "Closed" },
     { value: "open", label: "Open" },
@@ -184,71 +168,39 @@ const CallRemarksForm = ({
     }
   };
 
-  // Handle multiple file selection
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    updateFormData("attachments", files);
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Validate auto-populated fields exist
-    // if (!formData.CallId) {
-    //   newErrors.CallId = "Call ID is required";
-    // }
-
-    if (!formData.EmployeeId) {
-      newErrors.EmployeeId = "Employee ID is required";
-    }
-
-    if (!formData.callDateTime) {
-      newErrors.callDateTime = "Call date and time is required";
-    }
-
-    // Validate user input fields
-    if (!formData.supportTypeId) {
-      newErrors.supportTypeId = "Support type is required";
-    }
-
-    if (!formData.processTypeId) {
-      newErrors.processTypeId = "Process type is required";
-    }
-
-    if (!formData.queryTypeId) {
-      newErrors.queryTypeId = "Query type is required";
-    }
-
-    if (!formData.remarks.trim()) {
-      newErrors.remarks = "Remarks are required";
-    }
-
-    if (formData.status === "open" && !formData.followUpDate) {
-      newErrors.followUpDate = "Follow-up date is required for open tickets";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleCustomerInputChange = (e) => {
+    const { name, value } = e.target;
+    setTraderNotFoundData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Just call the parent's onSubmit
+    console.log("📝 Starting form submission...");
+
+    // Small delay to ensure state updates are applied
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    console.log("📝 Form data with customer info:", formData);
+
+    // Call parent's onSubmit which will handle the actual API call
     await onSubmit();
   };
 
   const handleCancel = () => {
-    // Only check for user-entered data (not auto-populated fields)
     const hasFormData =
       formData.supportTypeId ||
       formData.processTypeId ||
       formData.queryTypeId ||
-      formData.remarks.trim() ||
-      formData.attachments.length > 0 ||
+      formData.remarks?.trim() ||
+      formData.attachments?.length > 0 ||
       formData.status !== "closed" ||
-      formData.followUpDate;
+      formData.followUpDate ||
+      traderNotFoundData.name.trim();
 
     onCancel(hasFormData);
   };
@@ -275,6 +227,106 @@ const CallRemarksForm = ({
           </div>
         )}
 
+        {/* Customer Form - Only show if showNewCustomerForm is true */}
+        {showNewCustomerForm && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                {searchError && (
+                  <p className="text-sm text-blue-600 mt-1">{searchError}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Customer Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={traderNotFoundData.name}
+                  onChange={handleCustomerInputChange}
+                  className="w-full px-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400" />
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={traderNotFoundData.phoneNumber}
+                    onChange={handleCustomerInputChange}
+                    disabled={true}
+                    className="w-full pl-10 pr-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Region
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400" />
+                  <select
+                    name="region"
+                    value={traderNotFoundData.region}
+                    onChange={handleCustomerInputChange}
+                    className="w-full pl-10 pr-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  >
+                    <option value="">Select region</option>
+                    {regions.map((region) => (
+                      <option key={region.value} value={region.value}>
+                        {region.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Type
+                </label>
+                <select
+                  name="type"
+                  value={traderNotFoundData.type}
+                  onChange={handleCustomerInputChange}
+                  className="w-full px-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  {typeOptions.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Auto-save indicator */}
+            {traderNotFoundData.name.trim() && (
+              <div className="mt-4 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800 flex items-center">
+                  ✅ Customer details will be saved with call form
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Category Selection Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
@@ -288,7 +340,7 @@ const CallRemarksForm = ({
               </label>
               <select
                 name="supportTypeId"
-                value={formData.supportTypeId}
+                value={formData.supportTypeId || ""}
                 onChange={handleInputChange}
                 disabled={loadingOptions.supportTypes}
                 className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
@@ -323,7 +375,7 @@ const CallRemarksForm = ({
               </label>
               <select
                 name="processTypeId"
-                value={formData.processTypeId}
+                value={formData.processTypeId || ""}
                 onChange={handleInputChange}
                 disabled={loadingOptions.processTypes}
                 className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
@@ -358,7 +410,7 @@ const CallRemarksForm = ({
               </label>
               <select
                 name="queryTypeId"
-                value={formData.queryTypeId}
+                value={formData.queryTypeId || ""}
                 onChange={handleInputChange}
                 disabled={loadingOptions.queryTypes}
                 className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
@@ -401,7 +453,7 @@ const CallRemarksForm = ({
             </label>
             <textarea
               name="remarks"
-              value={formData.remarks}
+              value={formData.remarks || ""}
               onChange={handleInputChange}
               rows={4}
               className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors resize-vertical ${
@@ -428,7 +480,7 @@ const CallRemarksForm = ({
               </label>
               <select
                 name="status"
-                value={formData.status}
+                value={formData.status || "closed"}
                 onChange={handleInputChange}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors"
               >
@@ -449,7 +501,7 @@ const CallRemarksForm = ({
                 <input
                   type="date"
                   name="followUpDate"
-                  value={formData.followUpDate}
+                  value={formData.followUpDate || ""}
                   onChange={handleInputChange}
                   min={new Date().toISOString().split("T")[0]}
                   className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
@@ -468,14 +520,6 @@ const CallRemarksForm = ({
 
         {/* Form Actions */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
-          {/* <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-            className="px-6 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-2 sm:order-1"
-          >
-            Cancel
-          </button> */}
           <button
             type="button"
             onClick={handleSubmit}

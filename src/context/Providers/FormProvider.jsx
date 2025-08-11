@@ -25,7 +25,7 @@ const getPersistedFormState = () => {
 const FormProvider = ({ children }) => {
   // Load persisted state on mount
   const persistedFormState = getPersistedFormState();
-  
+
   // Form state management - initialize with persisted values if available
   const [isFormOpen, setIsFormOpen] = useState(
     persistedFormState?.isFormOpen || false
@@ -67,6 +67,15 @@ const FormProvider = ({ children }) => {
     processTypes: false,
     queryTypes: false,
   });
+
+  // Trader Not Found form state
+  const [traderNotFoundData, setTraderNotFoundData] = useState(
+    persistedFormState?.traderNotFoundData || {
+      name: "",
+      region: "",
+      type: "Trader",
+    }
+  );
 
   // Customer data state - initialize with persisted values if available
   const [customerData, setCustomerData] = useState(
@@ -119,6 +128,7 @@ const FormProvider = ({ children }) => {
           ...formData,
           attachments: [], // Don't persist file objects
         },
+        traderNotFoundData,
         customerData,
         orderData,
         callHistory,
@@ -127,7 +137,7 @@ const FormProvider = ({ children }) => {
         activeTab,
         timestamp: Date.now(), // Add timestamp for expiry check
       };
-      
+
       localStorage.setItem("formState", JSON.stringify(stateToSave));
       console.log("📝 Form state persisted:", stateToSave);
     } catch (error) {
@@ -160,15 +170,21 @@ const FormProvider = ({ children }) => {
       const now = Date.now();
       const stateAge = now - persistedFormState.timestamp;
       const maxAge = 30 * 60 * 1000; // 30 minutes
-      
+
       if (stateAge > maxAge) {
         console.log("🧹 Clearing expired form state");
         localStorage.removeItem("formState");
       } else {
-        console.log("📝 Restored form state from localStorage:", persistedFormState);
-        
+        console.log(
+          "📝 Restored form state from localStorage:",
+          persistedFormState
+        );
+
         // If the form was open before refresh and we have call details, keep it open
-        if (persistedFormState.isFormOpen && persistedFormState.currentCallDetails) {
+        if (
+          persistedFormState.isFormOpen &&
+          persistedFormState.currentCallDetails
+        ) {
           console.log("🔄 Form was open before refresh, keeping it open");
           // Form state is already restored through initialization
         }
@@ -309,7 +325,7 @@ const FormProvider = ({ children }) => {
     setErrors({});
     setSubmissionError(null);
     setLastError(null);
-    
+
     // Clear persisted form state
     localStorage.removeItem("formState");
     console.log("🧹 Cleared persisted form state");
@@ -322,29 +338,55 @@ const FormProvider = ({ children }) => {
       : new Date().toISOString().slice(0, 16);
 
     // Debug logging to identify the issue
-    console.log("📝 PopulateFormData - callDetails.callType:", callDetails?.callType);
+    console.log(
+      "📝 PopulateFormData - callDetails.callType:",
+      callDetails?.callType
+    );
     console.log("📝 PopulateFormData - callDetails.type:", callDetails?.type);
-    console.log("📝 PopulateFormData - callDetails.direction:", callDetails?.direction);
-    console.log("📝 PopulateFormData - callDetails.callDirection:", callDetails?.callDirection);
+    console.log(
+      "📝 PopulateFormData - callDetails.direction:",
+      callDetails?.direction
+    );
+    console.log(
+      "📝 PopulateFormData - callDetails.callDirection:",
+      callDetails?.callDirection
+    );
     console.log("📝 PopulateFormData - Full callDetails:", callDetails);
 
     // Check multiple possible property names for call type
-    const rawCallType = callDetails?.callType || callDetails?.callDirection || callDetails?.type || callDetails?.direction;
-    
+    const rawCallType =
+      callDetails?.callType ||
+      callDetails?.callDirection ||
+      callDetails?.type ||
+      callDetails?.direction;
+
     let callType = "OutBound"; // Default
-    if (rawCallType === "incoming" || rawCallType === "inbound" || rawCallType === "InBound") {
+    if (
+      rawCallType === "incoming" ||
+      rawCallType === "inbound" ||
+      rawCallType === "InBound"
+    ) {
       callType = "InBound";
-    } else if (rawCallType === "outgoing" || rawCallType === "outbound" || rawCallType === "OutBound") {
+    } else if (
+      rawCallType === "outgoing" ||
+      rawCallType === "outbound" ||
+      rawCallType === "OutBound"
+    ) {
       callType = "OutBound";
     }
-    
-    console.log("📝 PopulateFormData - Raw call type:", rawCallType, "-> Final call type:", callType);
-    
+
+    console.log(
+      "📝 PopulateFormData - Raw call type:",
+      rawCallType,
+      "-> Final call type:",
+      callType
+    );
+
     const inquiryNumber = orderData?.orderId || customerData?.accountId || "";
 
     // Extract CallId from multiple possible sources
     const callId = callDetails?.CallId || callDetails?.callId || "";
-    
+
     console.log("📝 PopulateFormData - CallId being set:", callId);
 
     console.log("📝 Setting formData with callType:", callType);
@@ -564,8 +606,9 @@ const FormProvider = ({ children }) => {
   //     return Promise.reject(new Error(errorMessage));
   //   }
   // };
-  const submitForm = async () => {
+  const submitForm = async (contactData = null) => {
     console.log("📝 Submitting form data");
+    console.log("📝 Contact data received:", contactData);
 
     if (!validateForm()) {
       setFormStatus(FORM_STATUS.ERROR);
@@ -582,11 +625,30 @@ const FormProvider = ({ children }) => {
         inquiryNumber: currentCallDetails?.number || formData.inquiryNumber,
       };
 
+      // Merge contact data from props or Trader Not Found form state
+      const finalTraderData = contactData?.name
+        ? {
+            Contact_Name: contactData.name,
+            Region: contactData.region || "",
+            Type: contactData.type || "Trader",
+          }
+        : {
+            Contact_Name: traderNotFoundData.name,
+            Region: traderNotFoundData.region || "",
+            Type: traderNotFoundData.type || "Trader",
+          };
+
+      Object.assign(enhancedFormData, finalTraderData);
+
       console.log("📝 Enhanced form data:", enhancedFormData);
       console.log("📝 CallId being submitted:", enhancedFormData.CallId);
       console.log("📝 CallType being submitted:", enhancedFormData.callType);
-      console.log("📝 Current formData.callType:", formData.callType);
-      
+      console.log("📝 Contact data being submitted:", {
+        Contact_Name: enhancedFormData.Contact_Name,
+        Region: enhancedFormData.Region,
+        Type: enhancedFormData.Type,
+      });
+
       if (!enhancedFormData.CallId) {
         console.error("❌ WARNING: CallId is missing from form submission!");
         console.log("📝 Current currentCallDetails:", currentCallDetails);
@@ -623,9 +685,15 @@ const FormProvider = ({ children }) => {
           enhancedFormData[key] !== undefined
         ) {
           submissionData.append(key, enhancedFormData[key]);
-          // Log callType specifically
+          // Log important fields
           if (key === "callType") {
-            console.log("📝 Adding callType to FormData:", enhancedFormData[key]);
+            console.log(
+              "📝 Adding callType to FormData:",
+              enhancedFormData[key]
+            );
+          }
+          if (key === "Contact_Name" || key === "Region" || key === "Type") {
+            console.log(`📝 Adding ${key} to FormData:`, enhancedFormData[key]);
           }
         }
       });
@@ -647,7 +715,7 @@ const FormProvider = ({ children }) => {
       console.log("✅ Form submitted successfully:", response.data);
       setFormStatus(FORM_STATUS.SUBMITTED);
 
-      // **NEW: Emit event to notify DialerProvider that form was submitted**
+      // Emit event to notify DialerProvider that form was submitted
       if (window.dispatchEvent) {
         window.dispatchEvent(
           new CustomEvent("formSubmitted", {
@@ -803,6 +871,8 @@ const FormProvider = ({ children }) => {
     isSearching,
     searchError,
     hasSearched,
+    traderNotFoundData,
+    setTraderNotFoundData,
 
     // UI state
     showCustomerPanel,
