@@ -36,6 +36,10 @@ const FormProvider = ({ children }) => {
   const [currentCallDetails, setCurrentCallDetails] = useState(
     persistedFormState?.currentCallDetails || null
   );
+  // Saved contact info from /contact/mobile API
+  const [savedContactData, setSavedContactData] = useState(
+    persistedFormState?.savedContactData || null
+  );
 
   // Form data state - initialize with persisted values if available
   const [formData, setFormData] = useState(
@@ -130,6 +134,7 @@ const FormProvider = ({ children }) => {
         },
         traderNotFoundData,
         customerData,
+        savedContactData,
         orderData,
         callHistory,
         hasSearched,
@@ -191,6 +196,22 @@ const FormProvider = ({ children }) => {
       }
     }
   }, []);
+
+  const fetchSavedContactData = async (phoneNumber) => {
+    if (!phoneNumber) return;
+
+    try {
+      const res = await axiosInstance.get(`/contact/mobile/${phoneNumber}`);
+      if (res.data?.success && res.data?.data) {
+        setSavedContactData(res.data.data);
+      } else {
+        setSavedContactData(null);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching saved contact info:", err);
+      setSavedContactData(null);
+    }
+  };
 
   // Mock customer database - replace with actual API
   const mockCustomerDatabase = {
@@ -310,6 +331,9 @@ const FormProvider = ({ children }) => {
     // Auto-search customer if phone number is available
     if (callDetails?.number) {
       searchCustomer(callDetails.number);
+    }
+    if (callDetails?.number) {
+      fetchSavedContactData(callDetails.number);
     }
   };
 
@@ -880,6 +904,7 @@ const FormProvider = ({ children }) => {
 
     // User data
     userData,
+    savedContactData,
 
     // Actions
     openForm,

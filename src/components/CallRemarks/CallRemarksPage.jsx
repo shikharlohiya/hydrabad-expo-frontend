@@ -29,6 +29,7 @@ const CallRemarksPage = () => {
     submitForm,
     errors,
     formStatus,
+    savedContactData,
   } = useForm();
 
   // UI state
@@ -47,7 +48,6 @@ const CallRemarksPage = () => {
 
   // New customer form states - modified to store contact data
   const [newContactData, setNewContactData] = useState(null);
-  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
 
   const { userData } = useContext(UserContext);
 
@@ -78,8 +78,6 @@ const CallRemarksPage = () => {
       setHasSearched(false);
       setCustomerData(null);
       setCallHistory([]);
-      setSearchError(null);
-      setShowNewCustomerForm(false);
       setNewContactData(null); // Reset new contact data
     }
   }, [currentNumber]);
@@ -151,7 +149,6 @@ const CallRemarksPage = () => {
     setIsSearching(true);
     setSearchError(null);
     setHasSearched(true);
-    setShowNewCustomerForm(false);
     setNewContactData(null); // Reset new contact data
 
     try {
@@ -162,14 +159,12 @@ const CallRemarksPage = () => {
         setCallHistory(history);
         setShowCustomerPanel(true);
         setSearchError(null);
-        setShowNewCustomerForm(false);
         setNewContactData(null); // Clear new contact data if existing customer found
       } else {
         setCustomerData(null);
         setCallHistory([]);
         setShowCustomerPanel(false);
-        setShowNewCustomerForm(true);
-        setSearchError("Trader not found. You can add them below.");
+        setSearchError("Note: You can update the trader information below");
       }
     } catch (error) {
       console.error("Search error:", error);
@@ -177,7 +172,6 @@ const CallRemarksPage = () => {
       setCustomerData(null);
       setCallHistory([]);
       setShowCustomerPanel(false);
-      setShowNewCustomerForm(false);
       setNewContactData(null);
     } finally {
       setIsSearching(false);
@@ -287,6 +281,23 @@ const CallRemarksPage = () => {
                   />
                 </div>
               </div>
+              {savedContactData && (
+                <div className="mt-6 mx-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
+                  <h1> Saved Trader-</h1>
+                  <div>
+                    <strong>Contact No:</strong> {savedContactData.Contact_no}
+                  </div>
+                  <div>
+                    <strong>Name:</strong> {savedContactData.Contact_Name}
+                  </div>
+                  <div>
+                    <strong>Type:</strong> {savedContactData.Type}
+                  </div>
+                  <div>
+                    <strong>Region:</strong> {savedContactData.Region}
+                  </div>
+                </div>
+              )}
 
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto">
@@ -345,7 +356,6 @@ const CallRemarksPage = () => {
                     callDuration={callDuration}
                     activeCallId={activeCallId}
                     userData={userData}
-                    showNewCustomerForm={showNewCustomerForm}
                     searchError={searchError}
                   />
                 )}

@@ -21,10 +21,10 @@ const CallRemarksForm = ({
   activeCallId,
   userData,
   // New props for customer form
-  showNewCustomerForm,
   searchError,
 }) => {
-  const { traderNotFoundData, setTraderNotFoundData } = useForm();
+  const { traderNotFoundData, setTraderNotFoundData, savedContactData } =
+    useForm();
 
   const [dropdownOptions, setDropdownOptions] = useState({
     supportTypes: [],
@@ -95,6 +95,17 @@ const CallRemarksForm = ({
       phoneNumber: currentNumber || "",
     }));
   }, [currentNumber, setTraderNotFoundData]);
+
+  useEffect(() => {
+    if (savedContactData?.Contact_Name) {
+      setTraderNotFoundData((prev) => ({
+        ...prev,
+        name: savedContactData.Contact_Name || "",
+        region: savedContactData.Region || prev.region || "",
+        type: savedContactData.Type || prev.type || "Trader",
+      }));
+    }
+  }, [savedContactData, setTraderNotFoundData]);
 
   // Fetch dropdown options from APIs
   useEffect(() => {
@@ -228,15 +239,21 @@ const CallRemarksForm = ({
         )}
 
         {/* Customer Form - Only show if showNewCustomerForm is true */}
-        {showNewCustomerForm && (
+        {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                {searchError && (
-                  <p className="text-sm text-blue-600 mt-1">{searchError}</p>
+                {searchError ? (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Save or Update Trader Information!
+                  </p>
+                ) : (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Enter The Trader Information Below
+                  </p>
                 )}
               </div>
             </div>
@@ -325,7 +342,7 @@ const CallRemarksForm = ({
               </div>
             )}
           </div>
-        )}
+        }
 
         {/* Category Selection Section */}
         <div className="space-y-4">
