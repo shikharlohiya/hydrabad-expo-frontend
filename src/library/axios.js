@@ -23,6 +23,9 @@ axiosInstance.interceptors.response.use(
       // Token expired or invalid → force logout
       localStorage.removeItem("authToken");
       localStorage.removeItem("userData");
+      localStorage.removeItem("formState");
+      localStorage.removeItem("dialerState");
+      localStorage.removeItem("clickToCallToken");
       window.location.href = "/";
     }
     return Promise.reject(error);
