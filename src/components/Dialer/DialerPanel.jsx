@@ -15,6 +15,7 @@ import {
   UserGroupIcon,
   PlusIcon,
   BellIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import useDialer from "../../hooks/useDialer";
 import { CALL_STATUS } from "../../context/Providers/DialerProvider";
@@ -47,6 +48,7 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
     incomingCallData,
     isIncomingCall,
     incomingCallTimer,
+    getAuthToken,
   } = useDialer();
 
   const [displayNumber, setDisplayNumber] = useState("");
@@ -375,6 +377,13 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              onClick={getAuthToken}
+              className={`p-1.5 rounded-full transition-all duration-200 text-gray-600 hover:bg-white/60`}
+              title="Refresh token"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+            </button>
             <button
               onClick={toggleRingingSound}
               className={`p-1.5 rounded-full transition-all duration-200 ${

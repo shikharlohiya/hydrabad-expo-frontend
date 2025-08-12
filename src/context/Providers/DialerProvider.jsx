@@ -28,11 +28,12 @@ const getPersistedDialerState = () => {
 };
 
 const DialerProvider = ({ children }) => {
-  const baseURL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
+  const baseURL = import.meta.env.VITE_API_URL || "";
+  // const baseURL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
 
   // Load persisted state on mount
   const persistedState = getPersistedDialerState();
-  
+
   // Core call state - initialize with persisted values if available
   const [callStatus, setCallStatus] = useState(
     persistedState?.callStatus || CALL_STATUS.IDLE
@@ -46,12 +47,8 @@ const DialerProvider = ({ children }) => {
   const [callStartTime, setCallStartTime] = useState(
     persistedState?.callStartTime || null
   );
-  const [isOnHold, setIsOnHold] = useState(
-    persistedState?.isOnHold || false
-  );
-  const [isMuted, setIsMuted] = useState(
-    persistedState?.isMuted || false
-  );
+  const [isOnHold, setIsOnHold] = useState(persistedState?.isOnHold || false);
+  const [isMuted, setIsMuted] = useState(persistedState?.isMuted || false);
   const [activeCallId, setActiveCallId] = useState(
     persistedState?.activeCallId || null
   );
@@ -84,10 +81,9 @@ const DialerProvider = ({ children }) => {
   useEffect(() => {
     const fetchToken = async () => {
       try {
-        const token = await getAuthToken();
-        setBearerToken(token); // ✅ Save to state
-        localStorage.setItem("clickToCallToken", token); // ✅ Save to localStorage
-        console.log("✅ Fetched and stored bearer token");
+        // getAuthToken will fetch, save to state, and save to localStorage
+        await getAuthToken();
+        console.log("✅ Fetched and stored bearer token on mount");
       } catch (err) {
         console.error("❌ Failed to fetch token on mount:", err);
       }
@@ -131,7 +127,7 @@ const DialerProvider = ({ children }) => {
         callDetailsForForm,
         timestamp: Date.now(), // Add timestamp for expiry check
       };
-      
+
       localStorage.setItem("dialerState", JSON.stringify(stateToSave));
       console.log("💾 Dialer state persisted:", stateToSave);
     } catch (error) {
@@ -142,7 +138,12 @@ const DialerProvider = ({ children }) => {
   // Auto-persist state whenever it changes
   useEffect(() => {
     // Only persist if there's meaningful state to save
-    if (activeCallId || callStatus !== CALL_STATUS.IDLE || currentNumber || isIncomingCall) {
+    if (
+      activeCallId ||
+      callStatus !== CALL_STATUS.IDLE ||
+      currentNumber ||
+      isIncomingCall
+    ) {
       persistDialerState();
     }
   }, [
@@ -168,24 +169,33 @@ const DialerProvider = ({ children }) => {
       const now = Date.now();
       const stateAge = now - persistedState.timestamp;
       const maxAge = 30 * 60 * 1000; // 30 minutes
-      
+
       if (stateAge > maxAge) {
         console.log("🧹 Clearing expired dialer state");
         localStorage.removeItem("dialerState");
       } else {
-        console.log("🔄 Restored dialer state from localStorage:", persistedState);
-        
+        console.log(
+          "🔄 Restored dialer state from localStorage:",
+          persistedState
+        );
+
         // If there was an active call before refresh, log for debugging
-        if (persistedState.activeCallId && persistedState.callStatus !== CALL_STATUS.IDLE) {
+        if (
+          persistedState.activeCallId &&
+          persistedState.callStatus !== CALL_STATUS.IDLE
+        ) {
           console.log("🔄 Active call state recovered:", {
             callId: persistedState.activeCallId,
             status: persistedState.callStatus,
             number: persistedState.currentNumber,
-            duration: persistedState.callDuration
+            duration: persistedState.callDuration,
           });
-          
+
           // If call was connected, restart the timer
-          if (persistedState.callStatus === CALL_STATUS.CONNECTED && persistedState.callStartTime) {
+          if (
+            persistedState.callStatus === CALL_STATUS.CONNECTED &&
+            persistedState.callStartTime
+          ) {
             console.log("🔄 Restarting call timer after refresh");
           }
         }
@@ -230,9 +240,11 @@ const DialerProvider = ({ children }) => {
       // Check if it matches current active call or preserved call details
       const currentCallId = activeCallId || callDetailsForForm?.CallId;
       if (String(callId) === String(currentCallId)) {
-        console.log("✅ Setting hasFormBeenSubmitted to true and resetting call state");
+        console.log(
+          "✅ Setting hasFormBeenSubmitted to true and resetting call state"
+        );
         setHasFormBeenSubmitted(true);
-        
+
         // Reset call state after successful form submission
         setTimeout(() => {
           resetCallState();
@@ -254,18 +266,22 @@ const DialerProvider = ({ children }) => {
   const shouldProcessCallEvent = (data, eventType) => {
     // Normalize phone numbers for comparison (remove spaces, handle different formats)
     const normalizePhone = (phone) => {
-      if (!phone) return '';
-      return String(phone).replace(/[\s\-\+]/g, '').trim();
+      if (!phone) return "";
+      return String(phone)
+        .replace(/[\s\-\+]/g, "")
+        .trim();
     };
-    
+
     const userPhone = normalizePhone(userData.EmployeePhone);
     const userId = userData.EmployeeId;
-    
+
     // For call-initiated events, check if apartyno matches current user
-    if (eventType === 'call-initiated') {
-      const eventPhone = normalizePhone(data.apartyno || data.agentNumber || data.fromNumber);
+    if (eventType === "call-initiated") {
+      const eventPhone = normalizePhone(
+        data.apartyno || data.agentNumber || data.fromNumber
+      );
       const isForCurrentUser = eventPhone === userPhone;
-      
+
       console.log("🔍 Call-initiated filter check:", {
         eventApartyno: data.apartyno,
         eventAgentNumber: data.agentNumber,
@@ -274,61 +290,69 @@ const DialerProvider = ({ children }) => {
         userPhone: userData.EmployeePhone,
         normalizedUserPhone: userPhone,
         isForCurrentUser: isForCurrentUser,
-        fullEventData: data
+        fullEventData: data,
       });
-      
+
       // If still no match, be extra conservative and reject
       if (!isForCurrentUser) {
-        console.log("🛑 BLOCKING call-initiated event - phone number doesn't match current user");
+        console.log(
+          "🛑 BLOCKING call-initiated event - phone number doesn't match current user"
+        );
         return false;
       }
-      
+
       return isForCurrentUser;
     }
-    
+
     // For other call events, only process if it's our active call or no filtering info available
-    const eventCallId = String(data.callId || data.CALL_ID || '');
-    const currentCallId = String(activeCallId || '');
-    
+    const eventCallId = String(data.callId || data.CALL_ID || "");
+    const currentCallId = String(activeCallId || "");
+
     // If we have an active call, only process events for that call
     if (currentCallId && eventCallId) {
       const isOurCall = eventCallId === currentCallId;
       console.log(`🔍 ${eventType} filter check:`, {
         eventCallId,
         currentCallId,
-        isOurCall
+        isOurCall,
       });
       return isOurCall;
     }
-    
+
     // If no active call but event has user identification, check if it's for us
     if (data.agentId || data.employeeId || data.agentNumber) {
       const eventUserId = data.agentId || data.employeeId;
       const eventUserPhone = normalizePhone(data.agentNumber);
-      
-      const isForCurrentUser = (eventUserId && eventUserId.toString() === userId?.toString()) ||
-                               (eventUserPhone && eventUserPhone === userPhone);
-      
+
+      const isForCurrentUser =
+        (eventUserId && eventUserId.toString() === userId?.toString()) ||
+        (eventUserPhone && eventUserPhone === userPhone);
+
       console.log(`🔍 ${eventType} user filter check:`, {
         eventUserId,
         eventUserPhone,
         userId,
         userPhone,
-        isForCurrentUser
+        isForCurrentUser,
       });
-      
+
       return isForCurrentUser;
     }
-    
+
     // For events without clear user identification, be conservative and ignore
-    console.log(`⚠️ ${eventType} - No clear user identification, ignoring to prevent cross-user issues`);
-    console.log(`🛑 BLOCKING ${eventType} event - insufficient user identification:`, {
-      hasCallId: !!eventCallId,
-      hasCurrentCallId: !!currentCallId,
-      hasAgentId: !!(data.agentId || data.employeeId),
-      hasAgentNumber: !!data.agentNumber,
-      eventData: data
-    });
+    console.log(
+      `⚠️ ${eventType} - No clear user identification, ignoring to prevent cross-user issues`
+    );
+    console.log(
+      `🛑 BLOCKING ${eventType} event - insufficient user identification:`,
+      {
+        hasCallId: !!eventCallId,
+        hasCurrentCallId: !!currentCallId,
+        hasAgentId: !!(data.agentId || data.employeeId),
+        hasAgentNumber: !!data.agentNumber,
+        eventData: data,
+      }
+    );
     return false;
   };
 
@@ -336,25 +360,32 @@ const DialerProvider = ({ children }) => {
     registerCallEventHandlers({
       onCallInitiated: (data) => {
         console.log("📞 Call initiated event:", data);
-        
+
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-initiated')) {
-          console.log("❌ Ignoring call-initiated event - not for current user");
+        if (!shouldProcessCallEvent(data, "call-initiated")) {
+          console.log(
+            "❌ Ignoring call-initiated event - not for current user"
+          );
           return;
         }
-        
+
         // Additional check: Don't process if we already have an active call
         if (activeCallId && activeCallId !== data.callId) {
-          console.log("⚠️ Ignoring call-initiated - already have active call:", activeCallId);
+          console.log(
+            "⚠️ Ignoring call-initiated - already have active call:",
+            activeCallId
+          );
           return;
         }
-        
+
         // Don't process socket event if user initiated the call themselves
         if (userInitiatedCall) {
-          console.log("⚠️ Ignoring call-initiated socket event - user initiated this call");
+          console.log(
+            "⚠️ Ignoring call-initiated socket event - user initiated this call"
+          );
           return;
         }
-        
+
         console.log("✅ Processing call-initiated event for current user");
         setActiveCallId(data.callId);
         setCallStatus(CALL_STATUS.RINGING);
@@ -367,8 +398,10 @@ const DialerProvider = ({ children }) => {
         console.log("🔗 Call connected event:", data);
 
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-connected')) {
-          console.log("❌ Ignoring call-connected event - not for current user");
+        if (!shouldProcessCallEvent(data, "call-connected")) {
+          console.log(
+            "❌ Ignoring call-connected event - not for current user"
+          );
           return;
         }
 
@@ -416,8 +449,10 @@ const DialerProvider = ({ children }) => {
         console.log("📱 Call disconnected event received:", data);
 
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-disconnected')) {
-          console.log("❌ Ignoring call-disconnected event - not for current user");
+        if (!shouldProcessCallEvent(data, "call-disconnected")) {
+          console.log(
+            "❌ Ignoring call-disconnected event - not for current user"
+          );
           return;
         }
 
@@ -450,8 +485,10 @@ const DialerProvider = ({ children }) => {
         console.log("📱 Call status update event:", data);
 
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-status-update')) {
-          console.log("❌ Ignoring call-status-update event - not for current user");
+        if (!shouldProcessCallEvent(data, "call-status-update")) {
+          console.log(
+            "❌ Ignoring call-status-update event - not for current user"
+          );
           return;
         }
 
@@ -468,7 +505,9 @@ const DialerProvider = ({ children }) => {
             // Additional check: Don't set ringing if user initiated the call
             // (they already got ringing status from initiateCall function)
             if (userInitiatedCall) {
-              console.log("⚠️ Ignoring ringing status - user initiated this call");
+              console.log(
+                "⚠️ Ignoring ringing status - user initiated this call"
+              );
               return;
             }
             setCallStatus(CALL_STATUS.RINGING);
@@ -497,13 +536,15 @@ const DialerProvider = ({ children }) => {
       // Keep other handlers unchanged...
       onCallHoldStatus: (data) => {
         console.log("⏸️ Call hold status event:", data);
-        
+
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-hold-status')) {
-          console.log("❌ Ignoring call-hold-status event - not for current user");
+        if (!shouldProcessCallEvent(data, "call-hold-status")) {
+          console.log(
+            "❌ Ignoring call-hold-status event - not for current user"
+          );
           return;
         }
-        
+
         const callId = String(data.callId);
         const currentCallId = String(activeCallId);
 
@@ -516,13 +557,13 @@ const DialerProvider = ({ children }) => {
 
       onCallEnded: (data) => {
         console.log("📱 Call ended event (legacy):", data);
-        
+
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-ended')) {
+        if (!shouldProcessCallEvent(data, "call-ended")) {
           console.log("❌ Ignoring call-ended event - not for current user");
           return;
         }
-        
+
         const callId = String(data.callId || data.CALL_ID);
         const currentCallId = String(activeCallId);
 
@@ -533,13 +574,13 @@ const DialerProvider = ({ children }) => {
 
       onCallFailed: (data) => {
         console.log("❌ Call failed event:", data);
-        
+
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-failed')) {
+        if (!shouldProcessCallEvent(data, "call-failed")) {
           console.log("❌ Ignoring call-failed event - not for current user");
           return;
         }
-        
+
         const callId = String(data.callId);
         const currentCallId = String(activeCallId);
 
@@ -552,13 +593,13 @@ const DialerProvider = ({ children }) => {
 
       onCallError: (data) => {
         console.log("⚠️ Call error event:", data);
-        
+
         // Use centralized filtering logic
-        if (!shouldProcessCallEvent(data, 'call-error')) {
+        if (!shouldProcessCallEvent(data, "call-error")) {
           console.log("❌ Ignoring call-error event - not for current user");
           return;
         }
-        
+
         setLastError(data.error || "Call error occurred");
       },
 
@@ -662,18 +703,19 @@ const DialerProvider = ({ children }) => {
       callId,
       ivrNumber,
       userPhone: userData.EmployeePhone,
-      eventType: data.eventType || data.event
+      eventType: data.eventType || data.event,
     });
 
     // If agent_number is provided and not empty, check if it matches current user
     if (agentNumber && agentNumber.trim() !== "") {
-      const userPhone = userData.EmployeePhone || userData.phone || userData.Phone;
-      
+      const userPhone =
+        userData.EmployeePhone || userData.phone || userData.Phone;
+
       if (agentNumber !== userPhone) {
         console.log("❌ Incoming call not for this agent:", {
           agentNumber,
           userPhone,
-          matches: agentNumber === userPhone
+          matches: agentNumber === userPhone,
         });
         return;
       }
@@ -681,7 +723,9 @@ const DialerProvider = ({ children }) => {
       // If agent_number is empty, this might be a general incoming call
       // For now, we'll skip showing it to avoid showing to all agents
       // You might want to implement different logic here based on your business rules
-      console.log("⚠️ Incoming call has no specific agent - skipping to avoid showing to all agents");
+      console.log(
+        "⚠️ Incoming call has no specific agent - skipping to avoid showing to all agents"
+      );
       return;
     }
 
@@ -997,7 +1041,7 @@ const DialerProvider = ({ children }) => {
       recordingflag: 0,
       employeeId: userData.EmployeeId, // Add employeeId to identify the specific user
     };
-    
+
     console.log("📞 Initiating call with employeeId:", userData.EmployeeId);
 
     try {
@@ -1009,17 +1053,31 @@ const DialerProvider = ({ children }) => {
       setContactName(contactInfo?.name || null);
       setHasFormBeenSubmitted(false);
 
-      const headers = {
-        Authorization: `Bearer ${currentToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      };
+      const requestHeaders = new Headers();
+      requestHeaders.append("Authorization", `Bearer ${currentToken.trim()}`);
+      requestHeaders.append("Content-Type", "application/json");
+      requestHeaders.append("Accept", "application/json");
+      requestHeaders.append("X-Requested-With", "XMLHttpRequest");
 
-      const response = await axiosInstance.post("/initiate-call", callData, {
-        headers,
+      const response = await fetch(`${baseURL}/initiate-call`, {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify(callData),
       });
-      const { status, message } = response.data;
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        const error = new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
+        error.response = { status: response.status, data: errorData };
+        throw error;
+      }
+
+      const responseData = await response.json();
+      const { status, message } = responseData;
 
       if (status === 1 && message?.Response === "success" && message?.callid) {
         setActiveCallId(message.callid);
@@ -1054,23 +1112,38 @@ const DialerProvider = ({ children }) => {
           const newToken = await getAuthToken();
 
           if (newToken) {
-            const retryHeaders = {
-              Authorization: `Bearer ${newToken}`,
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              "X-Requested-With": "XMLHttpRequest",
-            };
+            const retryHeaders = new Headers();
+            retryHeaders.append("Authorization", `Bearer ${newToken.trim()}`);
+            retryHeaders.append("Content-Type", "application/json");
+            retryHeaders.append("Accept", "application/json");
+            retryHeaders.append("X-Requested-With", "XMLHttpRequest");
 
-            const retryResponse = await axiosInstance.post(
-              "/initiate-call",
-              callData,
-              {
-                headers: retryHeaders,
-              }
-            );
+            const retryResponse = await fetch(`${baseURL}/initiate-call`, {
+              method: "POST",
+              headers: retryHeaders,
+              body: JSON.stringify(callData),
+            });
 
+            if (!retryResponse.ok) {
+              const errorData = await retryResponse
+                .json()
+                .catch(() => ({
+                  message: `HTTP error! status: ${retryResponse.status}`,
+                }));
+              const retryError = new Error(
+                errorData.message ||
+                  `HTTP error! status: ${retryResponse.status}`
+              );
+              retryError.response = {
+                status: retryResponse.status,
+                data: errorData,
+              };
+              throw retryError;
+            }
+
+            const retryResponseData = await retryResponse.json();
             const { status: retryStatus, message: retryMessage } =
-              retryResponse.data;
+              retryResponseData;
 
             if (
               retryStatus === 1 &&
@@ -1089,13 +1162,19 @@ const DialerProvider = ({ children }) => {
                 });
               }
               return;
+            } else {
+              // if retry is not successful, throw an error to be caught by outer catch
+              throw new Error(
+                retryMessage?.Response || "Call initiation retry failed"
+              );
             }
           }
         } catch (retryError) {
           // Retry failed
+          setLastError(
+            "Authentication failed after retry. Please login again."
+          );
         }
-
-        setLastError("Authentication failed. Please login again.");
       } else if (error.response?.status === 401) {
         setLastError("Unauthorized. Please login again.");
         setBearerToken(null);
@@ -1259,7 +1338,7 @@ const DialerProvider = ({ children }) => {
     setTimeout(() => {
       callEndProcessedRef.current = false;
     }, 1000);
-    
+
     // Set a longer timeout as a fallback to prevent hanging state
     setTimeout(() => {
       if (!hasFormBeenSubmitted) {
@@ -1500,7 +1579,10 @@ const DialerProvider = ({ children }) => {
 
   // Reset call state
   const resetCallState = () => {
-    console.log("🔄 resetCallState() called - clearing activeCallId:", activeCallId);
+    console.log(
+      "🔄 resetCallState() called - clearing activeCallId:",
+      activeCallId
+    );
     setCallStatus(CALL_STATUS.IDLE);
     setCallDuration(0);
     setCallStartTime(null);
@@ -1518,7 +1600,7 @@ const DialerProvider = ({ children }) => {
     setUserInitiatedCall(false); // Reset user initiated call flag
     callEndProcessedRef.current = false;
     stopIncomingCallTimer();
-    
+
     // Clear persisted dialer state
     localStorage.removeItem("dialerState");
     console.log("🧹 Cleared persisted dialer state");

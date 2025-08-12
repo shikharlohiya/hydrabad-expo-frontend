@@ -82,41 +82,80 @@ const CallRemarksPage = () => {
     }
   }, [currentNumber]);
 
-  // API call to search trader
+  // API call to get history (includes trader info and call records)
   const searchCustomerAPI = async (searchTerm) => {
     try {
-      const response = await axiosInstance.get(`/trader/mobile/${searchTerm}`);
+      const response = await axiosInstance.get(
+        `/history/${searchTerm}?page=1&limit=20`
+      );
 
       if (response.data.success && response.data.data) {
-        const traderData = response.data.data;
-        const transformedCustomer = {
-          id: traderData.id,
-          name: traderData.Trader_Name,
-          email: traderData.email || null,
-          accountId: traderData.Code,
-          phoneNumber: traderData.Contact_no,
-          joinDate: traderData.createdAt,
-          lastActivity: traderData.updatedAt,
-          accountType: "Trader",
-          totalCalls: 0,
-          status: traderData.status,
-          businessName: traderData.Trader_business_Name,
-          region: traderData.Region,
-          zone: traderData.Zone,
-          lastActionDate: traderData.last_action_date,
-          followUpDate: traderData.follow_up_date,
-          completedOn: traderData.completed_on,
-          agentId: traderData.AgentId,
-        };
+        const historyData = response.data.data;
+
+        // Extract trader info - use trader_master or contact data
+        const traderMaster = historyData.TraderInfo?.trader_master;
+        const contactInfo = historyData.TraderInfo?.contact;
+
+        let transformedCustomer = null;
+
+        // Prioritize trader_master, fallback to contact
+        if (traderMaster || contactInfo) {
+          const primaryData = traderMaster || contactInfo;
+          const secondaryData = traderMaster ? contactInfo : null;
+
+          transformedCustomer = {
+            id: primaryData.id,
+            name: primaryData.Trader_Name || primaryData.Contact_Name,
+            email: primaryData.email || null,
+            accountId: primaryData.Code || null,
+            phoneNumber: primaryData.Contact_no,
+            joinDate: primaryData.createdAt,
+            lastActivity: primaryData.updatedAt,
+            accountType: contactInfo?.Type || "Trader",
+            totalCalls: historyData.call_records?.length || 0,
+            status: primaryData.status || "active",
+            businessName: primaryData.Trader_business_Name || null,
+            region: primaryData.Region,
+            zone: primaryData.Zone,
+            lastActionDate: primaryData.last_action_date,
+            followUpDate: primaryData.follow_up_date,
+            completedOn: primaryData.completed_on,
+            agentId: primaryData.AgentId,
+            // Include both data sources for display
+            traderMaster: traderMaster,
+            contactInfo: contactInfo,
+          };
+        }
+
+        // Transform call records
+        const transformedHistory =
+          historyData.call_records?.map((record) => ({
+            id: record.CallId,
+            date: record.startTime,
+            time: record.startTime,
+            duration: record.duration,
+            type: record.type, // inbound/outbound
+            callType: record.type,
+            status: record.status,
+            agent: record.agent?.EmployeeName || "Unknown",
+            agentId: record.agent?.EmployeeId,
+            agentPhone: record.agent?.EmployeePhone,
+            voiceRecording: record.voiceRecording,
+            formDetail: record.formDetail,
+            customerNumber: record.customerNumber,
+            agentNumber: record.agentNumber,
+            startTime: record.startTime,
+            endTime: record.endTime,
+          })) || [];
 
         return {
           customer: transformedCustomer,
-          history: [],
+          history: transformedHistory,
         };
       }
       return { customer: null, history: [] };
     } catch (error) {
-      console.error("Trader search API error:", error);
+      console.error("History API error:", error);
 
       // Handle 404 - customer not found (this is expected behavior)
       if (error.response?.status === 404) {
@@ -160,6 +199,12 @@ const CallRemarksPage = () => {
         setShowCustomerPanel(true);
         setSearchError(null);
         setNewContactData(null); // Clear new contact data if existing customer found
+      } else if (history && history.length > 0) {
+        setCustomerData(null);
+        setCallHistory(history);
+        setShowCustomerPanel(true);
+        setActiveTab("history");
+        setSearchError("Note: You can update the trader information below");
       } else {
         setCustomerData(null);
         setCallHistory([]);
@@ -414,28 +459,30 @@ const CallRemarksPage = () => {
 
           {/* Panel Content */}
           <div className="flex-1 overflow-y-auto">
-            {customerData ? (
-              activeTab === "info" ? (
+            {activeTab === "info" ? (
+              customerData ? (
                 <CustomerInfoPanel
                   customerData={customerData}
                   phoneNumber={currentNumber}
                 />
-              ) : callHistory.length > 0 ? (
-                <CustomerCallHistory
-                  callHistory={callHistory}
-                  phoneNumber={currentNumber}
-                />
               ) : (
                 <div className="p-4 text-center">
-                  <div className="text-gray-500 text-sm">No recent calls</div>
+                  <div className="text-gray-500 text-sm">
+                    {hasSearched
+                      ? "No trader information found for this number."
+                      : "Search for trader information to view details"}
+                  </div>
                 </div>
               )
+            ) : callHistory.length > 0 ? (
+              <CustomerCallHistory
+                callHistory={callHistory}
+                phoneNumber={currentNumber}
+              />
             ) : (
               <div className="p-4 text-center">
                 <div className="text-gray-500 text-sm">
-                  {hasSearched
-                    ? "No trader data found"
-                    : "Search for trader information to view details"}
+                  No call history available.
                 </div>
               </div>
             )}

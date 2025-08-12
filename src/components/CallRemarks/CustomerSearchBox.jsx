@@ -48,7 +48,7 @@ const CustomerSearchBox = ({
       return <CheckCircle className="w-4 h-4 text-green-500" />;
     }
     if (searchError) {
-      return <AlertCircle className="w-4 h-4 text-red-500" />;
+      return <AlertCircle className="w-4 h-4 text-yellow-500" />;
     }
     return <Search className="w-4 h-4 text-gray-400" />;
   };
@@ -88,7 +88,7 @@ const CustomerSearchBox = ({
               placeholder="Search Customer ID or Phone..."
               className={`w-64 px-3 py-2 pr-10 text-sm border rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
                 searchError
-                  ? "border-red-300 bg-red-50"
+                  ? "border-yellow-300 bg-yellow-50"
                   : hasResults
                   ? "border-green-300 bg-green-50"
                   : "border-gray-300 bg-white"
@@ -159,7 +159,7 @@ const CustomerSearchBox = ({
       {/* Status Messages */}
       <div className="mt-1">
         {searchError && (
-          <div className="p-2 text-sm text-red-700 bg-red-50 rounded border border-red-200">
+          <div className="p-2 text-sm text-yellow-500 bg-yellow-50 rounded border border-yellow-200">
             <div className="flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{searchError}</span>
