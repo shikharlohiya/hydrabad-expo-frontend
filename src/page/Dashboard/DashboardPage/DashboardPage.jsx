@@ -667,20 +667,25 @@ const DashboardPage = () => {
     }
   };
 
-  // Effects
+  // Effects - Combined to prevent duplicate API calls
   useEffect(() => {
-    loadDashboardData();
-  }, [selectedPeriod, dateFilter, customStartDate, customEndDate]);
+    // Only load data if userData is available (prevents initial double-load)
+    if (!userData?.EmployeeId && !userData?.EmployeePhone) {
+      return;
+    }
 
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      if (searchTerm !== undefined) {
+    if (searchTerm !== undefined && searchTerm !== '') {
+      // Debounce search-triggered loads
+      const delayedSearch = setTimeout(() => {
         loadDashboardData();
-      }
-    }, 500);
+      }, 500);
 
-    return () => clearTimeout(delayedSearch);
-  }, [searchTerm]);
+      return () => clearTimeout(delayedSearch);
+    } else {
+      // Immediate load for filter changes (non-search)
+      loadDashboardData();
+    }
+  }, [selectedPeriod, dateFilter, customStartDate, customEndDate, searchTerm, userData?.EmployeeId, userData?.EmployeePhone]);
 
   // Utility functions
   const getCallTypeIcon = (type) => {
