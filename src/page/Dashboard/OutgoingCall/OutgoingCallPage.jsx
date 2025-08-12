@@ -178,7 +178,7 @@ const OutgoingCallPage = () => {
     console.log("👨‍💼 Manager API response:", response.data);
 
     if (response.data.success && response.data.data) {
-      const { stats, pagination, groupedRecords } = response.data.data;
+      const { stats = {}, pagination = {}, groupedRecords = [] } = response.data.data;
 
       // Store grouped records for manager view
       setGroupedRecords(groupedRecords || []);
@@ -187,9 +187,9 @@ const OutgoingCallPage = () => {
       const flatTransformedCalls = [];
       const agentsList = [];
 
-      groupedRecords?.forEach((agentGroup) => {
+      (groupedRecords || []).forEach((agentGroup) => {
         // Add agent to available agents list
-        if (agentGroup.agentDetails) {
+        if (agentGroup && agentGroup.agentDetails) {
           agentsList.push({
             id: agentGroup.agentDetails.EmployeeId,
             name: agentGroup.agentDetails.EmployeeName,
@@ -199,7 +199,7 @@ const OutgoingCallPage = () => {
         }
 
         // Transform each call in the agent's call list
-        agentGroup.calls?.forEach((call) => {
+        (agentGroup?.calls || []).forEach((call) => {
           const transformedCall = transformManagerCall(call, agentGroup.agentDetails);
           flatTransformedCalls.push(transformedCall);
         });
@@ -211,20 +211,21 @@ const OutgoingCallPage = () => {
       // Set flat calls for table display
       setOutgoingCalls(flatTransformedCalls);
 
-      // Set manager stats
+      // Set manager stats with safe fallbacks
       setStats({
-        total: stats.totalCalls || 0,
-        completed: stats.connectedCalls || 0,
-        failed: stats.failedCalls || 0,
-        totalTalkTime: formatTotalTalkTime(stats.totalTalkTime || 0)
+        total: (stats && stats.totalCalls) || 0,
+        completed: (stats && stats.connectedCalls) || 0,
+        failed: (stats && stats.failedCalls) || 0,
+        totalTalkTime: formatTotalTalkTime((stats && stats.totalTalkTime) || 0)
       });
 
-      setPagination(pagination);
+      setPagination(pagination || {});
     } else {
       console.warn("⚠️ Manager API response structure unexpected:", response.data);
       setGroupedRecords([]);
       setOutgoingCalls([]);
       setStats({ total: 0, completed: 0, failed: 0, totalTalkTime: "0m" });
+      setPagination({});
     }
   };
 
@@ -276,25 +277,26 @@ const OutgoingCallPage = () => {
     console.log("👤 Agent API response:", response.data);
 
     if (response.data.success && response.data.data) {
-      const { stats, pagination, records } = response.data.data;
+      const { stats = {}, pagination = {}, records = [] } = response.data.data;
       
       // Transform agent calls using updated logic for new API structure
-      const transformedCalls = records.map((call) => transformAgentCall(call));
+      const transformedCalls = (records || []).map((call) => transformAgentCall(call));
 
       setOutgoingCalls(transformedCalls);
       
-      // Use stats from API response directly
+      // Use stats from API response directly with safe fallbacks
       setStats({
-        total: stats.totalCalls || 0,
-        completed: stats.connected || 0,
-        failed: stats.missed || 0,
-        totalTalkTime: formatTotalTalkTime(stats.totalTalkTime || 0)
+        total: (stats && stats.totalCalls) || 0,
+        completed: (stats && stats.connected) || 0,
+        failed: (stats && stats.missed) || 0,
+        totalTalkTime: formatTotalTalkTime((stats && stats.totalTalkTime) || 0)
       });
-      setPagination(pagination);
+      setPagination(pagination || {});
     } else {
       console.warn("⚠️ Agent API response structure unexpected:", response.data);
       setOutgoingCalls([]);
       setStats({ total: 0, completed: 0, failed: 0, totalTalkTime: "0m" });
+      setPagination({});
     }
   };
 
