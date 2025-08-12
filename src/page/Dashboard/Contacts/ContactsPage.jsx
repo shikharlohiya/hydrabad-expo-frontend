@@ -1010,35 +1010,33 @@ const ContactsPage = () => {
     }
   };
 
-  // Initial data fetch
+  // Combined data fetch to prevent duplicate API calls
   useEffect(() => {
-    if (userData) {
-      fetchTraders();
+    if (!userData) {
+      return;
+    }
+
+    // Fetch counts only on initial userData load
+    if (currentPage === 1 && selectedStatus === "active" && !selectedRegion && !searchTerm) {
       fetchTraderCounts();
     }
-  }, [userData]);
 
-  // Refetch when page, status, or region filter changes
-  useEffect(() => {
-    if (userData) {
-      fetchTraders(currentPage, pageSize, selectedStatus, selectedRegion, searchTerm);
-    }
-  }, [currentPage, pageSize, selectedStatus, selectedRegion]);
-
-  // Handle search with debouncing
-  useEffect(() => {
-    if (userData) {
+    if (searchTerm !== undefined && searchTerm !== '') {
+      // Debounce search-triggered loads
       const delayedSearch = setTimeout(() => {
         if (currentPage === 1) {
           fetchTraders(1, pageSize, selectedStatus, selectedRegion, searchTerm);
         } else {
-          setCurrentPage(1);
+          setCurrentPage(1); // This will trigger another useEffect call
         }
       }, 500);
 
       return () => clearTimeout(delayedSearch);
+    } else {
+      // Immediate load for filter/pagination changes
+      fetchTraders(currentPage, pageSize, selectedStatus, selectedRegion, searchTerm);
     }
-  }, [searchTerm]);
+  }, [userData, currentPage, pageSize, selectedStatus, selectedRegion, searchTerm]);
 
   // Pagination handlers
   const handlePageChange = (newPage) => {
