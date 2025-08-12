@@ -29,9 +29,11 @@ import {
 } from "@heroicons/react/24/outline";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
+import useDialer from "../../../hooks/useDialer";
 
 const OutgoingCallPage = () => {
   const { userData } = useContext(UserContext);
+  const { initiateCall, canInitiateCall, isCallActive, callStatus, setCurrentNumber } = useDialer();
 
   // ====== ROLE DETECTION ======
   // Determine if the current user is a manager (EmployeeRole = 2) or agent (EmployeeRole = 1)
@@ -40,7 +42,8 @@ const OutgoingCallPage = () => {
 
   // ====== SHARED STATE (Both Agent & Manager) ======
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [connectedFilterAgent, setConnectedFilterAgent] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("today");
   const [sortBy, setSortBy] = useState("recent");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -63,9 +66,29 @@ const OutgoingCallPage = () => {
   const [availableAgents, setAvailableAgents] = useState([]); // List of agents for dropdown filter
 
   // ====== DATE RANGE STATE (Enhanced for Manager) ======
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Helper function to get yesterday's date in YYYY-MM-DD format  
+  const getYesterdayDate = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString().split('T')[0];
+  };
+
+  // Helper function to get date N days ago in YYYY-MM-DD format
+  const getDateNDaysAgo = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date.toISOString().split('T')[0];
+  };
+
   // Managers get more sophisticated date filtering
-  const [startDate, setStartDate] = useState("2025-08-01");
-  const [endDate, setEndDate] = useState("2025-08-07");
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
 
   // ====== EXCEL EXPORT STATE (Manager Only) ======
   // These states handle the Excel export functionality for managers
@@ -127,7 +150,7 @@ const OutgoingCallPage = () => {
       startDate,
       endDate,
       page: currentPage,
-      limit: 50,
+      limit: 10,
       connected: connectedFilter,
       agentId: selectedAgentId
     });
@@ -137,7 +160,7 @@ const OutgoingCallPage = () => {
       startDate: startDate,
       endDate: endDate,
       page: currentPage,
-      limit: 50, // Fixed limit as per API
+      limit: 10, // Fixed limit for pagination
     };
 
     // Add optional filters only if they have values
@@ -205,7 +228,7 @@ const OutgoingCallPage = () => {
     }
   };
 
-  // ====== AGENT API FUNCTION (Original Logic) ======
+  // ====== AGENT API FUNCTION (Updated for new API structure) ======
   const fetchAgentOutgoingCalls = async () => {
     const agentNumber = userData?.EmployeePhone;
     if (!agentNumber) {
@@ -214,11 +237,39 @@ const OutgoingCallPage = () => {
 
     console.log("👤 Fetching agent outgoing calls for:", agentNumber);
     
+    // Calculate date range based on dateFilter
+    let apiStartDate, apiEndDate;
+    switch (dateFilter) {
+      case "today":
+        apiStartDate = getTodayDate();
+        apiEndDate = getTodayDate();
+        break;
+      case "yesterday":
+        apiStartDate = getYesterdayDate();
+        apiEndDate = getYesterdayDate();
+        break;
+      case "week":
+        apiStartDate = getDateNDaysAgo(7);
+        apiEndDate = getTodayDate();
+        break;
+      case "custom":
+        apiStartDate = startDate;
+        apiEndDate = endDate;
+        break;
+      default:
+        apiStartDate = getTodayDate();
+        apiEndDate = getTodayDate();
+    }
+    
     const response = await axiosInstance.get("/calls/outgoing", {
       params: {
-        startDate: startDate,
-        endDate: endDate,
         agentNumber: agentNumber,
+        startDate: apiStartDate,
+        endDate: apiEndDate,
+        page: currentPage,
+        limit: 10,
+        ...(debouncedSearchTerm && debouncedSearchTerm.trim() && { search: debouncedSearchTerm.trim() }),
+        ...(connectedFilterAgent && connectedFilterAgent !== '' && { connected: connectedFilterAgent === 'true' }),
       },
     });
 
@@ -227,22 +278,16 @@ const OutgoingCallPage = () => {
     if (response.data.success && response.data.data) {
       const { stats, pagination, records } = response.data.data;
       
-      // Transform agent calls using existing logic
+      // Transform agent calls using updated logic for new API structure
       const transformedCalls = records.map((call) => transformAgentCall(call));
 
       setOutgoingCalls(transformedCalls);
       
-      // Calculate agent stats
-      const totalCalls = stats.totalCalls || records.length;
-      const completedCalls = records.filter(call => 
-        call.aDialStatus === "Connected" && call.bDialStatus === "Connected" && call.totalCallDuration > 0
-      ).length;
-      const failedCalls = totalCalls - completedCalls;
-      
+      // Use stats from API response directly
       setStats({
-        total: totalCalls,
-        completed: completedCalls,
-        failed: failedCalls,
+        total: stats.totalCalls || 0,
+        completed: stats.connected || 0,
+        failed: stats.missed || 0,
         totalTalkTime: formatTotalTalkTime(stats.totalTalkTime || 0)
       });
       setPagination(pagination);
@@ -305,32 +350,24 @@ const OutgoingCallPage = () => {
     };
   };
 
-  // Transform agent call data (original logic)
+  // Transform agent call data (updated for new API structure)
   const transformAgentCall = (call) => {
-    const recipientName = call.BPartyContact?.Contact_Name || "Unknown Caller";
-    const recipientNumber = call.bPartyNo;
-    const region = call.BPartyContact?.Region || "Unknown";
-    const zone = call.BPartyContact?.Zone || "Unknown";
+    // Get trader name from trader_master (updated based on your new API response)
+    const recipientName = call.trader_master?.Trader_Name || 
+                         call.trader_master?.Trader_business_Name || 
+                         "Unknown Caller";
     
-    // Determine status based on aDialStatus and bDialStatus
-    let status = "failed";
-    if (call.aDialStatus === "Connected" && call.bDialStatus === "Connected" && call.totalCallDuration > 0) {
-      status = "completed";
-    } else if (call.aDialStatus === "Connected" && (call.bDialStatus === "User Not Responding" || call.bDialStatus === "" || call.totalCallDuration === 0)) {
-      status = "failed";
-    } else if (call.aDialStatus === "Line Drop") {
-      status = "failed";
-    }
+    const recipientNumber = call.customerNumber;
     
-    // Determine call outcome
-    let callOutcome = "no-answer";
-    if (call.aDialStatus === "Connected" && call.bDialStatus === "Connected") {
-      callOutcome = "successful";
-    } else if (call.bDialStatus === "User Not Responding") {
-      callOutcome = "no-answer";
-    } else if (call.aDialStatus === "Line Drop") {
-      callOutcome = "line-drop";
-    }
+    // Get region from trader_master (updated based on your new API response)
+    const region = call.trader_master?.Region || "Unknown";
+    const zone = call.trader_master?.Zone || "Unknown";
+    
+    // Use status directly from API response
+    const status = call.status === "Connected" ? "completed" : "failed";
+    
+    // Get remarks from formDetails
+    const remarks = call.formDetails?.remarks || null;
     
     return {
       id: call.CallId,
@@ -342,12 +379,15 @@ const OutgoingCallPage = () => {
       callDateTime: call.callStartTime,
       duration: formatDurationFromSeconds(call.totalCallDuration),
       status: status,
-      callOutcome: callOutcome,
-      aDialStatus: call.aDialStatus,
-      bDialStatus: call.bDialStatus,
-      remarks: null, // Will be added when form details are provided
+      callStatus: call.status, // Store original status for retry logic
+      remarks: remarks,
       rawData: call, // Store original data for details modal
-      isManagerView: false
+      isManagerView: false,
+      // Additional data from new API
+      agent: call.agent,
+      trader_master: call.trader_master,
+      formDetails: call.formDetails,
+      recordVoice: call.recordVoice
     };
   };
 
@@ -477,6 +517,22 @@ const OutgoingCallPage = () => {
 
   // ====== EFFECT HOOKS ======
   
+  // Debounce search term to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    if (debouncedSearchTerm !== searchTerm) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm]);
+
   // Load data when component mounts or filters change
   useEffect(() => {
     if (userData?.EmployeeId || userData?.EmployeePhone) {
@@ -490,26 +546,31 @@ const OutgoingCallPage = () => {
     selectedAgentId,
     connectedFilter,
     startDate,
-    endDate
+    endDate,
+    // Agent-specific dependencies
+    debouncedSearchTerm,
+    connectedFilterAgent
   ]);
 
   // ====== FILTERING LOGIC ======
   
-  // Enhanced filter function for both agent and manager views
-  const filteredCalls = outgoingCalls.filter((call) => {
+  // For agent view, use server-side pagination so no client-side filtering
+  // For manager view, keep client-side filtering since it handles multiple agents
+  const filteredCalls = isManager ? outgoingCalls.filter((call) => {
     // ====== SEARCH FILTER ======
     const matchesSearch = 
       call.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       call.recipientNumber.includes(searchTerm) ||
       call.callId.toString().includes(searchTerm) ||
-      // MANAGER-SPECIFIC: Also search by agent name
-      (isManager && call.agentName?.toLowerCase().includes(searchTerm.toLowerCase()));
+      call.agentName?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // ====== STATUS FILTER ======
-    const matchesStatus = statusFilter === "all" || call.status === statusFilter;
+    // ====== CONNECTED FILTER ======
+    const matchesConnected = connectedFilter === "" || 
+      (connectedFilter === "true" && call.status === "connected") ||
+      (connectedFilter === "false" && call.status !== "connected");
 
-    return matchesSearch && matchesStatus;
-  });
+    return matchesSearch && matchesConnected;
+  }) : outgoingCalls; // Agent view: no client-side filtering, data comes paginated from server
 
   // ====== HELPER FUNCTIONS FOR MANAGER FEATURES ======
 
@@ -529,17 +590,18 @@ const OutgoingCallPage = () => {
     setSelectedAgentId("");
     setConnectedFilter("");
     setSearchTerm("");
-    setStatusFilter("all");
     setDateFilter("today");
     setSortBy("recent");
+    setCurrentPage(1);
   };
 
   // Clear all agent-specific filters
   const clearAgentFilters = () => {
     setSearchTerm("");
-    setStatusFilter("all");
+    setConnectedFilterAgent("");
     setDateFilter("today");
     setSortBy("recent");
+    setCurrentPage(1);
   };
 
   // Handle view details
@@ -551,6 +613,22 @@ const OutgoingCallPage = () => {
   // Handle refresh
   const handleRefresh = () => {
     fetchOutgoingCalls();
+  };
+
+  // Handle retry call
+  const handleRetryCall = (phoneNumber, traderName) => {
+    console.log("🔍 handleRetryCall called with:", { phoneNumber, traderName });
+    if (phoneNumber && phoneNumber.trim() !== "") {
+      console.log(`📞 Initiating retry call to ${phoneNumber} for ${traderName}`);
+      
+      // Set the current number first, then initiate call
+      setCurrentNumber(phoneNumber);
+      initiateCall(phoneNumber, { name: traderName });
+      
+      console.log("✅ Retry call initiated");
+    } else {
+      console.error("❌ No phone number provided for retry");
+    }
   };
 
   const getStatusIcon = (status) => {
@@ -840,16 +918,16 @@ const OutgoingCallPage = () => {
                 {/* Status Filter */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Call Status
+                    Connection Status
                   </label>
                   <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+                    value={connectedFilter}
+                    onChange={(e) => setConnectedFilter(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                   >
-                    <option value="all">All Status</option>
-                    <option value="completed">Completed</option>
-                    <option value="failed">Failed</option>
+                    <option value="">All Calls</option>
+                    <option value="true">Connected</option>
+                    <option value="false">Not Connected</option>
                   </select>
                 </div>
 
@@ -932,15 +1010,15 @@ const OutgoingCallPage = () => {
                 </div>
               </div>
 
-              {/* Status Filter */}
+              {/* Connected Filter */}
               <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                value={connectedFilterAgent}
+                onChange={(e) => setConnectedFilterAgent(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
               >
-                <option value="all">All Status</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
+                <option value="">All Calls</option>
+                <option value="true">Connected</option>
+                <option value="false">Not Connected</option>
               </select>
 
               {/* Date Filter */}
@@ -951,9 +1029,27 @@ const OutgoingCallPage = () => {
               >
                 <option value="today">Today</option>
                 <option value="yesterday">Yesterday</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
+                <option value="week">Last Week</option>
+                <option value="custom">Custom</option>
               </select>
+
+              {/* Custom Date Range for Agent */}
+              {dateFilter === "custom" && (
+                <div className="col-span-2 grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                  />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+              )}
 
               {/* Sort By */}
               <select
@@ -1090,7 +1186,7 @@ const OutgoingCallPage = () => {
               <PhoneArrowUpRightIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Outgoing Calls</h3>
               <p className="text-gray-600">
-                {searchTerm || statusFilter !== "all" 
+                {searchTerm || connectedFilterAgent !== "" || (isManager && connectedFilter !== "")
                   ? "No calls match your search criteria" 
                   : "No outgoing calls found for the selected period"}
               </p>
@@ -1116,7 +1212,7 @@ const OutgoingCallPage = () => {
                       Call Info
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status & Outcome
+                      Remarks
                     </th>
                     {/* Manager gets enhanced actions */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1193,23 +1289,60 @@ const OutgoingCallPage = () => {
                             <ClockIcon className="h-3 w-3 mr-1" />
                             {time} • {call.duration}
                           </div>
-                          <div className="mt-1 text-xs text-gray-500">
-                            A: {call.aDialStatus} | B: {call.bDialStatus || 'N/A'}
+                          <div className="mt-1">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              call.callStatus === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {call.callStatus || call.status}
+                            </span>
                           </div>
                         </td>
 
-                        {/* Status & Outcome */}
+                        {/* Remarks */}
                         <td className="px-6 py-4">
-                          <div className="flex flex-col space-y-2">
-                            <span className={getStatusBadge(call.status)}>
-                              {getStatusIcon(call.status)}
-                              <span className="ml-1 capitalize">{call.status}</span>
-                            </span>
-                            {call.callOutcome && (
-                              <div className="flex items-center text-xs text-gray-600">
-                                {getOutcomeIcon(call.callOutcome)}
-                                <span className="ml-1 capitalize">{call.callOutcome.replace('-', ' ')}</span>
+                          <div className="text-sm text-gray-900">
+                            {call.remarks ? (
+                              <div className="max-w-xs">
+                                {call.remarks.length > 50 ? (
+                                  <div>
+                                    {expandedRemarks.has(call.id) ? (
+                                      <div>
+                                        <div className="whitespace-pre-wrap break-words mb-1">
+                                          {call.remarks}
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            const newExpanded = new Set(expandedRemarks);
+                                            newExpanded.delete(call.id);
+                                            setExpandedRemarks(newExpanded);
+                                          }}
+                                          className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                                        >
+                                          Show less
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <span>{call.remarks.substring(0, 50)}...</span>
+                                        <button
+                                          onClick={() => {
+                                            const newExpanded = new Set(expandedRemarks);
+                                            newExpanded.add(call.id);
+                                            setExpandedRemarks(newExpanded);
+                                          }}
+                                          className="ml-1 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                                        >
+                                          read more
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span>{call.remarks}</span>
+                                )}
                               </div>
+                            ) : (
+                              <span className="text-gray-400 italic">No remarks</span>
                             )}
                           </div>
                         </td>
@@ -1224,9 +1357,9 @@ const OutgoingCallPage = () => {
                               <EyeIcon className="w-4 h-4 mr-1" />
                               View Details
                             </button>
-                            {call.rawData?.recordVoice && call.rawData.recordVoice !== "No Voice" && (
+                            {call.recordVoice && call.recordVoice !== "No Voice" && (
                               <a 
-                                href={call.rawData.recordVoice}
+                                href={call.recordVoice}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-purple-600 hover:text-purple-900 flex items-center"
@@ -1235,24 +1368,14 @@ const OutgoingCallPage = () => {
                                 Recording
                               </a>
                             )}
-                            {/* Manager-specific: Show form details if available */}
-                            {isManager && call.formDetails && (
+                            {/* Show retry call button for non-connected calls */}
+                            {(call.callStatus !== "Connected" && call.status !== "completed") && (
                               <button 
-                                onClick={() => handleViewDetails(call)}
-                                className="text-blue-600 hover:text-blue-900 flex items-center"
+                                onClick={() => handleRetryCall(call.recipientNumber, call.recipientName)}
+                                className="text-orange-600 hover:text-orange-900 flex items-center"
+                                disabled={!call.recipientNumber}
                               >
-                                <DocumentTextIcon className="w-4 h-4 mr-1" />
-                                Form Details
-                              </button>
-                            )}
-                            {/* Show remarks if available */}
-                            {call.remarks && (
-                              <div className="text-xs text-gray-600 mt-1 max-w-xs">
-                                <span className="font-medium">Remarks:</span> {call.remarks.length > 20 ? `${call.remarks.substring(0, 20)}...` : call.remarks}
-                              </div>
-                            )}
-                            {(call.status === "failed") && (
-                              <button className="text-orange-600 hover:text-orange-900 text-xs">
+                                <PhoneIcon className="w-4 h-4 mr-1" />
                                 Retry Call
                               </button>
                             )}
@@ -1267,33 +1390,77 @@ const OutgoingCallPage = () => {
           )}
 
           {/* Pagination */}
-          {filteredCalls.length > 0 && (
+          {pagination && pagination.totalPages > 1 && (
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
               <div className="flex-1 flex justify-between sm:hidden">
-                <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage <= 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Previous
                 </button>
-                <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                  disabled={currentPage >= pagination.totalPages}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Next
                 </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{Math.min(1, filteredCalls.length)}</span> to <span className="font-medium">{filteredCalls.length}</span> of{' '}
-                    <span className="font-medium">{stats?.total || filteredCalls.length}</span> results
+                    Showing <span className="font-medium">{((currentPage - 1) * 10) + 1}</span> to <span className="font-medium">{Math.min(currentPage * 10, pagination.totalRecords)}</span> of{' '}
+                    <span className="font-medium">{pagination.totalRecords}</span> results
                   </p>
                 </div>
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                    <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                      Previous
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage <= 1}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <ArrowDownIcon className="h-5 w-5 rotate-90" aria-hidden="true" />
                     </button>
-                    <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-green-50 text-sm font-medium text-green-600">
-                      1
-                    </button>
-                    <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                      Next
+                    
+                    {/* Page Numbers */}
+                    {[...Array(Math.min(5, pagination.totalPages))].map((_, index) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = index + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = index + 1;
+                      } else if (currentPage >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + index;
+                      } else {
+                        pageNum = currentPage - 2 + index;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            currentPage === pageNum
+                              ? 'z-10 bg-green-50 border-green-500 text-green-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                      disabled={currentPage >= pagination.totalPages}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      <ArrowDownIcon className="h-5 w-5 -rotate-90" aria-hidden="true" />
                     </button>
                   </nav>
                 </div>
@@ -1334,11 +1501,11 @@ const OutgoingCallPage = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Agent Number:</span>
-                      <span className="font-medium">{selectedCall.rawData?.aPartyNo}</span>
+                      <span className="font-medium">{selectedCall.rawData?.agentNumber}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Recipient Number:</span>
-                      <span className="font-medium">{selectedCall.rawData?.bPartyNo}</span>
+                      <span className="text-gray-600">Customer Number:</span>
+                      <span className="font-medium">{selectedCall.rawData?.customerNumber}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Start Time:</span>
@@ -1350,11 +1517,19 @@ const OutgoingCallPage = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">End Time:</span>
-                      <span className="font-medium">{new Date(selectedCall.rawData?.aPartyEndTime).toLocaleString()}</span>
+                      <span className="font-medium">{selectedCall.rawData?.aPartyEndTime ? new Date(selectedCall.rawData.aPartyEndTime).toLocaleString() : 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Duration:</span>
                       <span className="font-medium">{selectedCall.duration}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedCall.rawData?.status === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedCall.rawData?.status}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1394,38 +1569,124 @@ const OutgoingCallPage = () => {
                   </div>
                 </div>
 
-                {/* Contact Details */}
-                {selectedCall.rawData?.BPartyContact && (
+                {/* Trader Master Details */}
+                {selectedCall.rawData?.trader_master && (
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Details</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Trader Details</h3>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Contact Name:</span>
-                        <span className="font-medium">{selectedCall.rawData.BPartyContact.Contact_Name || 'N/A'}</span>
+                        <span className="text-gray-600">Trader Name:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Trader_Name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Business Name:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Trader_business_Name || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Contact Number:</span>
-                        <span className="font-medium">{selectedCall.rawData.BPartyContact.Contact_no}</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Contact_no}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Type:</span>
-                        <span className="font-medium">{selectedCall.rawData.BPartyContact.Type}</span>
+                        <span className="text-gray-600">Code:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Code}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Region:</span>
-                        <span className="font-medium">{selectedCall.rawData.BPartyContact.Region}</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Region}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Zone:</span>
-                        <span className="font-medium">{selectedCall.rawData.BPartyContact.Zone || 'N/A'}</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Zone || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedCall.rawData.BPartyContact.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          selectedCall.rawData.trader_master.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {selectedCall.rawData.BPartyContact.isActive ? 'Active' : 'Inactive'}
+                          {selectedCall.rawData.trader_master.status}
                         </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Agent Details */}
+                {selectedCall.rawData?.agent && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Agent Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Agent Name:</span>
+                        <span className="font-medium">{selectedCall.rawData.agent.EmployeeName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Employee ID:</span>
+                        <span className="font-medium">{selectedCall.rawData.agent.EmployeeId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Phone:</span>
+                        <span className="font-medium">{selectedCall.rawData.agent.EmployeePhone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Region:</span>
+                        <span className="font-medium">{selectedCall.rawData.agent.EmployeeRegion}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Role ID:</span>
+                        <span className="font-medium">{selectedCall.rawData.agent.EmployeeRoleID}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Details */}
+                {selectedCall.rawData?.formDetails && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Form Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Call Type:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.callType || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Inquiry Number:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.inquiryNumber || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Support Type:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.SupportType?.supportName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Process Type:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.ProcessType?.processName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Query Type:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.QueryType?.queryName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Follow-up Date:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.followUpDate 
+                            ? new Date(selectedCall.rawData.formDetails.followUpDate).toLocaleDateString()
+                            : 'No follow-up scheduled'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Form Status:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedCall.rawData.formDetails.status === 'open' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {selectedCall.rawData.formDetails.status?.charAt(0).toUpperCase() + selectedCall.rawData.formDetails.status?.slice(1) || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-600 text-sm">Remarks:</span>
+                        <div className="mt-1 p-3 bg-white border rounded-lg">
+                          <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                            {selectedCall.rawData.formDetails.remarks || 'No remarks provided'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1438,9 +1699,9 @@ const OutgoingCallPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Recording Status:</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedCall.rawData?.recordVoice !== 'No Voice' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        selectedCall.rawData?.recordVoice && selectedCall.rawData.recordVoice !== 'No Voice' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {selectedCall.rawData?.recordVoice !== 'No Voice' ? 'Available' : 'Not Available'}
+                        {selectedCall.rawData?.recordVoice && selectedCall.rawData.recordVoice !== 'No Voice' ? 'Available' : 'Not Available'}
                       </span>
                     </div>
                     {selectedCall.rawData?.recordVoice && selectedCall.rawData.recordVoice !== "No Voice" && (

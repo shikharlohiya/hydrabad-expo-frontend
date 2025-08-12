@@ -24,16 +24,18 @@ import {
 } from "@heroicons/react/24/outline";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
+import useDialer from "../../../hooks/useDialer";
 
 const IncomingCallPage = () => {
   const { userData } = useContext(UserContext);
+  const { initiateCall, canInitiateCall, isCallActive, callStatus, setCurrentNumber } = useDialer();
   
   // Role-based management: Check if user is manager (EmployeeRole = 2)
   const isManager = userData?.EmployeeRole === 2;
   const managerId = userData?.EmployeeId;
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [connectedFilterAgent, setConnectedFilterAgent] = useState("");
   const [dateFilter, setDateFilter] = useState("today");
   const [sortBy, setSortBy] = useState("recent");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -46,12 +48,33 @@ const IncomingCallPage = () => {
   const [selectedCall, setSelectedCall] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [expandedRemarks, setExpandedRemarks] = useState(new Set());
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Helper function to get yesterday's date in YYYY-MM-DD format  
+  const getYesterdayDate = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString().split('T')[0];
+  };
+
+  // Helper function to get date N days ago in YYYY-MM-DD format
+  const getDateNDaysAgo = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date.toISOString().split('T')[0];
+  };
 
   // Manager-specific state
   const [selectedAgent, setSelectedAgent] = useState("");
   const [connectedFilter, setConnectedFilter] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
   const [availableAgents, setAvailableAgents] = useState([]);
   
   // Manager Excel Export state
@@ -165,26 +188,58 @@ const IncomingCallPage = () => {
           setPagination(pagination);
         }
       } else {
-        // Agent API: /calls/incoming
+        // Agent API: /calls/incoming (Updated for new API structure)
         const agentNumber = userData?.EmployeePhone;
         if (!agentNumber) {
           throw new Error("Agent phone number not found. Please login again.");
         }
 
-        // Static date range - as requested
-        const staticStartDate = "2025-08-06";
-        const staticEndDate = "2025-08-07";
+        // Calculate date range based on dateFilter
+        let apiStartDate, apiEndDate;
+        switch (dateFilter) {
+          case "today":
+            apiStartDate = getTodayDate();
+            apiEndDate = getTodayDate();
+            break;
+          case "yesterday":
+            apiStartDate = getYesterdayDate();
+            apiEndDate = getYesterdayDate();
+            break;
+          case "week":
+            apiStartDate = getDateNDaysAgo(7);
+            apiEndDate = getTodayDate();
+            break;
+          case "custom":
+            apiStartDate = startDate;
+            apiEndDate = endDate;
+            break;
+          default:
+            apiStartDate = getTodayDate();
+            apiEndDate = getTodayDate();
+        }
 
-        console.log("📞 Fetching incoming calls for agent:", agentNumber);
+        console.log("📞 Fetching incoming calls for agent:", agentNumber, "Date range:", apiStartDate, "to", apiEndDate);
+        
+        const params = {
+          page: currentPage,
+          limit: 10,
+          startDate: apiStartDate,
+          endDate: apiEndDate,
+          agentNumber: agentNumber,
+        };
+        
+        // Add search parameter for server-side search
+        if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+          params.search = debouncedSearchTerm.trim();
+        }
+        
+        // Add connected filter for server-side filtering
+        if (connectedFilterAgent && connectedFilterAgent !== '') {
+          params.connected = connectedFilterAgent === 'true';
+        }
         
         response = await axiosInstance.get("/calls/incoming", {
-          params: {
-            page: currentPage,
-            limit: 10,
-            startDate: staticStartDate,
-            endDate: staticEndDate,
-            agentNumber: agentNumber,
-          },
+          params
         });
 
         console.log("📞 Agent incoming calls API response:", response.data);
@@ -192,11 +247,16 @@ const IncomingCallPage = () => {
         if (response.data.success && response.data.data) {
           const { stats, pagination, records } = response.data.data;
           
-          // Transform the data to match component structure
+          // Transform the data to match new API structure
           const transformedCalls = records.map((call) => {
-            const callerName = call.contactDetails?.Contact_Name || "Unknown Caller";
-            const region = call.contactDetails?.Region || "Unknown";
-            const zone = call.contactDetails?.Zone || "Unknown";
+            // Use trader_master info if available, otherwise use callerNumber
+            const callerName = call.trader_master?.Trader_Name || 
+                             call.trader_master?.Trader_business_Name || 
+                             "Unknown Caller";
+            
+            // Use agent region from agentDetails
+            const region = call.agentDetails?.EmployeeRegion || "Unknown";
+            const zone = call.trader_master?.Zone || "Unknown";
             const agentName = call.agentDetails?.EmployeeName || "Unknown Agent";
             
             // Determine status based on ogCallStatus and duration
@@ -215,9 +275,15 @@ const IncomingCallPage = () => {
               callDateTime: call.callStartTime,
               duration: formatDurationFromSeconds(call.totalCallDuration),
               status: status,
+              ogCallStatus: call.ogCallStatus, // Store original status for retry logic
               agentName: agentName,
               remarks: call.formDetails?.remarks || null,
               rawData: call, // Store original data for details modal
+              // Additional data from new API
+              agentDetails: call.agentDetails,
+              trader_master: call.trader_master,
+              formDetails: call.formDetails,
+              voiceRecording: call.voiceRecording
             };
           });
 
@@ -346,26 +412,45 @@ const IncomingCallPage = () => {
     }
   };
 
+  // Debounce search term to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    if (debouncedSearchTerm !== searchTerm) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm]);
+
   // Load data when component mounts or filters change
   useEffect(() => {
     if (isManager || userData?.EmployeePhone) {
       fetchIncomingCalls();
     }
-  }, [dateFilter, currentPage, userData, selectedAgent, connectedFilter, startDate, endDate]);
+  }, [dateFilter, currentPage, userData, selectedAgent, connectedFilter, startDate, endDate, debouncedSearchTerm, connectedFilterAgent]);
 
-  // Filter calls based on search and status
-  const filteredCalls = incomingCalls.filter((call) => {
+  // For agent view, use server-side pagination so no client-side filtering
+  // For manager view, keep client-side filtering since it handles multiple agents
+  const filteredCalls = isManager ? incomingCalls.filter((call) => {
     const matchesSearch = 
       call.callerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       call.callerNumber.includes(searchTerm) ||
       call.callId.toString().includes(searchTerm) ||
-      (isManager && call.agentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (isManager && call.agentPhone?.includes(searchTerm));
+      call.agentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      call.agentPhone?.includes(searchTerm);
 
-    const matchesStatus = statusFilter === "all" || call.status === statusFilter;
+    const matchesConnected = connectedFilterAgent === "" || 
+      (connectedFilterAgent === "true" && call.status === "answered") ||
+      (connectedFilterAgent === "false" && call.status === "missed");
 
-    return matchesSearch && matchesStatus;
-  });
+    return matchesSearch && matchesConnected;
+  }) : incomingCalls; // Agent view: no client-side filtering, data comes paginated from server
 
   // Handle view details
   const handleViewDetails = (call) => {
@@ -376,6 +461,22 @@ const IncomingCallPage = () => {
   // Handle refresh
   const handleRefresh = () => {
     fetchIncomingCalls();
+  };
+
+  // Handle retry/callback for missed calls
+  const handleRetryCall = (phoneNumber, callerName) => {
+    console.log("🔍 handleRetryCall called with:", { phoneNumber, callerName });
+    if (phoneNumber && phoneNumber.trim() !== "") {
+      console.log(`📞 Initiating callback to ${phoneNumber} for ${callerName}`);
+      
+      // Set the current number first, then initiate call
+      setCurrentNumber(phoneNumber);
+      initiateCall(phoneNumber, { name: callerName });
+      
+      console.log("✅ Callback call initiated");
+    } else {
+      console.error("❌ No phone number provided for callback");
+    }
   };
 
   const getStatusIcon = (status) => {
@@ -603,23 +704,24 @@ const IncomingCallPage = () => {
                 </div>
                 
                 <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  value={connectedFilter}
+                  onChange={(e) => setConnectedFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 >
-                  <option value="all">All Status</option>
-                  <option value="answered">Answered</option>
-                  <option value="missed">Missed</option>
+                  <option value="">All Calls</option>
+                  <option value="true">Connected</option>
+                  <option value="false">Not Connected</option>
                 </select>
                 
                 <button
                   onClick={() => {
                     setSearchTerm("");
-                    setStatusFilter("all");
+                    setConnectedFilter("");
                     setSelectedAgent("");
                     setConnectedFilter("");
                     setStartDate("");
                     setEndDate("");
+                    setCurrentPage(1);
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
@@ -663,15 +765,15 @@ const IncomingCallPage = () => {
                 </div>
               </div>
 
-              {/* Status Filter */}
+              {/* Connected Filter */}
               <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                value={connectedFilterAgent}
+                onChange={(e) => setConnectedFilterAgent(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               >
-                <option value="all">All Status</option>
-                <option value="answered">Answered</option>
-                <option value="missed">Missed</option>
+                <option value="">All Calls</option>
+                <option value="true">Connected</option>
+                <option value="false">Not Connected</option>
               </select>
 
               {/* Date Filter */}
@@ -682,9 +784,29 @@ const IncomingCallPage = () => {
               >
                 <option value="today">Today</option>
                 <option value="yesterday">Yesterday</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
+                <option value="week">Last Week</option>
+                <option value="custom">Custom</option>
               </select>
+
+              {/* Custom Date Range for Agent */}
+              {dateFilter === "custom" && (
+                <>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Start Date"
+                  />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="End Date"
+                  />
+                </>
+              )}
 
               {/* Sort By */}
               <select
@@ -701,9 +823,10 @@ const IncomingCallPage = () => {
               <button
                 onClick={() => {
                   setSearchTerm("");
-                  setStatusFilter("all");
+                  setConnectedFilterAgent("");
                   setDateFilter("today");
                   setSortBy("recent");
+                  setCurrentPage(1);
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
@@ -762,7 +885,7 @@ const IncomingCallPage = () => {
               <PhoneArrowDownLeftIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Incoming Calls</h3>
               <p className="text-gray-600">
-                {searchTerm || statusFilter !== "all" 
+                {searchTerm || connectedFilterAgent !== "" 
                   ? "No calls match your search criteria" 
                   : "No incoming calls found for the selected period"}
               </p>
@@ -787,7 +910,7 @@ const IncomingCallPage = () => {
                       Call Info
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      Remarks
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -859,60 +982,60 @@ const IncomingCallPage = () => {
                             <ClockIcon className="h-3 w-3 mr-1" />
                             {time} • {call.duration}
                           </div>
-                          {call.remarks && (
-                            <div className="mt-1 text-xs text-gray-500 max-w-xs">
-                              {call.remarks.length > 15 ? (
-                                <div>
-                                  {expandedRemarks.has(call.id) ? (
-                                    <div>
-                                      <div className="whitespace-pre-wrap break-words mb-1">
-                                        {call.remarks}
-                                      </div>
-                                      <button
-                                        onClick={() => {
-                                          const newExpanded = new Set(expandedRemarks);
-                                          newExpanded.delete(call.id);
-                                          setExpandedRemarks(newExpanded);
-                                        }}
-                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
-                                      >
-                                        Show less
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div>
-                                      <span>{call.remarks.substring(0, 15)}...</span>
-                                      <button
-                                        onClick={() => {
-                                          const newExpanded = new Set(expandedRemarks);
-                                          newExpanded.add(call.id);
-                                          setExpandedRemarks(newExpanded);
-                                        }}
-                                        className="ml-1 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
-                                      >
-                                        read more
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span>{call.remarks}</span>
-                              )}
-                            </div>
-                          )}
+                          <div className="mt-1">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              call.ogCallStatus === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {call.ogCallStatus || call.status}
+                            </span>
+                          </div>
                         </td>
 
-                        {/* Status */}
+                        {/* Remarks */}
                         <td className="px-6 py-4">
-                          <div className="flex flex-col space-y-2">
-                            <span className={getStatusBadge(call.status)}>
-                              {getStatusIcon(call.status)}
-                              <span className="ml-1 capitalize">{call.status}</span>
-                            </span>
-                            {call.agentName && (
-                              <div className="text-xs text-gray-500">
-                                by {call.agentName}
+                          <div className="text-sm text-gray-900">
+                            {call.remarks ? (
+                              <div className="max-w-xs">
+                                {call.remarks.length > 50 ? (
+                                  <div>
+                                    {expandedRemarks.has(call.id) ? (
+                                      <div>
+                                        <div className="whitespace-pre-wrap break-words mb-1">
+                                          {call.remarks}
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            const newExpanded = new Set(expandedRemarks);
+                                            newExpanded.delete(call.id);
+                                            setExpandedRemarks(newExpanded);
+                                          }}
+                                          className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                                        >
+                                          Show less
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <span>{call.remarks.substring(0, 50)}...</span>
+                                        <button
+                                          onClick={() => {
+                                            const newExpanded = new Set(expandedRemarks);
+                                            newExpanded.add(call.id);
+                                            setExpandedRemarks(newExpanded);
+                                          }}
+                                          className="ml-1 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                                        >
+                                          read more
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span>{call.remarks}</span>
+                                )}
                               </div>
+                            ) : (
+                              <span className="text-gray-400 italic">No remarks</span>
                             )}
                           </div>
                         </td>
@@ -927,9 +1050,9 @@ const IncomingCallPage = () => {
                               <EyeIcon className="w-4 h-4 mr-1" />
                               View Details
                             </button>
-                            {call.rawData?.voiceRecording && (
+                            {call.voiceRecording && (
                               <a 
-                                href={call.rawData.voiceRecording}
+                                href={call.voiceRecording}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-purple-600 hover:text-purple-900 flex items-center"
@@ -938,8 +1061,14 @@ const IncomingCallPage = () => {
                                 Recording
                               </a>
                             )}
-                            {call.status === "missed" && (
-                              <button className="text-green-600 hover:text-green-900">
+                            {/* Show callback button for missed calls */}
+                            {(call.status === "missed" || call.ogCallStatus !== "Connected") && (
+                              <button 
+                                onClick={() => handleRetryCall(call.callerNumber, call.callerName)}
+                                className="text-green-600 hover:text-green-900 flex items-center"
+                                disabled={!call.callerNumber}
+                              >
+                                <PhoneIcon className="w-4 h-4 mr-1" />
                                 Call Back
                               </button>
                             )}
@@ -954,33 +1083,77 @@ const IncomingCallPage = () => {
           )}
 
           {/* Pagination */}
-          {filteredCalls.length > 0 && (
+          {pagination && pagination.totalPages > 1 && (
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
               <div className="flex-1 flex justify-between sm:hidden">
-                <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage <= 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Previous
                 </button>
-                <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                  disabled={currentPage >= pagination.totalPages}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Next
                 </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{Math.min(1, filteredCalls.length)}</span> to <span className="font-medium">{filteredCalls.length}</span> of{' '}
-                    <span className="font-medium">{stats?.total || filteredCalls.length}</span> results
+                    Showing <span className="font-medium">{((currentPage - 1) * 10) + 1}</span> to <span className="font-medium">{Math.min(currentPage * 10, pagination.totalRecords)}</span> of{' '}
+                    <span className="font-medium">{pagination.totalRecords}</span> results
                   </p>
                 </div>
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                    <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                      Previous
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage <= 1}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <ArrowDownIcon className="h-5 w-5 rotate-90" aria-hidden="true" />
                     </button>
-                    <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-indigo-50 text-sm font-medium text-indigo-600">
-                      1
-                    </button>
-                    <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                      Next
+                    
+                    {/* Page Numbers */}
+                    {[...Array(Math.min(5, pagination.totalPages))].map((_, index) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = index + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = index + 1;
+                      } else if (currentPage >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + index;
+                      } else {
+                        pageNum = currentPage - 2 + index;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            currentPage === pageNum
+                              ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                      disabled={currentPage >= pagination.totalPages}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      <ArrowDownIcon className="h-5 w-5 -rotate-90" aria-hidden="true" />
                     </button>
                   </nav>
                 </div>
@@ -1050,40 +1223,46 @@ const IncomingCallPage = () => {
                   </div>
                 </div>
 
-                {/* Contact Details */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Contact Name:</span>
-                      <span className="font-medium">{selectedCall.rawData?.contactDetails?.Contact_Name || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Contact Number:</span>
-                      <span className="font-medium">{selectedCall.rawData?.contactDetails?.Contact_no}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Type:</span>
-                      <span className="font-medium">{selectedCall.rawData?.contactDetails?.Type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Region:</span>
-                      <span className="font-medium">{selectedCall.rawData?.contactDetails?.Region}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Zone:</span>
-                      <span className="font-medium">{selectedCall.rawData?.contactDetails?.Zone || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedCall.rawData?.contactDetails?.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {selectedCall.rawData?.contactDetails?.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                {/* Trader Master Details */}
+                {selectedCall.rawData?.trader_master && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Trader Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Trader Name:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Trader_Name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Business Name:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Trader_business_Name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Contact Number:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Contact_no}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Code:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Code}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Region:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Region}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Zone:</span>
+                        <span className="font-medium">{selectedCall.rawData.trader_master.Zone || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedCall.rawData.trader_master.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {selectedCall.rawData.trader_master.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Agent Details */}
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -1118,44 +1297,48 @@ const IncomingCallPage = () => {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Form Details</h3>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Form ID:</span>
-                        <span className="font-medium text-xs">{selectedCall.rawData.formDetails.id}</span>
-                      </div>
-                      <div className="flex justify-between">
                         <span className="text-gray-600">Call Type:</span>
-                        <span className="font-medium">{selectedCall.rawData.formDetails.callType}</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.callType || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Support Type ID:</span>
-                        <span className="font-medium">{selectedCall.rawData.formDetails.supportTypeId}</span>
+                        <span className="text-gray-600">Inquiry Number:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.inquiryNumber || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Process Type ID:</span>
-                        <span className="font-medium">{selectedCall.rawData.formDetails.processTypeId}</span>
+                        <span className="text-gray-600">Support Type:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.SupportType?.supportName || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Query Type ID:</span>
-                        <span className="font-medium">{selectedCall.rawData.formDetails.queryTypeId}</span>
+                        <span className="text-gray-600">Process Type:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.ProcessType?.processName || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Status:</span>
+                        <span className="text-gray-600">Query Type:</span>
+                        <span className="font-medium">{selectedCall.rawData.formDetails.QueryType?.queryName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Follow-up Date:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.followUpDate 
+                            ? new Date(selectedCall.rawData.formDetails.followUpDate).toLocaleDateString()
+                            : 'No follow-up scheduled'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Form Status:</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           selectedCall.rawData.formDetails.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {selectedCall.rawData.formDetails.status}
+                          {selectedCall.rawData.formDetails.status?.charAt(0).toUpperCase() + selectedCall.rawData.formDetails.status?.slice(1) || 'N/A'}
                         </span>
                       </div>
-                      {selectedCall.rawData.formDetails.remarks && (
-                        <div>
-                          <span className="text-gray-600 block mb-1">Remarks:</span>
-                          <div className="bg-white p-3 rounded border text-sm">
-                            {selectedCall.rawData.formDetails.remarks}
-                          </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-600 text-sm">Remarks:</span>
+                        <div className="mt-1 p-3 bg-white border rounded-lg">
+                          <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                            {selectedCall.rawData.formDetails.remarks || 'No remarks provided'}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Created:</span>
-                        <span className="font-medium text-xs">{new Date(selectedCall.rawData.formDetails.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
