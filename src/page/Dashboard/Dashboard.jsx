@@ -8,6 +8,7 @@ import OutgoingCallPage from "./OutgoingCall/OutgoingCallPage";
 import ContactsPage from "./Contacts/ContactsPage";
 import CallHistoryPage from "./CallHistory/CallHistoryPage";
 import ProfilePage from "./Profile/ProfilePage";
+import FollowUpPage from "./FollowUp/FollowUpPage";
 
 const Dashboard = () => {
   return (
@@ -22,6 +23,7 @@ const Dashboard = () => {
         <Route path="outgoing-call" element={<OutgoingCallPage />} />
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="call-history" element={<CallHistoryPage />} />
+        <Route path="follow-up" element={<FollowUpPage />} />
         <Route path="profile" element={<ProfilePage />} />
 
         {/* Add more dashboard routes here as needed */}

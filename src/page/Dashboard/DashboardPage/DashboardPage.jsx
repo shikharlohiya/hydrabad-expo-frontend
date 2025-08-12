@@ -561,9 +561,10 @@ const DashboardPage = () => {
 
       const response = await axiosInstance.get("/calls/follow-ups", {
         params: {
-          agentNumber: employeeId, // For managers, this will fetch follow-ups for all their agents
+          agentNumber: userData?.EmployeePhone || employeeId, // Use phone number for API
           startDate: startDate,
           endDate: endDate,
+          limit: 5, // Only fetch 5 for dashboard widget
         },
       });
 
@@ -574,37 +575,60 @@ const DashboardPage = () => {
 
       if (response.data.success && response.data.data) {
         // Transform the API data to match component structure
-        const transformedFollowUps = response.data.data.records.map(
-          (followUp) => {
-            // Determine priority based on follow-up date
-            const followUpDate = new Date(followUp.followUpDate);
-            const today = new Date();
-            const diffDays = Math.ceil(
-              (followUpDate - today) / (1000 * 60 * 60 * 24)
-            );
-
-            let priority = "Normal";
-            if (diffDays < 0) {
-              priority = "High"; // Overdue
-            } else if (diffDays <= 1) {
-              priority = "Medium"; // Due today or tomorrow
-            }
-
-            return {
-              id: followUp.id,
-              customerName: followUp.employee?.EmployeeName || "Unknown",
-              phoneNumber: followUp.inquiryNumber,
-              followUpDate: followUp.followUpDate,
-              priority: priority,
-              issue: followUp.remarks || "No remarks provided",
-              callId: followUp.CallId,
-              status: followUp.status,
-              callType: followUp.callType,
-              employeeData: followUp.employee,
-              rawData: followUp, // Store original data
-            };
+        const transformedFollowUps = (response.data.data.records || []).map((record) => {
+          // Safely destructure with fallbacks
+          const formDetail = record?.formDetail || {};
+          const agent = record?.agent || {};
+          const trader_master = record?.trader_master || {};
+          
+          // Determine priority based on follow-up date
+          const followUpDate = new Date(formDetail.followUpDate);
+          const today = new Date();
+          const diffDays = Math.ceil((followUpDate - today) / (1000 * 60 * 60 * 24));
+          
+          let priority = "Normal";
+          if (diffDays < 0) {
+            priority = "High"; // Overdue
+          } else if (diffDays <= 1) {
+            priority = "Medium"; // Due today or tomorrow
           }
-        );
+
+          return {
+            id: formDetail.id,
+            customerName: trader_master?.Trader_Name || 
+                         trader_master?.Trader_business_Name || 
+                         trader_master?.trader_name || 
+                         trader_master?.business_name || 
+                         "Unknown Trader",
+            traderName: trader_master?.Trader_Name || 
+                       trader_master?.Trader_business_Name || 
+                       trader_master?.trader_name || 
+                       trader_master?.business_name || 
+                       "Unknown Trader",
+            phoneNumber: trader_master?.Contact_no || 
+                        trader_master?.contact_no || 
+                        trader_master?.phone || 
+                        formDetail.inquiryNumber || 
+                        "N/A",
+            traderContact: trader_master?.Contact_no || 
+                          trader_master?.contact_no || 
+                          trader_master?.phone || 
+                          formDetail.inquiryNumber || 
+                          "N/A",
+            followUpDate: formDetail.followUpDate,
+            priority: priority,
+            issue: formDetail.remarks || "No remarks provided",
+            remarks: formDetail.remarks || "No remarks provided",
+            callId: formDetail.CallId,
+            status: formDetail.status,
+            callType: formDetail.callType,
+            agentName: agent?.EmployeeName || "Unknown Agent",
+            supportType: formDetail.supportType?.supportName || "N/A",
+            processType: formDetail.processType?.processName || "N/A",
+            queryType: formDetail.queryType?.queryName || "N/A",
+            rawData: record, // Store original data
+          };
+        });
 
         return transformedFollowUps;
       } else {
@@ -743,6 +767,46 @@ const DashboardPage = () => {
   const closeDetailModal = () => {
     setIsDetailModalOpen(false);
     setSelectedCallDetail(null);
+  };
+
+  // Format follow-up date helper
+  const formatFollowUpDate = (dateTime) => {
+    const date = new Date(dateTime);
+    const today = new Date();
+    const diffTime = date - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { text: `${Math.abs(diffDays)} days overdue`, isOverdue: true };
+    } else if (diffDays === 0) {
+      return { text: 'Today', isOverdue: false };
+    } else if (diffDays === 1) {
+      return { text: 'Tomorrow', isOverdue: false };
+    } else {
+      return { text: `In ${diffDays} days`, isOverdue: false };
+    }
+  };
+
+  // Handle view follow-up details
+  const handleViewFollowUpDetails = (followUp) => {
+    console.log("📋 Viewing follow-up details:", followUp);
+    navigate('/dashboard/follow-up');
+  };
+
+  // Handle call from follow-up
+  const handleCallFromFollowUp = (phoneNumber, traderName) => {
+    console.log("📞 Initiating call from follow-up:", { phoneNumber, traderName });
+    if (phoneNumber && phoneNumber.trim() !== "") {
+      console.log(`📞 Calling ${phoneNumber} for ${traderName}`);
+      
+      // Set the current number first, then initiate call
+      setCurrentNumber(phoneNumber);
+      initiateCall(phoneNumber, { name: traderName });
+      
+      console.log("✅ Follow-up call initiated");
+    } else {
+      console.error("❌ No phone number provided for follow-up call");
+    }
   };
 
   // Coming Soon Component - Overlay on actual dashboard
@@ -1746,50 +1810,102 @@ const DashboardPage = () => {
                     ? "Team Pending Follow-ups"
                     : "Pending Follow-ups"}
                 </h3>
-                <CalendarIcon className="w-5 h-5 text-gray-400" />
+                <div className="flex items-center space-x-2">
+                  <CalendarIcon className="w-5 h-5 text-gray-400" />
+                  <button
+                    onClick={() => navigate('/dashboard/follow-up')}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    View All
+                  </button>
+                </div>
               </div>
             </div>
             <div className="p-6">
               {followUps.length > 0 ? (
                 <div className="space-y-4">
-                  {followUps.map((followUp) => (
-                    <div
-                      key={followUp.id}
-                      className="border border-gray-200 rounded-lg p-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium text-gray-900">
-                            {followUp.customerName}
-                          </h4>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {followUp.phoneNumber}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-2">
-                            {followUp.issue}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Due:{" "}
-                            {new Date(
-                              followUp.followUpDate
-                            ).toLocaleDateString()}
-                          </p>
+                  {followUps.slice(0, 5).map((followUp) => {
+                    const followUpInfo = formatFollowUpDate(followUp.followUpDate);
+                    
+                    return (
+                      <div
+                        key={followUp.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            {/* Trader Name */}
+                            <h4 className="text-sm font-medium text-gray-900">
+                              {followUp.customerName || followUp.traderName || 'Unknown Trader'}
+                            </h4>
+                            
+                            {/* Phone Number */}
+                            <p className="text-xs text-gray-500 mt-1 flex items-center">
+                              <PhoneIcon className="w-3 h-3 mr-1" />
+                              {followUp.phoneNumber || followUp.traderContact || 'N/A'}
+                            </p>
+                            
+                            {/* Remarks */}
+                            <p className="text-sm text-gray-600 mt-2">
+                              <span className="font-medium">Remark:</span>{' '}
+                              {followUp.issue || followUp.remarks || 'No remarks'}
+                            </p>
+                            
+                            {/* Follow-up Date */}
+                            <p className="text-xs text-gray-500 mt-2">
+                              Due: <span className={followUpInfo.isOverdue ? 'text-red-600 font-medium' : ''}>
+                                {followUpInfo.text}
+                              </span>
+                            </p>
+                          </div>
+                          
+                          {/* Status Badge */}
+                          <div className="flex flex-col items-end space-y-2">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              followUp.status === 'open' 
+                                ? 'bg-green-100 text-green-800'
+                                : followUp.status === 'closed'
+                                ? 'bg-gray-100 text-gray-800'
+                                : getPriorityColor(followUp.priority)
+                            }`}>
+                              {followUp.status ? followUp.status.toUpperCase() : followUp.priority}
+                            </span>
+                          </div>
                         </div>
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(
-                            followUp.priority
-                          )}`}
-                        >
-                          {followUp.priority}
-                        </span>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
+                          <button
+                            onClick={() => handleViewFollowUpDetails(followUp)}
+                            className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                          >
+                            <EyeIcon className="w-3 h-3 mr-1" />
+                            View Details
+                          </button>
+                          
+                          <button
+                            onClick={() => handleCallFromFollowUp(followUp.phoneNumber || followUp.traderContact, followUp.customerName || followUp.traderName)}
+                            className="inline-flex items-center text-xs text-green-600 hover:text-green-800 font-medium"
+                            disabled={!followUp.phoneNumber && !followUp.traderContact}
+                          >
+                            <PhoneIcon className="w-3 h-3 mr-1" />
+                            Call
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">No pending follow-ups</p>
+                  <button
+                    onClick={() => navigate('/dashboard/follow-up')}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium mt-2"
+                  >
+                    View All Follow-ups
+                  </button>
                 </div>
               )}
             </div>
