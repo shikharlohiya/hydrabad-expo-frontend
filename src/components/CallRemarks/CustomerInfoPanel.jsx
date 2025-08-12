@@ -8,6 +8,8 @@ import {
   Activity,
   Building2,
   MapPin,
+  Database,
+  UserCheck,
 } from "lucide-react";
 
 const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
@@ -52,18 +54,6 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
     }
   };
 
-  const calculateYears = (joinDate) => {
-    if (!joinDate) return 0;
-    try {
-      const years = Math.floor(
-        (new Date() - new Date(joinDate)) / (1000 * 60 * 60 * 24 * 365)
-      );
-      return years > 0 ? years : 0;
-    } catch {
-      return 0;
-    }
-  };
-
   if (!customerData) {
     return (
       <div className="p-4 text-center">
@@ -71,6 +61,8 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
       </div>
     );
   }
+
+  const { traderMaster, contactInfo } = customerData;
 
   return (
     <div className="p-4 space-y-6">
@@ -84,8 +76,15 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
             {customerData.name || "Unknown Trader"}
           </h4>
           <p className="text-sm text-gray-500 mt-1">
-            Code: {customerData.accountId || customerData.Code || "N/A"}
+            Phone: {phoneNumber || customerData.phoneNumber || "N/A"}
           </p>
+
+          {/* Account ID */}
+          {customerData.accountId && (
+            <p className="text-sm text-gray-500 mt-1">
+              Code: {customerData.accountId}
+            </p>
+          )}
 
           {/* Business Name */}
           {customerData.businessName && (
@@ -115,6 +114,128 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
         </div>
       </div>
 
+      {/* Trader Master Data */}
+      {traderMaster && (
+        <div className="space-y-3">
+          <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1 flex items-center">
+            <Database className="w-4 h-4 mr-2 text-blue-500" />
+            Master Record
+          </h5>
+          <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Name:</span>
+                <span className="text-gray-900 font-medium">
+                  {traderMaster.Trader_Name || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Business:</span>
+                <span className="text-gray-900">
+                  {traderMaster.Trader_business_Name || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Code:</span>
+                <span className="text-gray-900 font-mono">
+                  {traderMaster.Code || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Region:</span>
+                <span className="text-gray-900">
+                  {traderMaster.Region || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Zone:</span>
+                <span className="text-gray-900">
+                  {traderMaster.Zone || "N/A"}
+                </span>
+              </div>
+              {/* <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <span
+                  className={`px-2 py-1 rounded text-xs ${getStatusColor(
+                    traderMaster.status
+                  )}`}
+                >
+                  {traderMaster.status || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Created:</span>
+                <span className="text-gray-900">
+                  {formatDate(traderMaster.createdAt)}
+                </span>
+              </div> */}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Directory Data */}
+      {contactInfo && (
+        <div className="space-y-3">
+          <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1 flex items-center">
+            <UserCheck className="w-4 h-4 mr-2 text-green-500" />
+            Saved Contact in Directory
+          </h5>
+          <div className="bg-green-50 rounded-lg p-3 space-y-2">
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Name:</span>
+                <span className="text-gray-900 font-medium">
+                  {contactInfo.Contact_Name || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Type:</span>
+                <span className="text-gray-900">
+                  {contactInfo.Type || "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Region:</span>
+                <span className="text-gray-900">
+                  {contactInfo.Region || "N/A"}
+                </span>
+              </div>
+              {contactInfo.Zone && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Zone:</span>
+                  <span className="text-gray-900">{contactInfo.Zone}</span>
+                </div>
+              )}
+              {/* <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <span
+                  className={`px-2 py-1 rounded text-xs ${
+                    contactInfo.isActive
+                      ? "text-green-700 bg-green-100"
+                      : "text-red-700 bg-red-100"
+                  }`}
+                >
+                  {contactInfo.isActive ? "Active" : "Inactive"}
+                </span>
+              </div> */}
+              {/* <div className="flex justify-between">
+                <span className="text-gray-600">Added:</span>
+                <span className="text-gray-900">
+                  {formatDate(contactInfo.createdAt)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Updated:</span>
+                <span className="text-gray-900">
+                  {formatDate(contactInfo.updatedAt)}
+                </span>
+              </div> */}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Contact Information */}
       <div className="space-y-3">
         <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
@@ -124,10 +245,7 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
           <div className="flex items-center space-x-3">
             <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <span className="text-sm text-gray-900">
-              {phoneNumber ||
-                customerData.phoneNumber ||
-                customerData.Contact_no ||
-                "N/A"}
+              {phoneNumber || customerData.phoneNumber || "N/A"}
             </span>
           </div>
           {customerData.email && (
@@ -172,52 +290,8 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
         </div>
       )}
 
-      {/* Account Details */}
-      {/* <div className="space-y-3">
-        <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
-          Account Details
-        </h5>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <div className="text-gray-500 mb-1">Join Date</div>
-            <div className="flex items-center space-x-1">
-              <Calendar className="w-3 h-3 text-gray-400" />
-              <span className="text-gray-900">
-                {formatDate(customerData.joinDate || customerData.createdAt)}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <div className="text-gray-500 mb-1">Last Activity</div>
-            <div className="flex items-center space-x-1">
-              <Activity className="w-3 h-3 text-gray-400" />
-              <span className="text-gray-900">
-                {formatDate(
-                  customerData.lastActivity || customerData.updatedAt
-                )}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <div className="text-gray-500 mb-1">Total Calls</div>
-            <span className="text-gray-900 font-medium">
-              {customerData.totalCalls || 0}
-            </span>
-          </div>
-
-          <div>
-            <div className="text-gray-500 mb-1">Years Active</div>
-            <span className="text-gray-900 font-medium">
-              {calculateYears(customerData.joinDate || customerData.createdAt)}
-            </span>
-          </div>
-        </div>
-      </div> */}
-
       {/* Follow-up Information */}
-      {(customerData.lastActionDate ||
+      {/* {(customerData.lastActionDate ||
         customerData.followUpDate ||
         customerData.completedOn) && (
         <div className="space-y-3">
@@ -251,10 +325,10 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
             )}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Agent Information */}
-      {customerData.agentId && (
+      {/* {customerData.agentId && (
         <div className="space-y-3">
           <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
             Agent Information
@@ -266,36 +340,44 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
             </span>
           </div>
         </div>
-      )}
+      )} */}
 
-      {/* Additional Info (if available) */}
-      {(customerData.notes || customerData.description) && (
+      {/* Call Statistics */}
+      {/* {customerData.totalCalls !== undefined && (
         <div className="space-y-3">
           <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
-            Notes
+            Call Statistics
           </h5>
           <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-sm text-gray-700">
-              {customerData.notes || customerData.description}
-            </p>
+            <div className="flex items-center space-x-2">
+              <Phone className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-600">Total Calls:</span>
+              <span className="text-sm font-medium text-gray-900">
+                {customerData.totalCalls}
+              </span>
+            </div>
           </div>
         </div>
-      )}
+      )} */}
 
-      {/* Trader Summary */}
+      {/* Data Source Info */}
       {/* <div className="space-y-3">
         <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
-          Summary
+          Data Sources
         </h5>
-        <div className="bg-blue-50 rounded-lg p-3">
-          <p className="text-sm text-blue-800">
-            {customerData.accountType || "Trader"} active for{" "}
-            {calculateYears(customerData.joinDate || customerData.createdAt)}{" "}
-            years
-            {customerData.businessName &&
-              ` operating ${customerData.businessName}`}
-            {customerData.region && ` in ${customerData.region}`}.
-          </p>
+        <div className="flex flex-wrap gap-2">
+          {traderMaster && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-blue-700 bg-blue-100">
+              <Database className="w-3 h-3 mr-1" />
+              Master Record
+            </span>
+          )}
+          {contactInfo && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-green-700 bg-green-100">
+              <UserCheck className="w-3 h-3 mr-1" />
+              Contact Directory
+            </span>
+          )}
         </div>
       </div> */}
     </div>

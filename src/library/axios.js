@@ -1,17 +1,33 @@
-import axios from 'axios';
+import axios from "axios";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
+});
+
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('[Axios Error]', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      // Token expired or invalid → force logout
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("formState");
+      localStorage.removeItem("dialerState");
+      localStorage.removeItem("clickToCallToken");
+      window.location.href = "/";
+    }
     return Promise.reject(error);
   }
 );
