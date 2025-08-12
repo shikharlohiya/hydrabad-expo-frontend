@@ -109,22 +109,25 @@ const CallRemarksForm = ({
   ]);
 
   useEffect(() => {
-    setTraderNotFoundData((prev) => ({
-      ...prev,
-      phoneNumber: currentNumber || "",
-    }));
-  }, [currentNumber, setTraderNotFoundData]);
+    setTraderNotFoundData((prev) => {
+      let newPhoneNumber = prev.phoneNumber; // default to old value
 
-  useEffect(() => {
-    if (savedContactData?.Contact_Name) {
-      setTraderNotFoundData((prev) => ({
+      if (savedContactData?.Contact_no) {
+        newPhoneNumber = savedContactData.Contact_no;
+      } else if (currentNumber && currentNumber !== prev.phoneNumber) {
+        // only update if new currentNumber is different
+        newPhoneNumber = currentNumber;
+      }
+
+      return {
         ...prev,
-        name: savedContactData.Contact_Name || "",
-        region: savedContactData.Region || prev.region || "",
-        type: savedContactData.Type || prev.type || "Trader",
-      }));
-    }
-  }, [savedContactData, setTraderNotFoundData]);
+        name: savedContactData?.Contact_Name || prev.name || "",
+        region: savedContactData?.Region || prev.region || "",
+        type: savedContactData?.Type || prev.type || "Trader",
+        phoneNumber: newPhoneNumber || "",
+      };
+    });
+  }, [savedContactData, currentNumber, setTraderNotFoundData]);
 
   // Fetch dropdown options from APIs
   useEffect(() => {
@@ -303,11 +306,10 @@ const CallRemarksForm = ({
                   <input
                     type="tel"
                     name="phoneNumber"
-                    value={traderNotFoundData.phoneNumber}
-                    onChange={handleCustomerInputChange}
-                    disabled={true}
-                    className="w-full pl-10 pr-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Enter phone number"
+                    value={traderNotFoundData.phoneNumber || ""}
+                    readOnly
+                    className="w-full pl-10 pr-3 py-2 border border-blue-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-text"
+                    placeholder="No phone number"
                   />
                 </div>
               </div>
