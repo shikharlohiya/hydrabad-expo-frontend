@@ -241,14 +241,12 @@ const DialerProvider = ({ children }) => {
       const currentCallId = activeCallId || callDetailsForForm?.CallId;
       if (String(callId) === String(currentCallId)) {
         console.log(
-          "✅ Setting hasFormBeenSubmitted to true and resetting call state"
+          "✅ Form submitted successfully - call continues until manual disconnect"
         );
         setHasFormBeenSubmitted(true);
-
-        // Reset call state after successful form submission
-        setTimeout(() => {
-          resetCallState();
-        }, 1500);
+        
+        // Note: Call remains active until user manually ends it or websocket receives call end
+        // Form will auto-close via FormProvider setTimeout, no need to end call here
       }
     };
 
@@ -1229,7 +1227,12 @@ const DialerProvider = ({ children }) => {
 
   // End the current call
   const endCall = async () => {
+    console.log("🔚 endCall() called manually by user");
+    console.log("🔚 Current activeCallId:", activeCallId);
+    console.log("🔚 Current callStatus:", callStatus);
+    
     if (!activeCallId) {
+      console.log("🔚 No activeCallId - calling resetCallState()");
       resetCallState();
       return;
     }
@@ -1238,33 +1241,127 @@ const DialerProvider = ({ children }) => {
       setIsLoading(true);
       setLastError(null);
 
-      const response = await axiosInstance.post(
-        "/call-disconnection",
-        {
+      // Get clickToCallToken from localStorage (same as initiateCall)
+      let currentToken = localStorage.getItem("clickToCallToken");
+      const authToken = localStorage.getItem("authToken"); // Also get authToken for comparison
+      
+      console.log("🔚 TOKEN DEBUGGING:");
+      console.log("🔚 clickToCallToken:", currentToken ? currentToken.substring(0, 20) + "..." : "NULL");
+      console.log("🔚 authToken:", authToken ? authToken.substring(0, 20) + "..." : "NULL");
+      console.log("🔚 bearerToken state:", bearerToken ? bearerToken.substring(0, 20) + "..." : "NULL");
+      
+      if (!currentToken || currentToken.trim() === "") {
+        console.log("🔚 clickToCallToken missing, fetching new token...");
+        try {
+          currentToken = await getAuthToken();
+          console.log("🔚 Got new token from getAuthToken:", currentToken ? currentToken.substring(0, 20) + "..." : "No token");
+        } catch (error) {
+          console.error("🔚 Failed to get auth token:", error);
+          return;
+        }
+      }
+
+      console.log("🔚 Final token being used:", currentToken ? currentToken.substring(0, 20) + "..." : "NULL");
+      console.log("🔚 Making fetch API call to /call-disconnection for callId:", activeCallId);
+
+      const requestHeaders = new Headers();
+      requestHeaders.append("Authorization", `Bearer ${currentToken.trim()}`);
+      requestHeaders.append("Content-Type", "application/json");
+      requestHeaders.append("Accept", "application/json");
+      requestHeaders.append("X-Requested-With", "XMLHttpRequest");
+
+      const response = await fetch(`${baseURL}/call-disconnection`, {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify({
           cli: cliNumber,
           call_id: String(activeCallId),
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${bearerToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+        }),
+      });
 
-      if (response.data?.status === 1) {
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        const error = new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
+        error.response = { status: response.status, data: errorData };
+        throw error;
+      }
+
+      const responseData = await response.json();
+      console.log("🔚 Call disconnection API response:", responseData);
+
+      if (responseData?.status === 1) {
+        console.log("🔚 API disconnect successful - emitting socket event");
         if (isConnected()) {
           emitCallEvent("call-disconnected", {
             callId: activeCallId,
             timestamp: new Date().toISOString(),
           });
+          console.log("🔚 Socket event 'call-disconnected' emitted");
+        } else {
+          console.log("🔚 Socket not connected - cannot emit event");
         }
+      } else {
+        console.log("🔚 API disconnect failed - status:", responseData?.status);
       }
 
+      console.log("🔚 Calling handleCallEnd() to cleanup local state");
       handleCallEnd();
     } catch (error) {
-      setLastError("Unable to end call properly");
-      handleCallEnd(); // Still end locally
+      console.error("🔚 Error in endCall():", error);
+      
+      // Handle 403 errors with token refresh (same pattern as initiateCall)
+      if (error.response?.status === 403) {
+        try {
+          console.log("🔚 Got 403 error, clearing clickToCallToken and retrying...");
+          localStorage.removeItem("clickToCallToken");
+          setBearerToken(null);
+          const newToken = await getAuthToken();
+
+          if (newToken) {
+            console.log("🔚 Retrying call-disconnection with new token:", newToken.substring(0, 20) + "...");
+            
+            const retryHeaders = new Headers();
+            retryHeaders.append("Authorization", `Bearer ${newToken.trim()}`);
+            retryHeaders.append("Content-Type", "application/json");
+            retryHeaders.append("Accept", "application/json");
+            retryHeaders.append("X-Requested-With", "XMLHttpRequest");
+
+            const retryResponse = await fetch(`${baseURL}/call-disconnection`, {
+              method: "POST",
+              headers: retryHeaders,
+              body: JSON.stringify({
+                cli: cliNumber,
+                call_id: String(activeCallId),
+              }),
+            });
+
+            const retryResponseData = await retryResponse.json();
+            console.log("🔚 Retry call disconnection API response:", retryResponseData);
+
+            if (retryResponseData?.status === 1) {
+              console.log("🔚 Retry API disconnect successful - emitting socket event");
+              if (isConnected()) {
+                emitCallEvent("call-disconnected", {
+                  callId: activeCallId,
+                  timestamp: new Date().toISOString(),
+                });
+                console.log("🔚 Socket event 'call-disconnected' emitted after retry");
+              }
+            }
+          }
+        } catch (retryError) {
+          console.error("🔚 Token refresh and retry failed:", retryError);
+          setLastError("Unable to end call properly after token refresh");
+        }
+      } else {
+        setLastError("Unable to end call properly");
+      }
+      
+      handleCallEnd(); // Still end locally regardless of API success/failure
     } finally {
       setIsLoading(false);
     }

@@ -804,13 +804,19 @@ const ContactsPage = () => {
   // Remarks expansion state
   const [expandedRemarks, setExpandedRemarks] = useState(new Set());
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  // Pagination state with persistence
+  const [currentPage, setCurrentPage] = useState(() => {
+    const saved = sessionStorage.getItem('contactsPage');
+    return saved ? parseInt(saved, 10) : 1;
+  });
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(() => {
+    const saved = sessionStorage.getItem('contactsPageSize');
+    return saved ? parseInt(saved, 10) : 20;
+  });
   const [pagination, setPagination] = useState(null);
 
   // Counts and statistics
@@ -969,6 +975,8 @@ const ContactsPage = () => {
           setTotalRecords(pagination.totalRecords);
           setHasNextPage(pagination.hasNextPage);
           setHasPrevPage(pagination.hasPrevPage);
+          // Update sessionStorage with the actual current page from API
+          sessionStorage.setItem('contactsPage', pagination.currentPage.toString());
         }
       } else {
         setError("Failed to fetch traders data");
@@ -1028,6 +1036,7 @@ const ContactsPage = () => {
           fetchTraders(1, pageSize, selectedStatus, selectedRegion, searchTerm);
         } else {
           setCurrentPage(1); // This will trigger another useEffect call
+          sessionStorage.setItem('contactsPage', '1'); // Reset pagination when searching
         }
       }, 500);
 
@@ -1038,26 +1047,31 @@ const ContactsPage = () => {
     }
   }, [userData, currentPage, pageSize, selectedStatus, selectedRegion, searchTerm]);
 
-  // Pagination handlers
+  // Pagination handlers with persistence
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
+      sessionStorage.setItem('contactsPage', newPage.toString());
     }
   };
 
   const handlePageSizeChange = (newPageSize) => {
     setPageSize(newPageSize);
+    sessionStorage.setItem('contactsPageSize', newPageSize.toString());
     setCurrentPage(1);
+    sessionStorage.setItem('contactsPage', '1');
   };
 
   const handleStatusFilterChange = (status) => {
     setSelectedStatus(status);
     setCurrentPage(1);
+    sessionStorage.setItem('contactsPage', '1'); // Reset to page 1 when filtering
   };
 
   const handleRegionFilterChange = (region) => {
     setSelectedRegion(region);
     setCurrentPage(1);
+    sessionStorage.setItem('contactsPage', '1'); // Reset to page 1 when filtering
   };
 
   // Handle call button click

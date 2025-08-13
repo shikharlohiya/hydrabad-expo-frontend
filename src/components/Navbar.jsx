@@ -17,11 +17,11 @@ const navItems = [
         label: 'Contacts',
         icon: <LuContactRound className="w-5 h-5" />
     },
-    {
-        to: '/dashboard/call-history',
-        label: 'Call History',
-        icon: <RiHistoryLine className="w-5 h-5" />
-    },
+    // {
+    //     to: '/dashboard/call-history',
+    //     label: 'Call History',
+    //     icon: <RiHistoryLine className="w-5 h-5" />
+    // },
     {
         to: '/dashboard/incoming-call',
         label: 'Incoming Calls',
