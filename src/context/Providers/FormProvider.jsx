@@ -201,7 +201,7 @@ const FormProvider = ({ children }) => {
     if (!phoneNumber) return;
 
     try {
-      const res = await axiosInstance.get(`/contact/mobile/${phoneNumber}`);
+      const res = await axiosInstance.get(`/trader/mobile/${phoneNumber}`);
       if (res.data?.success && res.data?.data) {
         setSavedContactData(res.data.data);
       } else {

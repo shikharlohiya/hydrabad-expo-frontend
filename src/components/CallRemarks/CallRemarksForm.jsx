@@ -121,7 +121,7 @@ const CallRemarksForm = ({
 
       return {
         ...prev,
-        name: savedContactData?.Contact_Name || prev.name || "",
+        name: savedContactData?.Trader_Name || prev.name || "",
         region: savedContactData?.Region || prev.region || "",
         type: savedContactData?.Type || prev.type || "Trader",
         phoneNumber: newPhoneNumber || "",
