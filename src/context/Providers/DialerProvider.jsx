@@ -241,12 +241,12 @@ const DialerProvider = ({ children }) => {
       const currentCallId = activeCallId || callDetailsForForm?.CallId;
       if (String(callId) === String(currentCallId)) {
         console.log(
-          "✅ Form submitted successfully - call continues until manual disconnect"
+          "✅ Form submitted successfully - call continues, dialer stays active"
         );
         setHasFormBeenSubmitted(true);
         
-        // Note: Call remains active until user manually ends it or websocket receives call end
-        // Form will auto-close via FormProvider setTimeout, no need to end call here
+        // Do NOT reset dialer after form submission - call should continue
+        // Only reset when user manually disconnects via endCall() function
       }
     };
 
@@ -474,8 +474,14 @@ const DialerProvider = ({ children }) => {
             setCallDuration(data.callDuration);
           }
 
-          console.log(`📱 About to call handleCallEnd() for call ${callId}`);
+          console.log(`📱 Websocket disconnect - calling handleCallEnd() and resetting dialer`);
           handleCallEnd();
+          
+          // Reset dialer immediately for websocket disconnects (external call end)
+          setTimeout(() => {
+            console.log("🔄 Resetting dialer state after websocket disconnect");
+            resetCallState();
+          }, 1500);
         }
       },
 
@@ -566,7 +572,14 @@ const DialerProvider = ({ children }) => {
         const currentCallId = String(activeCallId);
 
         if (callId === currentCallId) {
+          console.log(`📱 Websocket call ended - calling handleCallEnd() and resetting dialer`);
           handleCallEnd();
+          
+          // Reset dialer immediately for websocket call end events
+          setTimeout(() => {
+            console.log("🔄 Resetting dialer state after websocket call end");
+            resetCallState();
+          }, 1500);
         }
       },
 
@@ -755,7 +768,14 @@ const DialerProvider = ({ children }) => {
       // Open form when incoming call connects
       openCallRemarksForm();
     } else if (eventType === "call_ended") {
+      console.log(`📱 Incoming call ended - calling handleCallEnd() and resetting dialer`);
       handleCallEnd();
+      
+      // Reset dialer immediately for incoming call end events
+      setTimeout(() => {
+        console.log("🔄 Resetting dialer state after incoming call end");
+        resetCallState();
+      }, 1500);
     }
   };
 
@@ -1308,8 +1328,14 @@ const DialerProvider = ({ children }) => {
         console.log("🔚 API disconnect failed - status:", responseData?.status);
       }
 
-      console.log("🔚 Calling handleCallEnd() to cleanup local state");
+      console.log("🔚 Manual disconnect - calling handleCallEnd() and resetting dialer");
       handleCallEnd();
+      
+      // Reset dialer state after manual disconnect to allow new calls
+      setTimeout(() => {
+        console.log("🔄 Resetting dialer state after manual disconnect");
+        resetCallState();
+      }, 1500);
     } catch (error) {
       console.error("🔚 Error in endCall():", error);
       
@@ -1362,6 +1388,12 @@ const DialerProvider = ({ children }) => {
       }
       
       handleCallEnd(); // Still end locally regardless of API success/failure
+      
+      // Reset dialer state after manual disconnect (even if API failed)
+      setTimeout(() => {
+        console.log("🔄 Resetting dialer state after manual disconnect (API error case)");
+        resetCallState();
+      }, 1500);
     } finally {
       setIsLoading(false);
     }
@@ -1428,6 +1460,11 @@ const DialerProvider = ({ children }) => {
         "hasFormBeenSubmitted:",
         hasFormBeenSubmitted
       );
+      
+      // If form was already submitted, don't reset here - let manual disconnect handle reset
+      if (hasFormBeenSubmitted) {
+        console.log("📋 Form already submitted - waiting for manual disconnect to reset dialer");
+      }
     }
 
     // Only reset the processed flag after a delay, but don't reset call state yet
