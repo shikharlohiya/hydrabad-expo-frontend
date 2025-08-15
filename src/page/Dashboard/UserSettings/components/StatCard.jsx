@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const StatCard = ({ title, value, icon, color = "indigo" }) => (
   <div className="bg-white rounded-lg p-4 shadow-sm">

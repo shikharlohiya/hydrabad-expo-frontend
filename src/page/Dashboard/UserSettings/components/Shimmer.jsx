@@ -1,9 +1,12 @@
-import React from 'react';
+import React from "react";
 
 const Shimmer = () => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {[...Array(8)].map((_, i) => (
-      <div key={i} className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+      <div
+        key={i}
+        className="bg-white rounded-lg shadow-sm p-4 border border-gray-200"
+      >
         <div className="animate-pulse flex space-x-4">
           <div className="rounded-full bg-gray-300 h-12 w-12"></div>
           <div className="flex-1 space-y-4 py-1">

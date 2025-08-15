@@ -23,7 +23,6 @@ import {
 } from "react-icons/fa";
 import { FiAlertTriangle } from "react-icons/fi";
 import UserContext from "../../../context/UserContext";
-import axiosInstance from "../../../library/axios";
 import StatCard from "./components/StatCard";
 import Modal from "./components/Modal";
 import EmployeeForm from "./components/EmployeeForm";
