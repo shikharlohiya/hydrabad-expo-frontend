@@ -27,12 +27,12 @@ const navItems = [
     icon: <LuContactRound className="w-5 h-5" />,
     roles: [1, 2, 3],
   },
-  {
-    to: "/dashboard/call-history",
-    label: "Call History",
-    icon: <RiHistoryLine className="w-5 h-5" />,
-    roles: [1, 2, 3],
-  },
+  // {
+  //   to: "/dashboard/call-history",
+  //   label: "Call History",
+  //   icon: <RiHistoryLine className="w-5 h-5" />,
+  //   roles: [1, 2, 3],
+  // },
   {
     to: "/dashboard/incoming-call",
     label: "Incoming Calls",
