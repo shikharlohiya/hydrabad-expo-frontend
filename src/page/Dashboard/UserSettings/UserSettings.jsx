@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import {
-  FaChartBar,
+  FaRegUser,
   FaUserTie,
   FaMapMarkerAlt,
   FaPhone,
@@ -214,9 +214,9 @@ const UserSettings = () => {
             color="indigo"
           />
           <StatCard
-            title="Traders"
+            title="Agents"
             value={employeeStats.traders.length}
-            icon={<FaChartBar />}
+            icon={<FaRegUser />}
             color="blue"
           />
           <StatCard

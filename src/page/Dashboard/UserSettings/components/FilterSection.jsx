@@ -1,12 +1,6 @@
 import React from "react";
 import Select from "react-select";
-import {
-  FaSearch,
-  FaSync,
-  FaChartBar,
-  FaUserTie,
-  FaUser,
-} from "react-icons/fa";
+import { FaSearch, FaSync, FaRegUser, FaUserTie, FaUser } from "react-icons/fa";
 import { ROLE_CONFIG } from "../constants";
 
 const FilterSection = ({
@@ -26,7 +20,7 @@ const FilterSection = ({
     { value: "", label: "All Roles" },
     ...roles.map((role) => {
       const IconComponent = {
-        FaChartBar,
+        FaRegUser,
         FaUserTie,
         // FaUser,
       }[ROLE_CONFIG[role.RoleId]?.icon];

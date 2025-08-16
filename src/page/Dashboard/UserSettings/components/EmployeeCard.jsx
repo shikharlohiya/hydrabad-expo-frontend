@@ -4,7 +4,7 @@ import {
   FaMapMarkerAlt,
   FaEdit,
   FaTrash,
-  FaChartBar,
+  FaRegUser,
   FaUserTie,
   FaUser,
 } from "react-icons/fa";
@@ -12,7 +12,7 @@ import { ROLE_CONFIG } from "../constants";
 
 const EmployeeCard = ({ employee, onEdit, onDelete, roleConfig }) => {
   const IconComponent = {
-    FaChartBar: FaChartBar,
+    FaRegUser: FaRegUser,
     FaUserTie: FaUserTie,
     FaUser: FaUser,
   }[roleConfig.icon];

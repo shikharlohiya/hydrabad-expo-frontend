@@ -13,13 +13,13 @@ export const INITIAL_EMPLOYEE_STATE = {
 
 export const ROLE_CONFIG = {
   [TRADER_ROLE_ID]: {
-    name: "Trader",
+    name: "Agent",
     color: "blue",
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",
     textColor: "text-blue-700",
     badgeColor: "bg-blue-100 text-blue-800",
-    icon: "FaChartBar",
+    icon: "FaRegUser",
   },
   [MANAGER_ROLE_ID]: {
     name: "Manager",
