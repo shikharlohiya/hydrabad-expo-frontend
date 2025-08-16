@@ -1840,7 +1840,7 @@ const DashboardPage = () => {
 
         {/* Sidebar - Pending Follow-ups */}
         <div className="space-y-8">
-          <div className="bg-white rounded-lg shadow border border-gray-200">
+          <div className="bg-white rounded-lg shadow border border-gray-200 max-h-[600px] flex flex-col">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -1859,7 +1859,7 @@ const DashboardPage = () => {
                 </div>
               </div>
             </div>
-            <div className="p-6">
+            <div className="flex-1 overflow-auto p-6">
               {followUps.length > 0 ? (
                 <div className="space-y-4">
                   {followUps.slice(0, 5).map((followUp) => {
