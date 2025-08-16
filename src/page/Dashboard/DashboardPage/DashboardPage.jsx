@@ -201,9 +201,10 @@ const DashboardPage = () => {
     switch (dateFilter) {
       case "today":
         return { startDate: today, endDate: today };
-      case "yesterday":
+      case "yesterday": {
         const yesterday = getYesterdayDate();
         return { startDate: yesterday, endDate: yesterday };
+      }
       case "week":
         return { startDate: getDateNDaysAgo(7), endDate: today };
       case "custom":
@@ -318,7 +319,7 @@ const DashboardPage = () => {
         }
       } else {
         // Agent - fetch individual agent statistics with date range
-        if (!agentNumber) {
+        if (userRole !== 3 && !agentNumber) {
           throw new Error("Agent phone number not found. Please login again.");
         }
 
@@ -331,12 +332,17 @@ const DashboardPage = () => {
           endDate
         );
 
+        const params = {
+          startDate: startDate,
+          endDate: endDate,
+        };
+
+        if (userRole !== 3) {
+          params.agentNumber = agentNumber;
+        }
+
         const response = await axiosInstance.get("/calls/stats", {
-          params: {
-            startDate: startDate,
-            endDate: endDate,
-            agentNumber: agentNumber,
-          },
+          params,
         });
 
         console.log("📊 Agent stats API response:", response.data);
@@ -407,19 +413,22 @@ const DashboardPage = () => {
               });
             })()
           : await (async () => {
-              if (!agentNumber) {
+              if (userRole !== 3 && !agentNumber) {
                 throw new Error(
                   "Agent phone number not found. Please login again."
                 );
               }
               console.log("📞 Fetching recent calls for agent:", agentNumber);
+              const params = {
+                startDate: startDate,
+                endDate: endDate,
+                ...(search && { search }),
+              };
+              if (userRole !== 3) {
+                params.agentNumber = agentNumber;
+              }
               return await axiosInstance.get("/calls/recent-calls", {
-                params: {
-                  agentNumber: agentNumber,
-                  startDate: startDate,
-                  endDate: endDate,
-                  ...(search && { search }),
-                },
+                params,
               });
             })();
 
@@ -559,13 +568,18 @@ const DashboardPage = () => {
         endDate
       );
 
+      const params = {
+        startDate: startDate,
+        endDate: endDate,
+        limit: 5, // Only fetch 5 for dashboard widget
+      };
+
+      if (userRole !== 3) {
+        params.agentNumber = userData?.EmployeePhone || employeeId;
+      }
+
       const response = await axiosInstance.get("/calls/follow-ups", {
-        params: {
-          agentNumber: userData?.EmployeePhone || employeeId, // Use phone number for API
-          startDate: startDate,
-          endDate: endDate,
-          limit: 5, // Only fetch 5 for dashboard widget
-        },
+        params,
       });
 
       console.log(
