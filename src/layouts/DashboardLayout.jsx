@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 import { Outlet } from "react-router-dom";
 import CallRemarksPage from "../components/CallRemarks/CallRemarksPage";
 // import useDialer from "../hooks/useDialer";
 import useForm from "../hooks/useForm";
+import UserContext from "../context/UserContext";
 // import { CALL_STATUS } from "../context/Providers/DialerProvider";
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Get the employee role id from the context to pass into the Navbar
+  const { userData } = useContext(UserContext);
+  const EmployeeRoleId = userData?.EmployeeRole || 1;
 
   // Get form state from FormProvider
   const { isFormOpen } = useForm();
@@ -63,7 +68,11 @@ const DashboardLayout = () => {
             transition-transform duration-300 ease-in-out z-40
           `}
           >
-            <Navbar collapsed={collapsed} setCollapsed={setCollapsed} />
+            <Navbar
+              collapsed={collapsed}
+              setCollapsed={setCollapsed}
+              EmployeeRoleId={EmployeeRoleId}
+            />
           </div>
         )}
 

@@ -21,3 +21,273 @@
 *::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
+
+/* From DashboardHeader.jsx */
+/* Realistic Flag Waving Animation */
+@keyframes flagWave {
+  0% {
+    transform: translateX(0px) translateY(0px) rotate(0deg);
+    clip-path: polygon(0% 0%, 100% 0%, 95% 50%, 100% 100%, 0% 100%, 5% 50%);
+  }
+  25% {
+    transform: translateX(2px) translateY(-1px) rotate(0.5deg);
+    clip-path: polygon(
+      0% 0%,
+      100% 0%,
+      98% 30%,
+      95% 70%,
+      100% 100%,
+      0% 100%,
+      2% 70%,
+      5% 30%
+    );
+  }
+  50% {
+    transform: translateX(0px) translateY(1px) rotate(0deg);
+    clip-path: polygon(
+      0% 0%,
+      100% 0%,
+      100% 50%,
+      95% 50%,
+      100% 100%,
+      0% 100%,
+      0% 50%,
+      5% 50%
+    );
+  }
+  75% {
+    transform: translateX(-2px) translateY(-1px) rotate(-0.5deg);
+    clip-path: polygon(
+      0% 0%,
+      100% 0%,
+      95% 70%,
+      98% 30%,
+      100% 100%,
+      0% 100%,
+      5% 30%,
+      2% 70%
+    );
+  }
+  100% {
+    transform: translateX(0px) translateY(0px) rotate(0deg);
+    clip-path: polygon(0% 0%, 100% 0%, 95% 50%, 100% 100%, 0% 100%, 5% 50%);
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.7;
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes shimmerMove {
+  0% {
+    transform: translateX(-200%) skewX(-15deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(200%) skewX(-15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes chakraRotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes sparkleFloat {
+  0%,
+  100% {
+    transform: translateY(0px) scale(0.8);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Saffron Stripe Effects */
+.flag-saffron-wave {
+  background: linear-gradient(
+    135deg,
+    #ff9933 0%,
+    #ff7700 30%,
+    #ff9933 60%,
+    #ffaa44 100%
+  );
+  animation: flagWave 4s ease-in-out infinite;
+}
+
+.flag-saffron-glow {
+  background: radial-gradient(
+    circle at 30% 50%,
+    rgba(255, 153, 51, 0.8) 0%,
+    transparent 70%
+  );
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+.flag-saffron-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: shimmerMove 3s ease-in-out infinite;
+}
+
+/* White Stripe Effects */
+.flag-white-wave {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 50%, #ffffff 100%);
+  animation: flagWave 4s ease-in-out infinite 0.5s;
+}
+
+.flag-white-glow {
+  background: radial-gradient(
+    circle at 70% 50%,
+    rgba(255, 255, 255, 0.9) 0%,
+    transparent 70%
+  );
+  animation: glowPulse 3s ease-in-out infinite 1s;
+}
+
+/* Green Stripe Effects */
+.flag-green-wave {
+  background: linear-gradient(
+    135deg,
+    #138808 0%,
+    #228b22 30%,
+    #138808 60%,
+    #32cd32 100%
+  );
+  animation: flagWave 4s ease-in-out infinite 1s;
+}
+
+.flag-green-glow {
+  background: radial-gradient(
+    circle at 30% 50%,
+    rgba(19, 136, 8, 0.8) 0%,
+    transparent 70%
+  );
+  animation: glowPulse 3s ease-in-out infinite 2s;
+}
+
+.flag-green-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%
+  );
+  animation: shimmerMove 3s ease-in-out infinite 1.5s;
+}
+
+/* Enhanced Chakra */
+.chakra-enhanced {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  animation: chakraRotate 8s linear infinite;
+}
+
+.chakra-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #000080;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #ffffff 30%, #000080 70%);
+}
+
+.chakra-spokes {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 14px;
+  background: #000080;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 0 #000080, 0 0 0 0 rotate(15deg) #000080,
+    0 0 0 0 rotate(30deg) #000080, 0 0 0 0 rotate(45deg) #000080,
+    0 0 0 0 rotate(60deg) #000080, 0 0 0 0 rotate(75deg) #000080,
+    0 0 0 0 rotate(90deg) #000080, 0 0 0 0 rotate(105deg) #000080,
+    0 0 0 0 rotate(120deg) #000080, 0 0 0 0 rotate(135deg) #000080,
+    0 0 0 0 rotate(150deg) #000080, 0 0 0 0 rotate(165deg) #000080;
+}
+
+/* Patriotic Sparkles */
+.sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: linear-gradient(45deg, #ff9933, #ffffff, #138808);
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.sparkle-1 {
+  top: 20%;
+  left: 15%;
+  animation: sparkleFloat 2s ease-in-out infinite;
+}
+.sparkle-2 {
+  top: 60%;
+  left: 85%;
+  animation: sparkleFloat 2.5s ease-in-out infinite 0.5s;
+}
+.sparkle-3 {
+  top: 30%;
+  left: 75%;
+  animation: sparkleFloat 3s ease-in-out infinite 1s;
+}
+.sparkle-4 {
+  top: 80%;
+  left: 25%;
+  animation: sparkleFloat 2.2s ease-in-out infinite 1.5s;
+}
+.sparkle-5 {
+  top: 45%;
+  left: 90%;
+  animation: sparkleFloat 2.8s ease-in-out infinite 2s;
+}
+
+.sparkle-container {
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* From LoadingSkeleton.jsx */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
