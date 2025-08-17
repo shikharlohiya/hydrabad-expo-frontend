@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { useLocation } from "react-router-dom";
 import {
   PhoneIcon,
   ClockIcon,
@@ -27,6 +28,7 @@ import UserContext from "../../../context/UserContext";
 import useDialer from "../../../hooks/useDialer";
 
 const IncomingCallPage = () => {
+  const location = useLocation();
   const { userData } = useContext(UserContext);
   const {
     initiateCall,
@@ -60,6 +62,14 @@ const IncomingCallPage = () => {
   const [employees, setEmployees] = useState([]); // Store employee data
   const [selectedEmployeePhone, setSelectedEmployeePhone] = useState(""); // Selected employee's phone
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false); // Loading state for employees
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const agentPhone = params.get("agentPhone");
+    if (agentPhone) {
+      setSelectedEmployeePhone(agentPhone);
+    }
+  }, [location.search]);
 
   // Helper function to get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
