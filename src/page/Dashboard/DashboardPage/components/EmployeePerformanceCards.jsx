@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   UserGroupIcon,
   PhoneIcon,
@@ -12,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 const EmployeePerformanceCards = ({ adminData, onCall }) => {
+  const navigate = useNavigate();
   const [sortBy, setSortBy] = useState("totalCalls"); // totalCalls, connectionRate, name
   const [sortOrder, setSortOrder] = useState("desc"); // asc, desc
 
@@ -300,13 +302,27 @@ const EmployeePerformanceCards = ({ adminData, onCall }) => {
 
                     {/* Call Breakdown */}
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="flex items-center">
+                      <div
+                        className="flex items-center cursor-pointer"
+                        onClick={() =>
+                          navigate(
+                            `/dashboard/incoming-call?agentPhone=${employee.employeePhone}`
+                          )
+                        }
+                      >
                         <PhoneArrowDownLeftIcon className="w-3 h-3 text-blue-500 mr-1" />
                         <span className="text-gray-600">
                           In: {employee.inboundCalls.total}
                         </span>
                       </div>
-                      <div className="flex items-center">
+                      <div
+                        className="flex items-center cursor-pointer"
+                        onClick={() =>
+                          navigate(
+                            `/dashboard/outgoing-call?agentPhone=${employee.employeePhone}`
+                          )
+                        }
+                      >
                         <PhoneArrowUpRightIcon className="w-3 h-3 text-green-500 mr-1" />
                         <span className="text-gray-600">
                           Out: {employee.outboundCalls.total}
