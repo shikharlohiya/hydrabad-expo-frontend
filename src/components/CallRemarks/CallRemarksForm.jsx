@@ -30,12 +30,16 @@ const CallRemarksForm = ({
     supportTypes: [],
     processTypes: [],
     queryTypes: [],
+    problemTypes: [],
+    subProblemTypes: [],
   });
 
   const [loadingOptions, setLoadingOptions] = useState({
     supportTypes: false,
     processTypes: false,
     queryTypes: false,
+    problemTypes: false,
+    subProblemTypes: false,
   });
 
   // Common regions
@@ -179,10 +183,58 @@ const CallRemarksForm = ({
       } finally {
         setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
       }
+      // Fetch problem types
+      try {
+        setLoadingOptions((prev) => ({ ...prev, problemTypes: true }));
+        const problemTypesResponse = await axiosInstance.get("/problem-types");
+        if (problemTypesResponse.data.success) {
+          setDropdownOptions((prev) => ({
+            ...prev,
+            problemTypes: problemTypesResponse.data.data,
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching problem types:", error);
+      } finally {
+        setLoadingOptions((prev) => ({ ...prev, problemTypes: false }));
+      }
     };
 
     fetchDropdownOptions();
   }, []);
+
+  // Fetch sub-problem types when problemId changes
+  useEffect(() => {
+    const fetchSubProblemTypes = async () => {
+      // Reset sub-problem types if no problem is selected
+      if (!formData.problemId) {
+        setDropdownOptions((prev) => ({ ...prev, subProblemTypes: [] }));
+        return;
+      }
+
+      try {
+        setLoadingOptions((prev) => ({ ...prev, subProblemTypes: true }));
+        const response = await axiosInstance.get(
+          `/sub-problem-types?problemId=${formData.problemId}`
+        );
+        if (response.data.success) {
+          setDropdownOptions((prev) => ({
+            ...prev,
+            subProblemTypes: response.data.data,
+          }));
+        } else {
+          setDropdownOptions((prev) => ({ ...prev, subProblemTypes: [] }));
+        }
+      } catch (error) {
+        console.error("Error fetching sub-problem types:", error);
+        setDropdownOptions((prev) => ({ ...prev, subProblemTypes: [] }));
+      } finally {
+        setLoadingOptions((prev) => ({ ...prev, subProblemTypes: false }));
+      }
+    };
+
+    fetchSubProblemTypes();
+  }, [formData.problemId]);
 
   const statusOptions = [
     { value: "closed", label: "Closed" },
@@ -237,6 +289,23 @@ const CallRemarksForm = ({
 
     onCancel(hasFormData);
   };
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const day = now.getDate().toString().padStart(2, "0");
+  const hours = now.getHours().toString().padStart(2, "0");
+  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+  const maxDate = new Date();
+  maxDate.setHours(maxDate.getHours() + 12);
+  const maxYear = maxDate.getFullYear();
+  const maxMonth = (maxDate.getMonth() + 1).toString().padStart(2, "0");
+  const maxDay = maxDate.getDate().toString().padStart(2, "0");
+  const maxHours = maxDate.getHours().toString().padStart(2, "0");
+  const maxMinutes = maxDate.getMinutes().toString().padStart(2, "0");
+  const maxDateTime = `${maxYear}-${maxMonth}-${maxDay}T${maxHours}:${maxMinutes}`;
 
   return (
     <div className="relative">
@@ -365,8 +434,86 @@ const CallRemarksForm = ({
           </div>
         }
 
-        {/* Category Selection Section */}
+        {/* Problem Description Section */}
         <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+            Traders Inquiry
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Problem Type */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-2">
+                Problem Type *
+              </label>
+              <select
+                name="problemId"
+                value={formData.problemId || ""}
+                onChange={handleInputChange}
+                disabled={loadingOptions.problemTypes}
+                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
+                  errors.problemId ? "border-red-500" : "border-gray-300"
+                } ${
+                  loadingOptions.problemTypes
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+              >
+                <option value="">
+                  {loadingOptions.problemTypes
+                    ? "Loading..."
+                    : "Select problem type"}
+                </option>
+                {dropdownOptions.problemTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.problemName}
+                  </option>
+                ))}
+              </select>
+              {errors.problemId && (
+                <p className="text-red-500 text-xs mt-1">{errors.problemId}</p>
+              )}
+            </div>
+
+            {/* Sub Problem Type */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-2">
+                Related Issue *
+              </label>
+              <select
+                name="subProblemId"
+                value={formData.subProblemId || ""}
+                onChange={handleInputChange}
+                disabled={loadingOptions.subProblemTypes || !formData.problemId}
+                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
+                  errors.subProblemId ? "border-red-500" : "border-gray-300"
+                } ${
+                  loadingOptions.subProblemTypes || !formData.problemId
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+              >
+                <option value="">
+                  {loadingOptions.subProblemTypes
+                    ? "Loading..."
+                    : "Select sub-problem type"}
+                </option>
+                {dropdownOptions.subProblemTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.subProblemName}
+                  </option>
+                ))}
+              </select>
+              {errors.subProblemId && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.subProblemId}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Category Selection Section */}
+        {/* <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
             Category Selection
           </h3>
@@ -374,7 +521,7 @@ const CallRemarksForm = ({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-700 mb-2">
-                Support Type *
+                Support Type
               </label>
               <select
                 name="supportTypeId"
@@ -409,7 +556,7 @@ const CallRemarksForm = ({
 
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-700 mb-2">
-                Process Type *
+                Process Type
               </label>
               <select
                 name="processTypeId"
@@ -444,7 +591,7 @@ const CallRemarksForm = ({
 
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-700 mb-2">
-                Query Type *
+                Query Type
               </label>
               <select
                 name="queryTypeId"
@@ -477,13 +624,13 @@ const CallRemarksForm = ({
               )}
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Call Details Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+          {/* <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
             Call Details
-          </h3>
+          </h3> */}
 
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">
@@ -537,11 +684,12 @@ const CallRemarksForm = ({
                   Follow-up Date *
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   name="followUpDate"
                   value={formData.followUpDate || ""}
                   onChange={handleInputChange}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={minDateTime}
+                  max={maxDateTime}
                   className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                     errors.followUpDate ? "border-red-500" : "border-blue-300"
                   }`}
