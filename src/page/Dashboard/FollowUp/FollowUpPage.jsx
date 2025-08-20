@@ -42,7 +42,7 @@ const FollowUpPage = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("today");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [followUps, setFollowUps] = useState([]);
@@ -96,7 +96,11 @@ const FollowUpPage = () => {
       setIsLoading(true);
       setError(null);
 
-      console.log("📋 Fetching follow-ups for:", employeeId);
+      const userRole = userData?.EmployeeRole;
+      const managerId = userData?.EmployeeId;
+      const agentNumber = userData?.EmployeePhone;
+
+      console.log(`📋 Fetching follow-ups for role: ${userRole}`);
 
       // Calculate date range based on dateFilter
       let startDate, endDate;
@@ -130,11 +134,6 @@ const FollowUpPage = () => {
         limit: 10,
       };
 
-      // Only pass agentNumber if userRole is not 3
-      if (userData?.EmployeeRole !== 3) {
-        params.agentNumber = employeeId;
-      }
-
       // Add date filters if set
       if (startDate && endDate) {
         params.startDate = startDate;
@@ -151,9 +150,22 @@ const FollowUpPage = () => {
         params.status = statusFilter;
       }
 
-      const response = await axiosInstance.get("/calls/follow-ups", {
-        params,
-      });
+      let response;
+      if (userRole === 2) {
+        if (!managerId) throw new Error("Manager ID not found.");
+        response = await axiosInstance.get(
+          `/calls/manager-follow-ups/${managerId}`,
+          { params }
+        );
+      } else {
+        if (userRole === 1) {
+          if (!agentNumber) throw new Error("Agent number not found.");
+          params.agentNumber = agentNumber;
+        }
+        response = await axiosInstance.get("/calls/follow-ups", {
+          params,
+        });
+      }
 
       console.log("📋 Follow-ups API response:", response.data);
 
@@ -252,10 +264,10 @@ const FollowUpPage = () => {
 
   // Load data when component mounts or filters change
   useEffect(() => {
-    if (employeeId) {
+    if (userData) {
       fetchFollowUps();
     }
-  }, [dateFilter, currentPage, statusFilter, debouncedSearchTerm, employeeId]);
+  }, [dateFilter, currentPage, statusFilter, debouncedSearchTerm, userData]);
 
   // Filter follow-ups (client-side for additional filtering)
   const filteredFollowUps = followUps.filter((followUp) => {
@@ -309,6 +321,9 @@ const FollowUpPage = () => {
   };
 
   const formatDateTime = (dateTime) => {
+    if (!dateTime || isNaN(new Date(dateTime))) {
+      return { date: "Invalid Date", time: "" };
+    }
     const date = new Date(dateTime);
     return {
       date: date.toLocaleDateString(),
@@ -317,8 +332,14 @@ const FollowUpPage = () => {
   };
 
   const formatFollowUpDate = (dateTime) => {
+    if (!dateTime || isNaN(new Date(dateTime))) {
+      return { text: "No date set", isOverdue: false };
+    }
     const date = new Date(dateTime);
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Compare dates only
+    date.setHours(0, 0, 0, 0);
+
     const diffTime = date - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -501,7 +522,7 @@ const FollowUpPage = () => {
               onChange={(e) => setDateFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="all">All Time</option>
+              {/* <option value="all">All Time</option> */}
               <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
               <option value="week">Last Week</option>
@@ -513,7 +534,7 @@ const FollowUpPage = () => {
               onClick={() => {
                 setSearchTerm("");
                 setStatusFilter("");
-                setDateFilter("all");
+                setDateFilter("today");
                 setCurrentPage(1);
               }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -644,11 +665,21 @@ const FollowUpPage = () => {
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900 flex items-center">
                             <CalendarIcon className="h-3 w-3 mr-1" />
-                            {date} at {time}
+                            {formatDateTime(followUp.followUpDate).date} at{" "}
+                            {formatDateTime(followUp.followUpDate).time}
                           </div>
-                          {/* <div className="text-sm text-gray-500 mt-1">
-                            Follow-up: <span className={followUpInfo.isOverdue ? 'text-red-600 font-medium' : 'text-gray-900'}>{followUpInfo.text}</span>
-                          </div> */}
+                          <div className="text-sm text-gray-500 mt-1">
+                            Follow-up:{" "}
+                            <span
+                              className={
+                                followUpInfo.isOverdue
+                                  ? "text-red-600 font-medium"
+                                  : "text-gray-900"
+                              }
+                            >
+                              {followUpInfo.text}
+                            </span>
+                          </div>
                           <div className="mt-1">
                             <span className={getStatusBadge(followUp.status)}>
                               {followUp.status.toUpperCase()}

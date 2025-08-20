@@ -407,10 +407,15 @@ const OutgoingCallPage = () => {
 
   // Transform manager call data (from grouped API response)
   const transformManagerCall = (call, agentDetails) => {
-    const recipientName = call.BPartyContact?.Contact_Name || "Unknown Caller";
-    const recipientNumber = call.bPartyNo;
-    const region = call.BPartyContact?.Region || "Unknown";
-    const zone = call.BPartyContact?.Zone || "Unknown";
+    const recipientName =
+      call.trader_master?.Trader_Name ||
+      call.trader_master?.Trader_business_Name ||
+      call.BPartyContact?.Contact_Name || // Keep fallback
+      "Unknown Caller";
+    const recipientNumber = call.customerNumber || call.bPartyNo;
+    const region =
+      call.trader_master?.Region || call.BPartyContact?.Region || "Unknown";
+    const zone = call.trader_master?.Zone || call.BPartyContact?.Zone || "Unknown";
 
     // Determine status from manager API data
     let status = "failed";
@@ -454,6 +459,7 @@ const OutgoingCallPage = () => {
       formDetails: call.formDetails || null,
       remarks: call.formDetails?.remarks || null,
       rawData: call, // Store original data for details modal
+      recordVoice: call.recordVoice,
       // Additional manager context
       isManagerView: true,
     };
@@ -696,8 +702,8 @@ const OutgoingCallPage = () => {
         // ====== CONNECTED FILTER ======
         const matchesConnected =
           connectedFilter === "" ||
-          (connectedFilter === "true" && call.status === "connected") ||
-          (connectedFilter === "false" && call.status !== "connected");
+          (connectedFilter === "true" && call.status === "completed") ||
+          (connectedFilter === "false" && call.status !== "completed");
 
         return matchesSearch && matchesConnected;
       })

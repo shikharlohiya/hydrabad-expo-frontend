@@ -52,7 +52,9 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Caller Number:</span>
-                  <span className="font-medium">{callDetail.number || "N/A"}</span>
+                  <span className="font-medium">
+                    {callDetail.number || "N/A"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Agent Number:</span>
@@ -189,19 +191,19 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Support Type:</span>
                     <span className="font-medium">
-                      {formDetails.supportType?.supportName || "N/A"}
+                      {formDetails.SupportType?.supportName || "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Process Type:</span>
                     <span className="font-medium">
-                      {formDetails.processType?.processName || "N/A"}
+                      {formDetails.ProcessType?.processName || "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Query Type:</span>
                     <span className="font-medium">
-                      {formDetails.queryType?.queryName || "N/A"}
+                      {formDetails.QueryType?.queryName || "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">

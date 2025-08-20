@@ -67,6 +67,7 @@ Traders-Frontend
 ├─ package.json
 ├─ public
 │  ├─ icon-512.png
+│  ├─ icon.png
 │  └─ sounds
 │     ├─ button-click.mp3
 │     ├─ dial-tone.mp3
@@ -118,13 +119,39 @@ Traders-Frontend
 │  │  │  │  └─ ContactsPage.jsx
 │  │  │  ├─ Dashboard.jsx
 │  │  │  ├─ DashboardPage
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ AdminCharts.jsx
+│  │  │  │  │  ├─ CallDetailModal.jsx
+│  │  │  │  │  ├─ ComingSoon.jsx
+│  │  │  │  │  ├─ DashboardHeader.jsx
+│  │  │  │  │  ├─ EmployeeKPIDashboard.jsx
+│  │  │  │  │  ├─ EmployeePerformanceCards.jsx
+│  │  │  │  │  ├─ ErrorDisplay.jsx
+│  │  │  │  │  ├─ FollowUps.jsx
+│  │  │  │  │  ├─ LoadingSkeleton.jsx
+│  │  │  │  │  ├─ RecentCalls.jsx
+│  │  │  │  │  └─ StatsCards.jsx
 │  │  │  │  └─ DashboardPage.jsx
+│  │  │  ├─ FollowUp
+│  │  │  │  └─ FollowUpPage.jsx
 │  │  │  ├─ IncomingCall
 │  │  │  │  └─ IncomingCallPage.jsx
 │  │  │  ├─ OutgoingCall
 │  │  │  │  └─ OutgoingCallPage.jsx
-│  │  │  └─ Profile
-│  │  │     └─ ProfilePage.jsx
+│  │  │  ├─ Profile
+│  │  │  │  └─ ProfilePage.jsx
+│  │  │  └─ UserSettings
+│  │  │     ├─ components
+│  │  │     │  ├─ ConfirmationModal.jsx
+│  │  │     │  ├─ EmployeeCard.jsx
+│  │  │     │  ├─ EmployeeForm.jsx
+│  │  │     │  ├─ FilterSection.jsx
+│  │  │     │  ├─ Modal.jsx
+│  │  │     │  ├─ Shimmer.jsx
+│  │  │     │  └─ StatCard.jsx
+│  │  │     ├─ constants.js
+│  │  │     ├─ useEmployeeData.js
+│  │  │     └─ UserSettings.jsx
 │  │  ├─ Login.jsx
 │  │  └─ NotFound.jsx
 │  └─ utils
