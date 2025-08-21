@@ -519,20 +519,23 @@ const FormProvider = ({ children }) => {
       newErrors.callDateTime = "Call date and time is required";
     }
 
-    if (!formData.problemId) {
-      newErrors.problemId = "Problem Type is required";
-    }
+    if (traderNotFoundData.type !== "Non-Trader") {
+      if (!formData.problemId) {
+        newErrors.problemId = "Problem Type is required";
+      }
 
-    if (!formData.subProblemId) {
-      newErrors.subProblemId = "Related Issue is required";
+      // Related issue is not mandatory if problemId is 6
+      if (formData.problemId != 6 && !formData.subProblemId) {
+        newErrors.subProblemId = "Related Issue is required";
+      }
+
+      if (formData.status === "open" && !formData.followUpDate) {
+        newErrors.followUpDate = "Follow-up date is required for open tickets";
+      }
     }
 
     if (!formData.remarks.trim()) {
       newErrors.remarks = "Remarks are required";
-    }
-
-    if (formData.status === "open" && !formData.followUpDate) {
-      newErrors.followUpDate = "Follow-up date is required for open tickets";
     }
 
     setErrors(newErrors);

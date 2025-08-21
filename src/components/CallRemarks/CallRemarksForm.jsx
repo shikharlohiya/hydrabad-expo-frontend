@@ -435,82 +435,90 @@ const CallRemarksForm = ({
         }
 
         {/* Problem Description Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
-            Traders Inquiry
-          </h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Problem Type */}
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Problem Type *
-              </label>
-              <select
-                name="problemId"
-                value={formData.problemId || ""}
-                onChange={handleInputChange}
-                disabled={loadingOptions.problemTypes}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.problemId ? "border-red-500" : "border-gray-300"
-                } ${
-                  loadingOptions.problemTypes
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                <option value="">
-                  {loadingOptions.problemTypes
-                    ? "Loading..."
-                    : "Select problem type"}
-                </option>
-                {dropdownOptions.problemTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.problemName}
+        {traderNotFoundData.type !== "Non-Trader" && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+              Traders Inquiry
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Problem Type */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  Problem Type *
+                </label>
+                <select
+                  name="problemId"
+                  value={formData.problemId || ""}
+                  onChange={handleInputChange}
+                  disabled={loadingOptions.problemTypes}
+                  className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
+                    errors.problemId ? "border-red-500" : "border-gray-300"
+                  } ${
+                    loadingOptions.problemTypes
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <option value="">
+                    {loadingOptions.problemTypes
+                      ? "Loading..."
+                      : "Select problem type"}
                   </option>
-                ))}
-              </select>
-              {errors.problemId && (
-                <p className="text-red-500 text-xs mt-1">{errors.problemId}</p>
-              )}
-            </div>
+                  {dropdownOptions.problemTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.problemName}
+                    </option>
+                  ))}
+                </select>
+                {errors.problemId && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.problemId}
+                  </p>
+                )}
+              </div>
 
-            {/* Sub Problem Type */}
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Related Issue *
-              </label>
-              <select
-                name="subProblemId"
-                value={formData.subProblemId || ""}
-                onChange={handleInputChange}
-                disabled={loadingOptions.subProblemTypes || !formData.problemId}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.subProblemId ? "border-red-500" : "border-gray-300"
-                } ${
-                  loadingOptions.subProblemTypes || !formData.problemId
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                <option value="">
-                  {loadingOptions.subProblemTypes
-                    ? "Loading..."
-                    : "Select sub-problem type"}
-                </option>
-                {dropdownOptions.subProblemTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.subProblemName}
-                  </option>
-                ))}
-              </select>
-              {errors.subProblemId && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.subProblemId}
-                </p>
+              {/* Sub Problem Type */}
+              {formData.problemId != 6 && (
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-2">
+                    Related Issue *
+                  </label>
+                  <select
+                    name="subProblemId"
+                    value={formData.subProblemId || ""}
+                    onChange={handleInputChange}
+                    disabled={
+                      loadingOptions.subProblemTypes || !formData.problemId
+                    }
+                    className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
+                      errors.subProblemId ? "border-red-500" : "border-gray-300"
+                    } ${
+                      loadingOptions.subProblemTypes || !formData.problemId
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                  >
+                    <option value="">
+                      {loadingOptions.subProblemTypes
+                        ? "Loading..."
+                        : "Select sub-problem type"}
+                    </option>
+                    {dropdownOptions.subProblemTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.subProblemName}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.subProblemId && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.subProblemId}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* Category Selection Section */}
         {/* <div className="space-y-4">
@@ -653,56 +661,58 @@ const CallRemarksForm = ({
         </div>
 
         {/* Status Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
-            Status & Follow-up
-          </h3>
+        {traderNotFoundData.type !== "Non-Trader" && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+              Status & Follow-up
+            </h3>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Status *
-              </label>
-              <select
-                name="status"
-                value={formData.status || "closed"}
-                onChange={handleInputChange}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors"
-              >
-                {statusOptions.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Follow-up Date - Only show if status is open */}
-            {formData.status === "open" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-blue-800 mb-2">
-                  Follow-up Date *
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  Status *
                 </label>
-                <input
-                  type="datetime-local"
-                  name="followUpDate"
-                  value={formData.followUpDate || ""}
+                <select
+                  name="status"
+                  value={formData.status || "closed"}
                   onChange={handleInputChange}
-                  min={minDateTime}
-                  max={maxDateTime}
-                  className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.followUpDate ? "border-red-500" : "border-blue-300"
-                  }`}
-                />
-                {errors.followUpDate && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.followUpDate}
-                  </p>
-                )}
+                  className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors"
+                >
+                  {statusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+
+              {/* Follow-up Date - Only show if status is open */}
+              {formData.status === "open" && (
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-blue-800 mb-2">
+                    Follow-up Date *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="followUpDate"
+                    value={formData.followUpDate || ""}
+                    onChange={handleInputChange}
+                    min={minDateTime}
+                    max={maxDateTime}
+                    className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                      errors.followUpDate ? "border-red-500" : "border-blue-300"
+                    }`}
+                  />
+                  {errors.followUpDate && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.followUpDate}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Form Actions */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
