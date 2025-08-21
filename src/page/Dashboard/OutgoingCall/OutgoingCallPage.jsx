@@ -1499,12 +1499,16 @@ const OutgoingCallPage = () => {
                           <div className="mt-1">
                             <span
                               className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                call.callStatus === "Connected"
+                                (call.callStatus || call.bDialStatus) ===
+                                "Connected"
                                   ? "bg-green-100 text-green-800"
                                   : "bg-red-100 text-red-800"
                               }`}
                             >
-                              {call.callStatus || call.status}
+                              {call.callStatus ||
+                                (call.bDialStatus === ""
+                                  ? "No Status"
+                                  : call.bDialStatus)}
                             </span>
                           </div>
                         </td>
@@ -1817,7 +1821,9 @@ const OutgoingCallPage = () => {
                         }`}
                       >
                         {selectedCall.rawData?.status ||
-                          selectedCall.rawData?.bDialStatus}
+                          (selectedCall.rawData?.bDialStatus === ""
+                            ? "No Status"
+                            : selectedCall.rawData?.bDialStatus)}
                       </span>
                     </div>
                   </div>
