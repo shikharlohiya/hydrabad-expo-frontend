@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, use } from "react";
 import { useLocation } from "react-router-dom";
 import {
   PhoneIcon,
@@ -77,6 +77,7 @@ const OutgoingCallPage = () => {
   const [groupedRecords, setGroupedRecords] = useState([]); // Agent-wise grouped call data
   const [expandedAgents, setExpandedAgents] = useState(new Set()); // Track which agent groups are expanded
   const [availableAgents, setAvailableAgents] = useState([]); // List of agents for dropdown filter
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
 
   // ====== ROLE 3 SPECIFIC STATE ======
   const [employees, setEmployees] = useState([]); // Store employee data
@@ -171,6 +172,39 @@ const OutgoingCallPage = () => {
     }
   };
 
+  // ====== FETCH AVAILABLE AGENTS FOR MANAGER DROPDOWN ======
+  const fetchAvailableAgents = async () => {
+    if (!isManager) return;
+
+    setIsLoadingAgents(true);
+    try {
+      console.log("👥 Fetching available agents for manager filter");
+      const response = await axiosInstance.get(
+        `/calls/agents-for-manager/${userData?.EmployeeId}`
+      );
+
+      if (response.data.success && Array.isArray(response.data.data)) {
+        // Assuming the API returns a list of all employees.
+        // We can map them to the format needed for the dropdown.
+        const agents = response.data.data.map((emp) => ({
+          id: emp.EmployeeId,
+          name: emp.EmployeeName,
+          phone: emp.EmployeePhone,
+        }));
+        setAvailableAgents(agents);
+        console.log(`👥 Loaded ${agents.length} agents for dropdown.`);
+      } else {
+        console.warn("⚠️ Could not fetch available agents:", response.data);
+        setAvailableAgents([]);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching available agents:", error);
+      setAvailableAgents([]);
+    } finally {
+      setIsLoadingAgents(false);
+    }
+  };
+
   // ====== MAIN API FUNCTION - Role-Based Data Fetching ======
   const fetchOutgoingCalls = async () => {
     try {
@@ -246,19 +280,8 @@ const OutgoingCallPage = () => {
 
       // Transform grouped calls into flat list for compatibility with existing components
       const flatTransformedCalls = [];
-      const agentsList = [];
 
       (groupedRecords || []).forEach((agentGroup) => {
-        // Add agent to available agents list
-        if (agentGroup && agentGroup.agentDetails) {
-          agentsList.push({
-            id: agentGroup.agentDetails.EmployeeId,
-            name: agentGroup.agentDetails.EmployeeName,
-            phone: agentGroup.agentDetails.EmployeePhone,
-            region: agentGroup.agentDetails.EmployeeRegion,
-          });
-        }
-
         // Transform each call in the agent's call list
         (agentGroup?.calls || []).forEach((call) => {
           const transformedCall = transformManagerCall(
@@ -268,9 +291,6 @@ const OutgoingCallPage = () => {
           flatTransformedCalls.push(transformedCall);
         });
       });
-
-      // Update available agents for filter dropdown
-      setAvailableAgents(agentsList);
 
       // Set flat calls for table display
       setOutgoingCalls(flatTransformedCalls);
@@ -664,7 +684,11 @@ const OutgoingCallPage = () => {
     if (userData?.EmployeeRole === 3) {
       fetchEmployees();
     }
-  }, [userData?.EmployeeRole]);
+    // Fetch agents for manager's filter dropdown
+    if (isManager) {
+      fetchAvailableAgents();
+    }
+  }, [userData?.EmployeeRole, isManager]);
 
   // Load data when component mounts or filters change
   useEffect(() => {
@@ -1022,9 +1046,12 @@ const OutgoingCallPage = () => {
                     value={selectedAgentId}
                     onChange={(e) => setSelectedAgentId(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
+                    disabled={isLoadingAgents}
                   >
                     <option value="">
-                      All Agents ({availableAgents.length})
+                      {isLoadingAgents
+                        ? "Loading agents..."
+                        : `All Agents (${availableAgents.length})`}
                     </option>
                     {availableAgents.map((agent) => (
                       <option key={agent.id} value={agent.id}>

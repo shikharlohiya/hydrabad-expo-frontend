@@ -38,64 +38,64 @@
 //   const [traderCounts, setTraderCounts] = useState(null);
 //   const [countsLoading, setCountsLoading] = useState(false);
 //   const [employeeInfo, setEmployeeInfo] = useState(null);
-  
+
 //   const { userData } = useContext(UserContext);
-//   const { 
-//     initiateCall, 
-//     canInitiateCall, 
-//     isCallActive, 
+//   const {
+//     initiateCall,
+//     canInitiateCall,
+//     isCallActive,
 //     callStatus,
 //     setCurrentNumber,
 //     currentNumber,
-//     CALL_STATUS 
+//     CALL_STATUS
 //   } = useDialer();
 
 //   // Fetch traders data with pagination
 //   const fetchTraders = async (page = 1, limit = pageSize, status = selectedStatus, region = selectedRegion, search = searchTerm) => {
 //     const employeeId = userData?.EmployeeId;
-    
+
 //     if (!employeeId) {
 //       setError("Employee ID not found. Please login again.");
 //       setLoading(false);
 //       return;
 //     }
-    
+
 //     try {
 //       setLoading(true);
 //       setError(null);
-      
+
 //       const params = new URLSearchParams({
 //         page: page.toString(),
 //         limit: limit.toString(),
 //       });
-      
+
 //       if (status) {
 //         params.append('status', status);
 //       }
-      
+
 //       if (region) {
 //         params.append('region', region);
 //       }
-      
+
 //       // Add search parameter for server-side search
 //       if (search && search.trim()) {
 //         params.append('search', search.trim());
 //       }
-      
+
 //       console.log(`Making API call to: /traders/employee/${employeeId}?${params.toString()}`);
 //       const response = await axiosInstance.get(
 //         `/traders/employee/${employeeId}?${params.toString()}`
 //       );
-      
+
 //       console.log("API Response:", response.data);
-      
+
 //       if (response.data.success) {
 //         const { traders, pagination, employeeInfo } = response.data.data;
-        
+
 //         setTraders(traders || []);
 //         setPagination(pagination);
 //         setEmployeeInfo(employeeInfo);
-        
+
 //         // Update pagination state
 //         if (pagination) {
 //           setCurrentPage(pagination.currentPage);
@@ -118,22 +118,22 @@
 //   // Fetch trader counts
 //   const fetchTraderCounts = async () => {
 //     const employeeId = userData?.EmployeeId;
-    
+
 //     if (!employeeId) {
 //       console.error("Employee ID not found for counts API");
 //       return;
 //     }
-    
+
 //     try {
 //       setCountsLoading(true);
-      
+
 //       console.log(`Making counts API call to: /traders/count/employee/${employeeId}`);
 //       const response = await axiosInstance.get(
 //         `/traders/count/employee/${employeeId}`
 //       );
-      
+
 //       console.log("Counts API Response:", response.data);
-      
+
 //       if (response.data.success) {
 //         setTraderCounts(response.data.data);
 //       }
@@ -208,11 +208,11 @@
 //     if (phoneNumber && phoneNumber.trim() !== "") {
 //       console.log(`📞 Initiating call to ${phoneNumber} for ${traderName}`);
 //       console.log("📋 Contact info being passed:", { name: traderName });
-      
+
 //       // Set the current number first, then initiate call
 //       setCurrentNumber(phoneNumber);
 //       initiateCall(phoneNumber, { name: traderName });
-      
+
 //       console.log("✅ Call initiated - form should open when call connects");
 //     } else {
 //       console.error("❌ No phone number provided");
@@ -527,7 +527,7 @@
 //             {uniqueStatuses.map((status) => (
 //               <option key={status} value={status}>
 //                 {status.charAt(0).toUpperCase() + status.slice(1)}
-//                 {traderCounts?.statusCounts?.find(s => s.status === status) && 
+//                 {traderCounts?.statusCounts?.find(s => s.status === status) &&
 //                   ` (${traderCounts.statusCounts.find(s => s.status === status).count})`
 //                 }
 //               </option>
@@ -717,7 +717,7 @@
 //                     const maxVisiblePages = 5;
 //                     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
 //                     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                    
+
 //                     if (endPage - startPage + 1 < maxVisiblePages) {
 //                       startPage = Math.max(1, endPage - maxVisiblePages + 1);
 //                     }
@@ -760,11 +760,6 @@
 
 // export default ContactsPage;
 
-
-
-
-
-
 import React, { useState, useEffect, useContext } from "react";
 import {
   PhoneIcon,
@@ -806,7 +801,7 @@ const ContactsPage = () => {
 
   // Pagination state with persistence
   const [currentPage, setCurrentPage] = useState(() => {
-    const saved = sessionStorage.getItem('contactsPage');
+    const saved = sessionStorage.getItem("contactsPage");
     return saved ? parseInt(saved, 10) : 1;
   });
   const [totalPages, setTotalPages] = useState(1);
@@ -814,7 +809,7 @@ const ContactsPage = () => {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const [pageSize, setPageSize] = useState(() => {
-    const saved = sessionStorage.getItem('contactsPageSize');
+    const saved = sessionStorage.getItem("contactsPageSize");
     return saved ? parseInt(saved, 10) : 20;
   });
   const [pagination, setPagination] = useState(null);
@@ -823,16 +818,16 @@ const ContactsPage = () => {
   const [traderCounts, setTraderCounts] = useState(null);
   const [countsLoading, setCountsLoading] = useState(false);
   const [employeeInfo, setEmployeeInfo] = useState(null);
-  
+
   const { userData } = useContext(UserContext);
-  const { 
-    initiateCall, 
-    canInitiateCall, 
-    isCallActive, 
+  const {
+    initiateCall,
+    canInitiateCall,
+    isCallActive,
     callStatus,
     setCurrentNumber,
     currentNumber,
-    CALL_STATUS 
+    CALL_STATUS,
   } = useDialer();
 
   // Helper function to format date
@@ -842,7 +837,7 @@ const ContactsPage = () => {
     return date.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
-      year: "numeric"
+      year: "numeric",
     });
   };
 
@@ -854,12 +849,12 @@ const ContactsPage = () => {
       date: date.toLocaleDateString("en-IN", {
         day: "2-digit",
         month: "short",
-        year: "numeric"
+        year: "numeric",
       }),
       time: date.toLocaleTimeString("en-IN", {
         hour: "2-digit",
-        minute: "2-digit"
-      })
+        minute: "2-digit",
+      }),
     };
   };
 
@@ -880,7 +875,8 @@ const ContactsPage = () => {
 
   // Helper function to get form status badge classes
   const getFormStatusBadge = (status) => {
-    const baseClasses = "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium";
+    const baseClasses =
+      "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium";
     switch (status) {
       case "closed":
         return `${baseClasses} bg-green-100 text-green-800`;
@@ -925,50 +921,58 @@ const ContactsPage = () => {
   };
 
   // Fetch traders data with pagination
-  const fetchTraders = async (page = 1, limit = pageSize, status = selectedStatus, region = selectedRegion, search = searchTerm) => {
+  const fetchTraders = async (
+    page = 1,
+    limit = pageSize,
+    status = selectedStatus,
+    region = selectedRegion,
+    search = searchTerm
+  ) => {
     const employeeId = userData?.EmployeeId;
-    
+
     if (!employeeId) {
       setError("Employee ID not found. Please login again.");
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
       });
-      
+
       if (status) {
-        params.append('status', status);
+        params.append("status", status);
       }
-      
+
       if (region) {
-        params.append('region', region);
+        params.append("region", region);
       }
-      
+
       if (search && search.trim()) {
-        params.append('search', search.trim());
+        params.append("search", search.trim());
       }
-      
-      console.log(`Making API call to: /traders/employee/${employeeId}?${params.toString()}`);
+
+      console.log(
+        `Making API call to: /traders/employee/${employeeId}?${params.toString()}`
+      );
       const response = await axiosInstance.get(
         `/traders/employee/${employeeId}?${params.toString()}`
       );
-      
+
       console.log("API Response:", response.data);
-      
+
       if (response.data.success) {
         const { traders, pagination, employeeInfo } = response.data.data;
-        
+
         setTraders(traders || []);
         setPagination(pagination);
         setEmployeeInfo(employeeInfo);
-        
+
         if (pagination) {
           setCurrentPage(pagination.currentPage);
           setTotalPages(pagination.totalPages);
@@ -976,7 +980,10 @@ const ContactsPage = () => {
           setHasNextPage(pagination.hasNextPage);
           setHasPrevPage(pagination.hasPrevPage);
           // Update sessionStorage with the actual current page from API
-          sessionStorage.setItem('contactsPage', pagination.currentPage.toString());
+          sessionStorage.setItem(
+            "contactsPage",
+            pagination.currentPage.toString()
+          );
         }
       } else {
         setError("Failed to fetch traders data");
@@ -992,22 +999,24 @@ const ContactsPage = () => {
   // Fetch trader counts
   const fetchTraderCounts = async () => {
     const employeeId = userData?.EmployeeId;
-    
+
     if (!employeeId) {
       console.error("Employee ID not found for counts API");
       return;
     }
-    
+
     try {
       setCountsLoading(true);
-      
-      console.log(`Making counts API call to: /traders/count/employee/${employeeId}`);
+
+      console.log(
+        `Making counts API call to: /traders/count/employee/${employeeId}`
+      );
       const response = await axiosInstance.get(
         `/traders/count/employee/${employeeId}`
       );
-      
+
       console.log("Counts API Response:", response.data);
-      
+
       if (response.data.success) {
         setTraderCounts(response.data.data);
       }
@@ -1025,53 +1034,71 @@ const ContactsPage = () => {
     }
 
     // Fetch counts only on initial userData load
-    if (currentPage === 1 && selectedStatus === "active" && !selectedRegion && !searchTerm) {
+    if (
+      currentPage === 1 &&
+      selectedStatus === "active" &&
+      !selectedRegion &&
+      !searchTerm
+    ) {
       fetchTraderCounts();
     }
 
-    if (searchTerm !== undefined && searchTerm !== '') {
+    if (searchTerm !== undefined && searchTerm !== "") {
       // Debounce search-triggered loads
       const delayedSearch = setTimeout(() => {
         if (currentPage === 1) {
           fetchTraders(1, pageSize, selectedStatus, selectedRegion, searchTerm);
         } else {
           setCurrentPage(1); // This will trigger another useEffect call
-          sessionStorage.setItem('contactsPage', '1'); // Reset pagination when searching
+          sessionStorage.setItem("contactsPage", "1"); // Reset pagination when searching
         }
       }, 500);
 
       return () => clearTimeout(delayedSearch);
     } else {
       // Immediate load for filter/pagination changes
-      fetchTraders(currentPage, pageSize, selectedStatus, selectedRegion, searchTerm);
+      fetchTraders(
+        currentPage,
+        pageSize,
+        selectedStatus,
+        selectedRegion,
+        searchTerm
+      );
     }
-  }, [userData, currentPage, pageSize, selectedStatus, selectedRegion, searchTerm]);
+  }, [
+    userData,
+    currentPage,
+    pageSize,
+    selectedStatus,
+    selectedRegion,
+    searchTerm,
+  ]);
 
   // Pagination handlers with persistence
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
-      sessionStorage.setItem('contactsPage', newPage.toString());
+      sessionStorage.setItem("contactsPage", newPage.toString());
     }
   };
 
   const handlePageSizeChange = (newPageSize) => {
     setPageSize(newPageSize);
-    sessionStorage.setItem('contactsPageSize', newPageSize.toString());
+    sessionStorage.setItem("contactsPageSize", newPageSize.toString());
     setCurrentPage(1);
-    sessionStorage.setItem('contactsPage', '1');
+    sessionStorage.setItem("contactsPage", "1");
   };
 
   const handleStatusFilterChange = (status) => {
     setSelectedStatus(status);
     setCurrentPage(1);
-    sessionStorage.setItem('contactsPage', '1'); // Reset to page 1 when filtering
+    sessionStorage.setItem("contactsPage", "1"); // Reset to page 1 when filtering
   };
 
   const handleRegionFilterChange = (region) => {
     setSelectedRegion(region);
     setCurrentPage(1);
-    sessionStorage.setItem('contactsPage', '1'); // Reset to page 1 when filtering
+    sessionStorage.setItem("contactsPage", "1"); // Reset to page 1 when filtering
   };
 
   // Handle call button click
@@ -1080,10 +1107,10 @@ const ContactsPage = () => {
     if (phoneNumber && phoneNumber.trim() !== "") {
       console.log(`📞 Initiating call to ${phoneNumber} for ${traderName}`);
       console.log("📋 Contact info being passed:", { name: traderName });
-      
+
       setCurrentNumber(phoneNumber);
       initiateCall(phoneNumber, { name: traderName });
-      
+
       console.log("✅ Call initiated - form should open when call connects");
     } else {
       console.error("❌ No phone number provided");
@@ -1091,8 +1118,10 @@ const ContactsPage = () => {
   };
 
   // Get unique regions and statuses for filters
-  const uniqueRegions = traderCounts?.matchedRegions || [];
-  const uniqueStatuses = traderCounts?.statusCounts?.map(s => s.status) || [];
+  const uniqueRegions = userData?.EmployeeRegion
+    ? userData.EmployeeRegion.split(",").map((r) => r.trim())
+    : [];
+  const uniqueStatuses = traderCounts?.statusCounts?.map((s) => s.status) || [];
 
   if (loading) {
     return (
@@ -1133,7 +1162,10 @@ const ContactsPage = () => {
             <div className="p-6">
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center p-4 border border-gray-200 rounded-lg">
+                  <div
+                    key={i}
+                    className="flex items-center p-4 border border-gray-200 rounded-lg"
+                  >
                     <div className="w-10 h-10 bg-gray-200 rounded-full relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
                     </div>
@@ -1175,7 +1207,9 @@ const ContactsPage = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Contacts</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Error Loading Contacts
+          </h3>
           <p className="text-gray-600">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -1195,7 +1229,9 @@ const ContactsPage = () => {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Traders Directory</h1>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Traders Directory
+              </h1>
               <p className="text-sm text-gray-500 mt-1">
                 {traders.length} of {totalRecords} traders
                 {pagination && (
@@ -1216,24 +1252,29 @@ const ContactsPage = () => {
           {traderCounts && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
               <div className="text-center">
-                <div className="text-base font-semibold text-indigo-600">{traderCounts.totalCount}</div>
+                <div className="text-base font-semibold text-indigo-600">
+                  {traderCounts.totalCount}
+                </div>
                 <div className="text-xs text-gray-500">Total</div>
               </div>
               <div className="text-center">
                 <div className="text-base font-semibold text-green-600">
-                  {traderCounts.statusCounts?.find(s => s.status === 'active')?.count || 0}
+                  {traderCounts.statusCounts?.find((s) => s.status === "active")
+                    ?.count || 0}
                 </div>
                 <div className="text-xs text-gray-500">Active</div>
               </div>
               <div className="text-center">
                 <div className="text-base font-semibold text-red-600">
-                  {traderCounts.statusCounts?.find(s => s.status === 'inactive')?.count || 0}
+                  {traderCounts.statusCounts?.find(
+                    (s) => s.status === "inactive"
+                  )?.count || 0}
                 </div>
                 <div className="text-xs text-gray-500">Inactive</div>
               </div>
               <div className="text-center">
                 <div className="text-base font-semibold text-blue-600">
-                  {traderCounts.matchedRegions?.length || 0}
+                  {uniqueRegions.length || 0}
                 </div>
                 <div className="text-xs text-gray-500">Regions</div>
               </div>
@@ -1272,7 +1313,7 @@ const ContactsPage = () => {
           </select>
 
           {/* Status Filter */}
-          <select
+          {/* <select
             value={selectedStatus}
             onChange={(e) => handleStatusFilterChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
@@ -1280,12 +1321,14 @@ const ContactsPage = () => {
             {uniqueStatuses.map((status) => (
               <option key={status} value={status}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
-                {traderCounts?.statusCounts?.find(s => s.status === status) && 
-                  ` (${traderCounts.statusCounts.find(s => s.status === status).count})`
-                }
+                {traderCounts?.statusCounts?.find((s) => s.status === status) &&
+                  ` (${
+                    traderCounts.statusCounts.find((s) => s.status === status)
+                      .count
+                  })`}
               </option>
             ))}
-          </select>
+          </select> */}
 
           {/* Page Size */}
           <select
@@ -1314,7 +1357,13 @@ const ContactsPage = () => {
           {/* Refresh */}
           <button
             onClick={() => {
-              fetchTraders(currentPage, pageSize, selectedStatus, selectedRegion, searchTerm);
+              fetchTraders(
+                currentPage,
+                pageSize,
+                selectedStatus,
+                selectedRegion,
+                searchTerm
+              );
               fetchTraderCounts();
             }}
             disabled={loading}
@@ -1330,7 +1379,9 @@ const ContactsPage = () => {
         {traders.length === 0 ? (
           <div className="text-center py-8">
             <UserGroupIcon className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-sm font-medium text-gray-900 mb-1">No traders found</h3>
+            <h3 className="text-sm font-medium text-gray-900 mb-1">
+              No traders found
+            </h3>
             <p className="text-xs text-gray-600">
               {searchTerm || selectedRegion || selectedStatus
                 ? "Try adjusting your search criteria"
@@ -1388,14 +1439,19 @@ const ContactsPage = () => {
 
                     {/* Business */}
                     <td className="px-4 py-3">
-                      <div className="text-sm text-gray-900 max-w-xs truncate" title={trader.Trader_business_Name}>
+                      <div
+                        className="text-sm text-gray-900 max-w-xs truncate"
+                        title={trader.Trader_business_Name}
+                      >
                         {trader.Trader_business_Name || "N/A"}
                       </div>
                     </td>
 
                     {/* Location */}
                     <td className="px-4 py-3">
-                      <div className="text-sm text-gray-900">{trader.Region}</div>
+                      <div className="text-sm text-gray-900">
+                        {trader.Region}
+                      </div>
                       <div className="text-xs text-gray-500">{trader.Zone}</div>
                     </td>
 
@@ -1408,7 +1464,8 @@ const ContactsPage = () => {
                           </div>
                           <div className="text-gray-500 mt-1 max-w-xs">
                             {trader.latestCall.FormDetail?.remarks ? (
-                              trader.latestCall.FormDetail.remarks.length > 30 ? (
+                              trader.latestCall.FormDetail.remarks.length >
+                              30 ? (
                                 <div>
                                   {expandedRemarks.has(trader.id) ? (
                                     <div>
@@ -1416,7 +1473,9 @@ const ContactsPage = () => {
                                         {trader.latestCall.FormDetail.remarks}
                                       </div>
                                       <button
-                                        onClick={() => toggleRemarksExpansion(trader.id)}
+                                        onClick={() =>
+                                          toggleRemarksExpansion(trader.id)
+                                        }
                                         className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
                                       >
                                         show less
@@ -1424,9 +1483,17 @@ const ContactsPage = () => {
                                     </div>
                                   ) : (
                                     <div>
-                                      <span>{trader.latestCall.FormDetail.remarks.substring(0, 30)}...</span>
+                                      <span>
+                                        {trader.latestCall.FormDetail.remarks.substring(
+                                          0,
+                                          30
+                                        )}
+                                        ...
+                                      </span>
                                       <button
-                                        onClick={() => toggleRemarksExpansion(trader.id)}
+                                        onClick={() =>
+                                          toggleRemarksExpansion(trader.id)
+                                        }
                                         className="ml-1 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
                                       >
                                         read more
@@ -1435,7 +1502,9 @@ const ContactsPage = () => {
                                   )}
                                 </div>
                               ) : (
-                                <span>{trader.latestCall.FormDetail.remarks}</span>
+                                <span>
+                                  {trader.latestCall.FormDetail.remarks}
+                                </span>
                               )
                             ) : (
                               "No remarks"
@@ -1443,13 +1512,17 @@ const ContactsPage = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-400">No call history</div>
+                        <div className="text-xs text-gray-400">
+                          No call history
+                        </div>
                       )}
                     </td>
 
                     {/* Form Status (Updated to show "-" instead of "No Call") */}
                     <td className="px-4 py-3">
-                      <span className={getFormStatusBadge(getFormStatus(trader))}>
+                      <span
+                        className={getFormStatusBadge(getFormStatus(trader))}
+                      >
                         {getStatusDisplayText(getFormStatus(trader))}
                       </span>
                     </td>
@@ -1458,7 +1531,9 @@ const ContactsPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleCall(trader.Contact_no, trader.Trader_Name)}
+                          onClick={() =>
+                            handleCall(trader.Contact_no, trader.Trader_Name)
+                          }
                           disabled={!trader.Contact_no}
                           className={`inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white focus:outline-none focus:ring-1 focus:ring-offset-1 ${
                             trader.Contact_no
@@ -1474,7 +1549,7 @@ const ContactsPage = () => {
                           <PhoneIcon className="h-3 w-3 mr-1" />
                           Call
                         </button>
-                        
+
                         <button
                           onClick={() => handleViewDetails(trader)}
                           className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-indigo-500"
@@ -1513,11 +1588,16 @@ const ContactsPage = () => {
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs text-gray-600">
-                  Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords}
+                  Showing {(currentPage - 1) * pageSize + 1}-
+                  {Math.min(currentPage * pageSize, totalRecords)} of{" "}
+                  {totalRecords}
                 </p>
               </div>
               <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <nav
+                  className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                  aria-label="Pagination"
+                >
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={!hasPrevPage}
@@ -1529,9 +1609,15 @@ const ContactsPage = () => {
                   {(() => {
                     const pages = [];
                     const maxVisiblePages = 5;
-                    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                    
+                    let startPage = Math.max(
+                      1,
+                      currentPage - Math.floor(maxVisiblePages / 2)
+                    );
+                    let endPage = Math.min(
+                      totalPages,
+                      startPage + maxVisiblePages - 1
+                    );
+
                     if (endPage - startPage + 1 < maxVisiblePages) {
                       startPage = Math.max(1, endPage - maxVisiblePages + 1);
                     }
@@ -1591,7 +1677,9 @@ const ContactsPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Basic Trader Info */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Basic Information
+                  </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Trader ID:</span>
@@ -1603,45 +1691,68 @@ const ContactsPage = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Trader Name:</span>
-                      <span className="font-medium">{selectedTrader.Trader_Name || 'N/A'}</span>
+                      <span className="font-medium">
+                        {selectedTrader.Trader_Name || "N/A"}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Business Name:</span>
-                      <span className="font-medium">{selectedTrader.Trader_business_Name || 'N/A'}</span>
+                      <span className="font-medium">
+                        {selectedTrader.Trader_business_Name || "N/A"}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Contact Number:</span>
-                      <span className="font-medium">{selectedTrader.Contact_no}</span>
+                      <span className="font-medium">
+                        {selectedTrader.Contact_no}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Region:</span>
-                      <span className="font-medium">{selectedTrader.Region}</span>
+                      <span className="font-medium">
+                        {selectedTrader.Region}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Zone:</span>
-                      <span className="font-medium">{selectedTrader.Zone || 'N/A'}</span>
+                      <span className="font-medium">
+                        {selectedTrader.Zone || "N/A"}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Trader Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedTrader.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {selectedTrader.status?.charAt(0).toUpperCase() + selectedTrader.status?.slice(1)}
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedTrader.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {selectedTrader.status?.charAt(0).toUpperCase() +
+                          selectedTrader.status?.slice(1)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Form Status:</span>
-                      <span className={getFormStatusBadge(getFormStatus(selectedTrader))}>
+                      <span
+                        className={getFormStatusBadge(
+                          getFormStatus(selectedTrader)
+                        )}
+                      >
                         {getStatusDisplayText(getFormStatus(selectedTrader))}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Created:</span>
-                      <span className="font-medium">{formatDate(selectedTrader.createdAt)}</span>
+                      <span className="font-medium">
+                        {formatDate(selectedTrader.createdAt)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Last Updated:</span>
-                      <span className="font-medium">{formatDate(selectedTrader.updatedAt)}</span>
+                      <span className="font-medium">
+                        {formatDate(selectedTrader.updatedAt)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1649,53 +1760,85 @@ const ContactsPage = () => {
                 {/* Latest Call Information */}
                 {selectedTrader.latestCall ? (
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Latest Call Details</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Latest Call Details
+                    </h3>
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Call ID:</span>
-                        <span className="font-medium">{selectedTrader.latestCall.CallId}</span>
+                        <span className="font-medium">
+                          {selectedTrader.latestCall.CallId}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Service Type:</span>
-                        <span className="font-medium">{selectedTrader.latestCall.serviceType}</span>
+                        <span className="font-medium">
+                          {selectedTrader.latestCall.serviceType}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Call Start:</span>
                         <span className="font-medium">
-                          {formatDateTime(selectedTrader.latestCall.callStartTime).date} at {formatDateTime(selectedTrader.latestCall.callStartTime).time}
+                          {
+                            formatDateTime(
+                              selectedTrader.latestCall.callStartTime
+                            ).date
+                          }{" "}
+                          at{" "}
+                          {
+                            formatDateTime(
+                              selectedTrader.latestCall.callStartTime
+                            ).time
+                          }
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Agent Status:</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedTrader.latestCall.aDialStatus === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            selectedTrader.latestCall.aDialStatus ===
+                            "Connected"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
                           {selectedTrader.latestCall.aDialStatus}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Customer Status:</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedTrader.latestCall.bDialStatus === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            selectedTrader.latestCall.bDialStatus ===
+                            "Connected"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
                           {selectedTrader.latestCall.bDialStatus}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Call Type:</span>
-                        <span className="font-medium">{selectedTrader.latestCall.callType}</span>
+                        <span className="font-medium">
+                          {selectedTrader.latestCall.callType}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Disconnected By:</span>
-                        <span className="font-medium">{selectedTrader.latestCall.disconnectedBy || 'N/A'}</span>
+                        <span className="font-medium">
+                          {selectedTrader.latestCall.disconnectedBy || "N/A"}
+                        </span>
                       </div>
-                      
+
                       {/* Recording */}
                       {selectedTrader.latestCall.recordVoice && (
                         <div className="pt-2">
-                          <span className="text-gray-600 text-sm">Call Recording:</span>
+                          <span className="text-gray-600 text-sm">
+                            Call Recording:
+                          </span>
                           <div className="mt-1">
-                            <a 
+                            <a
                               href={selectedTrader.latestCall.recordVoice}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -1711,7 +1854,9 @@ const ContactsPage = () => {
                   </div>
                 ) : (
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Call History</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Call History
+                    </h3>
                     <div className="text-center text-gray-500">
                       <ClockIcon className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                       <p>No call history available</p>
@@ -1722,47 +1867,73 @@ const ContactsPage = () => {
                 {/* Form Details */}
                 {selectedTrader.latestCall?.FormDetail && (
                   <div className="bg-gray-50 rounded-lg p-4 lg:col-span-2">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Form Details</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Form Details
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-3">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Form ID:</span>
-                          <span className="font-medium">{selectedTrader.latestCall.FormDetail.id}</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail.id}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Call Type:</span>
-                          <span className="font-medium">{selectedTrader.latestCall.FormDetail.callType}</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail.callType}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Inquiry Number:</span>
-                          <span className="font-medium">{selectedTrader.latestCall.FormDetail.inquiryNumber}</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail.inquiryNumber}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Form Status:</span>
-                          <span className={getFormStatusBadge(selectedTrader.latestCall.FormDetail.status)}>
-                            {getStatusDisplayText(selectedTrader.latestCall.FormDetail.status)}
+                          <span
+                            className={getFormStatusBadge(
+                              selectedTrader.latestCall.FormDetail.status
+                            )}
+                          >
+                            {getStatusDisplayText(
+                              selectedTrader.latestCall.FormDetail.status
+                            )}
                           </span>
                         </div>
                       </div>
                       <div className="space-y-3">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Support Type:</span>
-                          <span className="font-medium">{selectedTrader.latestCall.FormDetail.SupportType?.supportName || 'N/A'}</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail.SupportType
+                              ?.supportName || "N/A"}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Process Type:</span>
-                          <span className="font-medium">{selectedTrader.latestCall.FormDetail.ProcessType?.processName || 'N/A'}</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail.ProcessType
+                              ?.processName || "N/A"}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Query Type:</span>
-                          <span className="font-medium">{selectedTrader.latestCall.FormDetail.QueryType?.queryName || 'N/A'}</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail.QueryType
+                              ?.queryName || "N/A"}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Follow-up Date:</span>
                           <span className="font-medium">
-                            {selectedTrader.latestCall.FormDetail.followUpDate 
-                              ? formatDate(selectedTrader.latestCall.FormDetail.followUpDate)
-                              : 'No follow-up scheduled'}
+                            {selectedTrader.latestCall.FormDetail.followUpDate
+                              ? formatDate(
+                                  selectedTrader.latestCall.FormDetail
+                                    .followUpDate
+                                )
+                              : "No follow-up scheduled"}
                           </span>
                         </div>
                       </div>
@@ -1770,7 +1941,8 @@ const ContactsPage = () => {
                         <span className="text-gray-600 text-sm">Remarks:</span>
                         <div className="mt-1 p-3 bg-white border rounded-lg">
                           <p className="text-sm text-gray-900 whitespace-pre-wrap">
-                            {selectedTrader.latestCall.FormDetail.remarks || 'No remarks provided'}
+                            {selectedTrader.latestCall.FormDetail.remarks ||
+                              "No remarks provided"}
                           </p>
                         </div>
                       </div>
@@ -1785,7 +1957,10 @@ const ContactsPage = () => {
                   {selectedTrader.Contact_no && (
                     <button
                       onClick={() => {
-                        handleCall(selectedTrader.Contact_no, selectedTrader.Trader_Name);
+                        handleCall(
+                          selectedTrader.Contact_no,
+                          selectedTrader.Trader_Name
+                        );
                         setShowDetailsModal(false);
                       }}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"

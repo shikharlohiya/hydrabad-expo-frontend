@@ -102,6 +102,7 @@ const IncomingCallPage = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportError, setExportError] = useState(null);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
 
   // Helper function to format duration from seconds
   const formatDurationFromSeconds = (seconds) => {
@@ -121,6 +122,36 @@ const IncomingCallPage = () => {
       return `${hours}h ${minutes}m`;
     } else {
       return `${minutes}m`;
+    }
+  };
+
+  const fetchAvailableAgents = async () => {
+    if (!isManager) return;
+
+    setIsLoadingAgents(true);
+    try {
+      console.log("👥 Fetching available agents for manager filter");
+      const response = await axiosInstance.get(
+        `/calls/agents-for-manager/${userData?.EmployeeId}`
+      );
+
+      if (response.data.success && Array.isArray(response.data.data)) {
+        const agents = response.data.data.map((emp) => ({
+          id: emp.EmployeeId,
+          name: emp.EmployeeName,
+          phone: emp.EmployeePhone,
+        }));
+        setAvailableAgents(agents);
+        console.log(`👥 Loaded ${agents.length} agents for dropdown.`);
+      } else {
+        console.warn("⚠️ Could not fetch available agents:", response.data);
+        setAvailableAgents([]);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching available agents:", error);
+      setAvailableAgents([]);
+    } finally {
+      setIsLoadingAgents(false);
     }
   };
 
@@ -225,14 +256,6 @@ const IncomingCallPage = () => {
 
         if (response.data.success && response.data.data) {
           const { stats, pagination, groupedRecords } = response.data.data;
-
-          // Extract agents for dropdown
-          const agents = groupedRecords.map((group) => ({
-            id: group.agentDetails.EmployeeId,
-            name: group.agentDetails.EmployeeName,
-            phone: group.agentDetails.EmployeePhone,
-          }));
-          setAvailableAgents(agents);
 
           // Flatten calls
           const transformedCalls = groupedRecords.flatMap((group) =>
@@ -461,7 +484,11 @@ const IncomingCallPage = () => {
     if (userData?.EmployeeRole === 3) {
       fetchEmployees();
     }
-  }, [userData?.EmployeeRole]);
+    // Fetch agents for manager's filter dropdown
+    if (isManager) {
+      fetchAvailableAgents();
+    }
+  }, [userData?.EmployeeRole, isManager]);
 
   // Load data when component mounts or filters change
   useEffect(() => {
@@ -734,8 +761,13 @@ const IncomingCallPage = () => {
                     value={selectedAgent}
                     onChange={(e) => setSelectedAgent(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    disabled={isLoadingAgents}
                   >
-                    <option value="">All Agents</option>
+                    <option value="">
+                      {isLoadingAgents
+                        ? "Loading agents..."
+                        : `All Agents (${availableAgents.length})`}
+                    </option>
                     {availableAgents.map((agent) => (
                       <option key={agent.id} value={agent.id}>
                         {agent.name} ({agent.phone})
