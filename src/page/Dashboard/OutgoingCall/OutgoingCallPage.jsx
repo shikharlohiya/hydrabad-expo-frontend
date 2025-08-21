@@ -1898,12 +1898,14 @@ const OutgoingCallPage = () => {
                         {selectedCall.status}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Call Outcome:</span>
-                      <span className="font-medium capitalize">
-                        {selectedCall.callOutcome?.replace("-", " ")}
-                      </span>
-                    </div>
+                    {selectedCall.callOutcome && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Call Outcome:</span>
+                        <span className="font-medium capitalize">
+                          {selectedCall.callOutcome?.replace("-", " ")}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -897,7 +897,7 @@ const ContactsPage = () => {
       case "open":
         return "Open";
       case "no-call":
-        return "-"; // Changed from "No Call" to "-"
+        return "none"; // Changed from "No Call" to "-"
       default:
         return status?.charAt(0).toUpperCase() + status?.slice(1) || "Unknown";
     }
@@ -1773,7 +1773,10 @@ const ContactsPage = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Service Type:</span>
                         <span className="font-medium">
-                          {selectedTrader.latestCall.serviceType}
+                          {(selectedTrader.latestCall.event === "call_end"
+                            ? "Incoming call"
+                            : selectedTrader.latestCall.event) ||
+                            selectedTrader.latestCall.serviceType}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1796,26 +1799,40 @@ const ContactsPage = () => {
                         <span className="text-gray-600">Agent Status:</span>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedTrader.latestCall.aDialStatus ===
-                            "Connected"
+                            selectedTrader.latestCall.aDialStatus ||
+                            (selectedTrader.latestCall.ogCallStatus === ""
+                              ? "none"
+                              : selectedTrader.latestCall.ogCallStatus) ===
+                              "Connected"
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
                           }`}
                         >
-                          {selectedTrader.latestCall.aDialStatus}
+                          {selectedTrader.latestCall.aDialStatus ||
+                            (selectedTrader.latestCall.ogCallStatus === ""
+                              ? "none"
+                              : selectedTrader.latestCall.ogCallStatus)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Customer Status:</span>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedTrader.latestCall.bDialStatus ===
-                            "Connected"
+                            selectedTrader.latestCall.bDialStatus ||
+                            (selectedTrader.latestCall.ogCallStatus === ""
+                              ? "none"
+                              : selectedTrader.latestCall.ogCallStatus) ===
+                              "Connected"
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
                           }`}
                         >
-                          {selectedTrader.latestCall.bDialStatus}
+                          {(selectedTrader.latestCall.bDialStatus === ""
+                            ? "Not-connected"
+                            : selectedTrader.latestCall.bDialStatus) ||
+                            (selectedTrader.latestCall.ogCallStatus === ""
+                              ? "none"
+                              : selectedTrader.latestCall.ogCallStatus)}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1832,14 +1849,21 @@ const ContactsPage = () => {
                       </div>
 
                       {/* Recording */}
-                      {selectedTrader.latestCall.recordVoice && (
+                      {((selectedTrader.latestCall.recordVoice &&
+                        selectedTrader.latestCall.recordVoice !== "No Voice") ||
+                        (selectedTrader.latestCall.voiceRecording &&
+                          selectedTrader.latestCall.voiceRecording !==
+                            "No Voice")) && (
                         <div className="pt-2">
                           <span className="text-gray-600 text-sm">
                             Call Recording:
                           </span>
                           <div className="mt-1">
                             <a
-                              href={selectedTrader.latestCall.recordVoice}
+                              href={
+                                selectedTrader.latestCall.recordVoice ||
+                                selectedTrader.latestCall.voiceRecording
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
@@ -1904,6 +1928,20 @@ const ContactsPage = () => {
                         </div>
                       </div>
                       <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Inquiry Type:</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail
+                              .ProblemCategory?.problemName || "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Inquiry detail:</span>
+                          <span className="font-medium">
+                            {selectedTrader.latestCall.FormDetail
+                              .ProblemSubCategory?.subProblemName || "N/A"}
+                          </span>
+                        </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Support Type:</span>
                           <span className="font-medium">
