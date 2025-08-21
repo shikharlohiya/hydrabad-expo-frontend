@@ -1810,12 +1810,14 @@ const OutgoingCallPage = () => {
                       <span className="text-gray-600">Status:</span>
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedCall.rawData?.status === "Connected"
+                          (selectedCall.rawData?.status ||
+                            selectedCall.rawData?.bDialStatus) === "Connected"
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {selectedCall.rawData?.status}
+                        {selectedCall.rawData?.status ||
+                          selectedCall.rawData?.bDialStatus}
                       </span>
                     </div>
                   </div>
@@ -2079,32 +2081,45 @@ const OutgoingCallPage = () => {
                       <span className="text-gray-600">Recording Status:</span>
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedCall.rawData?.recordVoice &&
-                          selectedCall.rawData.recordVoice !== "No Voice"
+                          (selectedCall.rawData?.recordVoice &&
+                            selectedCall.rawData.recordVoice !== "No Voice") ||
+                          (selectedCall.rawData?.voiceRecording &&
+                            selectedCall.rawData.voiceRecording !== "No Voice")
                             ? "bg-green-100 text-green-800"
                             : "bg-gray-100 text-gray-800"
                         }`}
                       >
-                        {selectedCall.rawData?.recordVoice &&
-                        selectedCall.rawData.recordVoice !== "No Voice"
+                        {(selectedCall.rawData?.recordVoice &&
+                          selectedCall.rawData.recordVoice !== "No Voice") ||
+                        (selectedCall.rawData?.voiceRecording &&
+                          selectedCall.rawData.voiceRecording !== "No Voice")
                           ? "Available"
                           : "Not Available"}
                       </span>
                     </div>
-                    {selectedCall.rawData?.recordVoice &&
-                      selectedCall.rawData.recordVoice !== "No Voice" && (
-                        <div>
-                          <a
-                            href={selectedCall.rawData.recordVoice}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                          >
-                            <PlayIcon className="w-4 h-4 mr-2" />
-                            Play Recording
-                          </a>
-                        </div>
-                      )}
+                    {(selectedCall.rawData?.recordVoice &&
+                      selectedCall.rawData.recordVoice !== "No Voice") ||
+                    (selectedCall.rawData?.voiceRecording &&
+                      selectedCall.rawData.voiceRecording !== "No Voice") ? (
+                      <div>
+                        <a
+                          href={
+                            selectedCall.rawData.recordVoice ||
+                            selectedCall.rawData.voiceRecording
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                        >
+                          <PlayIcon className="w-4 h-4 mr-2" />
+                          Play Recording
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500">
+                        No Recording Available
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
