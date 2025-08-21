@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import useDialer from "../../../hooks/useDialer";
 import UserContext from "../../../context/UserContext";
 import axiosInstance from "../../../library/axios";
+import moment from "moment-timezone";
 
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import ErrorDisplay from "./components/ErrorDisplay";
@@ -827,10 +828,10 @@ const DashboardPage = () => {
 
   // Format follow-up date helper
   const formatFollowUpDate = (dateTime) => {
-    const date = new Date(dateTime);
-    const today = new Date();
-    const diffTime = date - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const dateIST = moment.tz(dateTime, "Asia/Kolkata").startOf("day");
+    const todayIST = moment().tz("Asia/Kolkata").startOf("day");
+
+    const diffDays = dateIST.diff(todayIST, "days");
 
     if (diffDays < 0) {
       return { text: `${Math.abs(diffDays)} days overdue`, isOverdue: true };

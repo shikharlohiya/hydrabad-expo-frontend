@@ -213,6 +213,9 @@ const FollowUpPage = () => {
             supportType: formDetail.supportType?.supportName || "N/A",
             processType: formDetail.processType?.processName || "N/A",
             queryType: formDetail.queryType?.queryName || "N/A",
+            problemCategory: formDetail.problemCategory?.problemName || "N/A",
+            problemSubCategory:
+              formDetail.problemSubCategory?.subProblemName || "N/A",
             remarks: formDetail.remarks || "No remarks",
             status: formDetail.status || "open",
             followUpDate: formDetail.followUpDate,
@@ -689,7 +692,7 @@ const FollowUpPage = () => {
 
                         {/* Support Details */}
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
+                          {/* <div className="text-sm text-gray-900">
                             {followUp.supportType}
                           </div>
                           <div className="text-sm text-gray-500">
@@ -697,6 +700,12 @@ const FollowUpPage = () => {
                           </div>
                           <div className="text-xs text-gray-400">
                             {followUp.queryType}
+                          </div> */}
+                          <div className="text-sm text-gray-900">
+                            {followUp.problemCategory}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {followUp.problemSubCategory}
                           </div>
                         </td>
 
@@ -1001,7 +1010,7 @@ const FollowUpPage = () => {
                     Support Details
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span className="text-gray-600">Support Type:</span>
                       <span className="font-medium">
                         {selectedFollowUp.supportType}
@@ -1017,6 +1026,18 @@ const FollowUpPage = () => {
                       <span className="text-gray-600">Query Type:</span>
                       <span className="font-medium">
                         {selectedFollowUp.queryType}
+                      </span>
+                    </div> */}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Inquiry Type:</span>
+                      <span className="font-medium">
+                        {selectedFollowUp.problemCategory}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Inquiry details:</span>
+                      <span className="font-medium">
+                        {selectedFollowUp.problemSubCategory}
                       </span>
                     </div>
                     <div className="flex justify-between">

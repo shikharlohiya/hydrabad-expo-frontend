@@ -188,7 +188,7 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                       {formDetails.callType || "N/A"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  {/* <div className="flex justify-between">
                     <span className="text-gray-600">Support Type:</span>
                     <span className="font-medium">
                       {formDetails.SupportType?.supportName || "N/A"}
@@ -204,6 +204,18 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                     <span className="text-gray-600">Query Type:</span>
                     <span className="font-medium">
                       {formDetails.QueryType?.queryName || "N/A"}
+                    </span>
+                  </div> */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Inquiry Type:</span>
+                    <span className="font-medium">
+                      {formDetails.ProblemCategory?.problemName || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Inquiry Details:</span>
+                    <span className="font-medium">
+                      {formDetails.ProblemSubCategory?.subProblemName || "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -230,7 +242,7 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
           </div>
 
           {/* Voice Recording */}
-          {rawData.voiceRecording && (
+          {rawData.voiceRecording !== "No Voice" && (
             <div className="mt-6 bg-purple-50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Voice Recording
