@@ -6,8 +6,10 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    host: true,
-    allowedHosts: ["crm-trader.abisibg.com"],
+    host: "0.0.0.0",
     port: 3009,
+    strictPort: true,
+    allowedHosts: ["crm-trader-dev.abisexport.com"], // 👈 add your domain
   },
 });
+
