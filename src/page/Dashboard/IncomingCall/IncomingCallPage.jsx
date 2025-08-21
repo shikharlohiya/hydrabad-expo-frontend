@@ -1178,7 +1178,7 @@ const IncomingCallPage = () => {
                               <EyeIcon className="w-4 h-4 mr-1" />
                               View Details
                             </button>
-                            {call.voiceRecording && (
+                            {call.voiceRecording !== "No Voice" && (
                               <a
                                 href={call.voiceRecording}
                                 target="_blank"
@@ -1533,7 +1533,7 @@ const IncomingCallPage = () => {
                             "N/A"}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Support Type:</span>
                         <span className="font-medium">
                           {selectedCall.rawData.formDetails.SupportType
@@ -1552,6 +1552,20 @@ const IncomingCallPage = () => {
                         <span className="font-medium">
                           {selectedCall.rawData.formDetails.QueryType
                             ?.queryName || "N/A"}
+                        </span>
+                      </div> */}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Inquiry Type:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.ProblemCategory
+                            ?.problemName || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Inquiry Details:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.ProblemSubCategory
+                            ?.subProblemName || "N/A"}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1595,7 +1609,7 @@ const IncomingCallPage = () => {
               </div>
 
               {/* Voice Recording */}
-              {selectedCall.rawData?.voiceRecording && (
+              {selectedCall.rawData?.voiceRecording !== "No Voice" && (
                 <div className="mt-6 bg-purple-50 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Voice Recording
