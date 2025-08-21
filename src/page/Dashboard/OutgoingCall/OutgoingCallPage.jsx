@@ -415,7 +415,8 @@ const OutgoingCallPage = () => {
     const recipientNumber = call.customerNumber || call.bPartyNo;
     const region =
       call.trader_master?.Region || call.BPartyContact?.Region || "Unknown";
-    const zone = call.trader_master?.Zone || call.BPartyContact?.Zone || "Unknown";
+    const zone =
+      call.trader_master?.Zone || call.BPartyContact?.Zone || "Unknown";
 
     // Determine status from manager API data
     let status = "failed";
@@ -1994,7 +1995,7 @@ const OutgoingCallPage = () => {
                             "N/A"}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Support Type:</span>
                         <span className="font-medium">
                           {selectedCall.rawData.formDetails.SupportType
@@ -2013,6 +2014,20 @@ const OutgoingCallPage = () => {
                         <span className="font-medium">
                           {selectedCall.rawData.formDetails.QueryType
                             ?.queryName || "N/A"}
+                        </span>
+                      </div> */}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Inquiry Type:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.ProblemCategory
+                            ?.problemName || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Inquiry Details:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.ProblemSubCategory
+                            ?.subProblemName || "N/A"}
                         </span>
                       </div>
                       <div className="flex justify-between">

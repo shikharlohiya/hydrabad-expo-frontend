@@ -22,6 +22,7 @@ import {
   UserGroupIcon,
   ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
+import moment from "moment-timezone";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
 import useDialer from "../../../hooks/useDialer";
@@ -338,13 +339,12 @@ const FollowUpPage = () => {
     if (!dateTime || isNaN(new Date(dateTime))) {
       return { text: "No date set", isOverdue: false };
     }
-    const date = new Date(dateTime);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Compare dates only
-    date.setHours(0, 0, 0, 0);
 
-    const diffTime = date - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Normalize both to IST midnight
+    const dateIST = moment.tz(dateTime, "Asia/Kolkata").startOf("day");
+    const todayIST = moment().tz("Asia/Kolkata").startOf("day");
+
+    const diffDays = dateIST.diff(todayIST, "days");
 
     if (diffDays < 0) {
       return { text: `${Math.abs(diffDays)} days overdue`, isOverdue: true };
