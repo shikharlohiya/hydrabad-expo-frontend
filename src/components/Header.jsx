@@ -72,6 +72,27 @@ const Header = ({ collapsed, setCollapsed }) => {
     }
   }, [isDialerOpen]);
 
+  // Separate click outside detection for menu
+  useEffect(() => {
+    const handleMenuClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      // Small delay to prevent immediate closing
+      const timer = setTimeout(() => {
+        document.addEventListener("mousedown", handleMenuClickOutside);
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener("mousedown", handleMenuClickOutside);
+      };
+    }
+  }, [isMenuOpen]);
+
   // Separate click outside detection for dialer
   useEffect(() => {
     const handleDialerClickOutside = (event) => {
