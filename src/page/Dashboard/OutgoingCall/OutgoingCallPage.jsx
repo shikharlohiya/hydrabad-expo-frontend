@@ -2002,12 +2002,12 @@ const OutgoingCallPage = () => {
                           {selectedCall.rawData.agent.EmployeeRegion}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Role ID:</span>
                         <span className="font-medium">
                           {selectedCall.rawData.agent.EmployeeRoleID}
                         </span>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 )}
