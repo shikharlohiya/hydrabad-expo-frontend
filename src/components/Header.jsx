@@ -419,21 +419,33 @@ const Header = ({ collapsed, setCollapsed }) => {
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                 {/* User Info Section */}
                 <div className="px-4 py-3 border-b border-gray-100">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center shadow-md">
-                      <span className="text-sm font-semibold text-white">
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    {/* Avatar */}
+                    <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+                      <span className="text-base font-semibold text-white">
                         {getInitials(userData?.EmployeeName)}
                       </span>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
+
+                    {/* User Info */}
+                    <div className="space-y-0.5 max-w-[14rem] overflow-hidden">
+                      <p className="text-sm font-semibold text-gray-900">
                         {userData?.EmployeeName}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 break-words">
                         {userData?.EmployeeMailId}
                       </p>
-                      <p className="text-xs text-gray-800 font-medium">
-                        ID: {userData?.EmployeeId}
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">ID:</span>{" "}
+                        {userData?.EmployeeId}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">Phone:</span>{" "}
+                        {userData?.EmployeePhone}
+                      </p>
+                      <p className="text-xs text-gray-600 whitespace-normal break-words">
+                        <span className="font-medium">Assigned Regions:</span>{" "}
+                        {userData?.EmployeeRegion}
                       </p>
                     </div>
                   </div>
