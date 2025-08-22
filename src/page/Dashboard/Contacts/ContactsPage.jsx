@@ -1818,11 +1818,11 @@ const ContactsPage = () => {
                         <span className="text-gray-600">Customer Status:</span>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedTrader.latestCall.bDialStatus ||
-                            (selectedTrader.latestCall.ogCallStatus === ""
-                              ? "none"
-                              : selectedTrader.latestCall.ogCallStatus) ===
-                              "Connected"
+                            selectedTrader.latestCall.bDialStatus ===
+                              "Connected" ||
+                            (selectedTrader.latestCall.bDialStatus === "" &&
+                              selectedTrader.latestCall.ogCallStatus ===
+                                "Connected")
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
                           }`}
@@ -1896,12 +1896,12 @@ const ContactsPage = () => {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-3">
-                        <div className="flex justify-between">
+                        {/* <div className="flex justify-between">
                           <span className="text-gray-600">Form ID:</span>
                           <span className="font-medium">
                             {selectedTrader.latestCall.FormDetail.id}
                           </span>
-                        </div>
+                        </div> */}
                         <div className="flex justify-between">
                           <span className="text-gray-600">Call Type:</span>
                           <span className="font-medium">
@@ -1942,7 +1942,7 @@ const ContactsPage = () => {
                               .ProblemSubCategory?.subProblemName || "N/A"}
                           </span>
                         </div>
-                        <div className="flex justify-between">
+                        {/* <div className="flex justify-between">
                           <span className="text-gray-600">Support Type:</span>
                           <span className="font-medium">
                             {selectedTrader.latestCall.FormDetail.SupportType
@@ -1962,7 +1962,7 @@ const ContactsPage = () => {
                             {selectedTrader.latestCall.FormDetail.QueryType
                               ?.queryName || "N/A"}
                           </span>
-                        </div>
+                        </div> */}
                         <div className="flex justify-between">
                           <span className="text-gray-600">Follow-up Date:</span>
                           <span className="font-medium">

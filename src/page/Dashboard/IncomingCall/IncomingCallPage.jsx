@@ -1402,7 +1402,7 @@ const IncomingCallPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Agent Number:</span>
                       <span className="font-medium">
-                        {selectedCall.agentPhone}
+                        {selectedCall.agentPhone || "N/A"}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1436,7 +1436,7 @@ const IncomingCallPage = () => {
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {selectedCall.rawData?.ogCallStatus}
+                        {selectedCall.rawData?.ogCallStatus || "N/A"}
                       </span>
                     </div>
                   </div>
@@ -1529,12 +1529,12 @@ const IncomingCallPage = () => {
                           {selectedCall.agentDetails?.EmployeePhone}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Email:</span>
                         <span className="font-medium">
                           {selectedCall.agentDetails?.EmployeeMailId}
                         </span>
-                      </div>
+                      </div> */}
                       <div className="flex justify-between">
                         <span className="text-gray-600">Region:</span>
                         <span className="font-medium">
