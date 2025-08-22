@@ -52,6 +52,8 @@ const FormProvider = ({ children }) => {
       inquiryNumber: "",
       processTypeId: "",
       queryTypeId: "",
+      problemId: "",
+      subProblemId: "",
       remarks: "",
       attachments: [],
       status: "closed",
@@ -441,6 +443,8 @@ const FormProvider = ({ children }) => {
       inquiryNumber: "",
       processTypeId: "",
       queryTypeId: "",
+      problemId: "",
+      subProblemId: "",
       remarks: "",
       attachments: [],
       status: "closed",
@@ -470,6 +474,11 @@ const FormProvider = ({ children }) => {
         ...prev,
         [name]: value,
       }));
+
+      // When problemId changes, reset subProblemId
+      if (name === "problemId") {
+        setFormData((prev) => ({ ...prev, subProblemId: "" }));
+      }
 
       // Clear follow-up date if status is changed to closed
       if (name === "status" && value === "closed") {
@@ -510,24 +519,23 @@ const FormProvider = ({ children }) => {
       newErrors.callDateTime = "Call date and time is required";
     }
 
-    if (!formData.supportTypeId) {
-      newErrors.supportTypeId = "Support type is required";
-    }
+    if (traderNotFoundData.type !== "Non-Trader") {
+      if (!formData.problemId) {
+        newErrors.problemId = "Problem Type is required";
+      }
 
-    if (!formData.processTypeId) {
-      newErrors.processTypeId = "Process type is required";
-    }
+      // Related issue is not mandatory if problemId is 6
+      if (formData.problemId != 6 && !formData.subProblemId) {
+        newErrors.subProblemId = "Related Issue is required";
+      }
 
-    if (!formData.queryTypeId) {
-      newErrors.queryTypeId = "Query type is required";
+      if (formData.status === "open" && !formData.followUpDate) {
+        newErrors.followUpDate = "Follow-up date is required for open tickets";
+      }
     }
 
     if (!formData.remarks.trim()) {
       newErrors.remarks = "Remarks are required";
-    }
-
-    if (formData.status === "open" && !formData.followUpDate) {
-      newErrors.followUpDate = "Follow-up date is required for open tickets";
     }
 
     setErrors(newErrors);

@@ -1,11 +1,62 @@
-# IVR and CRM for ABIS Traders
-- application developed for abis traders to manage.
+# GEMINI.md
 
+## Project Overview
 
+This is the frontend for a CRM and IVR application for "ABIS Traders". It's built with React and Vite. The application is designed to manage customer interactions, including features like a dialer, call history, contact management, and user-specific dashboards.
 
+**Key Technologies:**
 
-Notes-
-1. DailerPanel line no- 729  // Outgoing Call -> Incoming Call
+*   **Framework:** React
+*   **Build Tool:** Vite
+*   **Routing:** React Router
+*   **Styling:** Tailwind CSS
+*   **API Communication:** Axios
+*   **Real-time Communication:** Socket.IO Client
+*   **Linting:** ESLint
+
+**Architecture:**
+
+*   The application uses a component-based architecture, with components organized by feature.
+*   State management is handled through React Context API, with dedicated providers for Authentication, Dialer, Forms, Sockets, and User data.
+*   Routing is split into public and protected routes, with authentication handled by `AuthContext`.
+*   The main application entry point is `src/main.jsx`, which sets up the router and context providers. The root component is `src/App.jsx`.
+
+## Building and Running
+
+*   **Install Dependencies:**
+    ```bash
+    npm install
+    ```
+
+*   **Run Development Server:**
+    ```bash
+    npm run dev
+    ```
+    The application will be available at `http://localhost:3009`.
+
+*   **Build for Production:**
+    ```bash
+    npm run build
+    ```
+
+*   **Lint Files:**
+    ```bash
+    npm run lint
+    ```
+
+*   **Preview Production Build:**
+    ```bash
+    npm run preview
+    ```
+
+## Development Conventions
+
+*   **Styling:** Use Tailwind CSS for styling.
+*   **State Management:** Use the React Context API for managing global state. For feature-specific state, consider custom hooks.
+*   **API Calls:** Use the pre-configured Axios instance in `src/library/axios.js` for making API calls.
+*   **Routing:** Use `react-router-dom` for navigation. Add new routes in `src/App.jsx`. Use the `ProtectedRoute` and `PublicRoute` components for authentication-based routing.
+*   **Linting:** Adhere to the ESLint rules defined in `eslint.config.js`.
+
 
 
 ```
@@ -16,6 +67,7 @@ Traders-Frontend
 ├─ package.json
 ├─ public
 │  ├─ icon-512.png
+│  ├─ icon.png
 │  └─ sounds
 │     ├─ button-click.mp3
 │     ├─ dial-tone.mp3
@@ -67,13 +119,39 @@ Traders-Frontend
 │  │  │  │  └─ ContactsPage.jsx
 │  │  │  ├─ Dashboard.jsx
 │  │  │  ├─ DashboardPage
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ AdminCharts.jsx
+│  │  │  │  │  ├─ CallDetailModal.jsx
+│  │  │  │  │  ├─ ComingSoon.jsx
+│  │  │  │  │  ├─ DashboardHeader.jsx
+│  │  │  │  │  ├─ EmployeeKPIDashboard.jsx
+│  │  │  │  │  ├─ EmployeePerformanceCards.jsx
+│  │  │  │  │  ├─ ErrorDisplay.jsx
+│  │  │  │  │  ├─ FollowUps.jsx
+│  │  │  │  │  ├─ LoadingSkeleton.jsx
+│  │  │  │  │  ├─ RecentCalls.jsx
+│  │  │  │  │  └─ StatsCards.jsx
 │  │  │  │  └─ DashboardPage.jsx
+│  │  │  ├─ FollowUp
+│  │  │  │  └─ FollowUpPage.jsx
 │  │  │  ├─ IncomingCall
 │  │  │  │  └─ IncomingCallPage.jsx
 │  │  │  ├─ OutgoingCall
 │  │  │  │  └─ OutgoingCallPage.jsx
-│  │  │  └─ Profile
-│  │  │     └─ ProfilePage.jsx
+│  │  │  ├─ Profile
+│  │  │  │  └─ ProfilePage.jsx
+│  │  │  └─ UserSettings
+│  │  │     ├─ components
+│  │  │     │  ├─ ConfirmationModal.jsx
+│  │  │     │  ├─ EmployeeCard.jsx
+│  │  │     │  ├─ EmployeeForm.jsx
+│  │  │     │  ├─ FilterSection.jsx
+│  │  │     │  ├─ Modal.jsx
+│  │  │     │  ├─ Shimmer.jsx
+│  │  │     │  └─ StatCard.jsx
+│  │  │     ├─ constants.js
+│  │  │     ├─ useEmployeeData.js
+│  │  │     └─ UserSettings.jsx
 │  │  ├─ Login.jsx
 │  │  └─ NotFound.jsx
 │  └─ utils

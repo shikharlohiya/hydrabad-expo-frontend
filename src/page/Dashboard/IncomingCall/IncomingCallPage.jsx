@@ -102,6 +102,7 @@ const IncomingCallPage = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportError, setExportError] = useState(null);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
 
   // Helper function to format duration from seconds
   const formatDurationFromSeconds = (seconds) => {
@@ -121,6 +122,36 @@ const IncomingCallPage = () => {
       return `${hours}h ${minutes}m`;
     } else {
       return `${minutes}m`;
+    }
+  };
+
+  const fetchAvailableAgents = async () => {
+    if (!isManager) return;
+
+    setIsLoadingAgents(true);
+    try {
+      console.log("👥 Fetching available agents for manager filter");
+      const response = await axiosInstance.get(
+        `/calls/agents-for-manager/${userData?.EmployeeId}`
+      );
+
+      if (response.data.success && Array.isArray(response.data.data)) {
+        const agents = response.data.data.map((emp) => ({
+          id: emp.EmployeeId,
+          name: emp.EmployeeName,
+          phone: emp.EmployeePhone,
+        }));
+        setAvailableAgents(agents);
+        console.log(`👥 Loaded ${agents.length} agents for dropdown.`);
+      } else {
+        console.warn("⚠️ Could not fetch available agents:", response.data);
+        setAvailableAgents([]);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching available agents:", error);
+      setAvailableAgents([]);
+    } finally {
+      setIsLoadingAgents(false);
     }
   };
 
@@ -151,7 +182,55 @@ const IncomingCallPage = () => {
     }
   };
 
-  // Fetch incoming calls from API (Agent or Manager based)
+  const transformCall = (call, agentDetailsFallback = null) => {
+    const callerName =
+      call.trader_master?.Trader_Name ||
+      call.trader_master?.Trader_business_Name ||
+      call.contactDetails?.Contact_Name ||
+      "Unknown Caller";
+
+    const region =
+      call.trader_master?.Region ||
+      agentDetailsFallback?.EmployeeRegion ||
+      "Unknown";
+
+    const zone = call.trader_master?.Zone || "Unknown";
+
+    const agentName =
+      agentDetailsFallback?.EmployeeName ||
+      call.agentDetails?.EmployeeName ||
+      "Unknown Agent";
+
+    let status = "missed";
+    if (call.ogCallStatus === "Connected" && call.totalCallDuration > 0) {
+      status = "answered";
+    }
+
+    return {
+      id: call.CallId,
+      callId: call.CallId,
+      callerName,
+      callerNumber: call.callerNumber,
+      region,
+      zone,
+      callDateTime: call.callStartTime,
+      duration: formatDurationFromSeconds(call.totalCallDuration),
+      status,
+      ogCallStatus: call.ogCallStatus,
+      agentName,
+      agentPhone:
+        agentDetailsFallback?.EmployeePhone || call.agentDetails?.EmployeePhone,
+      agentId:
+        agentDetailsFallback?.EmployeeId || call.agentDetails?.EmployeeId,
+      remarks: call.formDetails?.remarks || null,
+      rawData: call,
+      agentDetails: call.agentDetails || agentDetailsFallback,
+      trader_master: call.trader_master,
+      formDetails: call.formDetails,
+      voiceRecording: call.voiceRecording,
+    };
+  };
+
   const fetchIncomingCalls = async () => {
     try {
       setIsLoading(true);
@@ -160,15 +239,9 @@ const IncomingCallPage = () => {
       let response;
 
       if (isManager) {
-        // Manager API: /api/calls/employees-under-manager/{managerId}
         console.log("📞 Fetching incoming calls for manager:", managerId);
 
-        const params = {
-          page: currentPage,
-          limit: 50,
-        };
-
-        // Add date filters if set
+        const params = { page: currentPage, limit: 50 };
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
         if (selectedAgent) params.agentId = selectedAgent;
@@ -176,9 +249,7 @@ const IncomingCallPage = () => {
 
         response = await axiosInstance.get(
           `/calls/employees-under-manager/${managerId}`,
-          {
-            params,
-          }
+          { params }
         );
 
         console.log("📞 Manager incoming calls API response:", response.data);
@@ -186,53 +257,10 @@ const IncomingCallPage = () => {
         if (response.data.success && response.data.data) {
           const { stats, pagination, groupedRecords } = response.data.data;
 
-          // Extract all agents for the dropdown
-          const agents = groupedRecords.map((group) => ({
-            id: group.agentDetails.EmployeeId,
-            name: group.agentDetails.EmployeeName,
-            phone: group.agentDetails.EmployeePhone,
-          }));
-          setAvailableAgents(agents);
-
-          // Flatten calls from all agents
-          const transformedCalls = [];
-          groupedRecords.forEach((group) => {
-            group.calls.forEach((call) => {
-              const callerName =
-                call.contactDetails?.Contact_Name || "Unknown Caller";
-              const region = call.contactDetails?.Region || "Unknown";
-              const zone = call.contactDetails?.Zone || "Unknown";
-              const agentName =
-                group.agentDetails?.EmployeeName || "Unknown Agent";
-
-              // Determine status based on ogCallStatus and duration
-              let status = "missed";
-              if (
-                call.ogCallStatus === "Connected" &&
-                call.totalCallDuration > 0
-              ) {
-                status = "answered";
-              }
-
-              transformedCalls.push({
-                id: call.CallId,
-                callId: call.CallId,
-                callerName: callerName,
-                callerNumber: call.callerNumber,
-                region: region,
-                zone: zone,
-                callDateTime: call.callStartTime,
-                duration: formatDurationFromSeconds(call.totalCallDuration),
-                status: status,
-                agentName: agentName,
-                agentPhone: group.agentDetails?.EmployeePhone,
-                agentId: group.agentDetails?.EmployeeId,
-                remarks: call.formDetails?.remarks || null,
-                rawData: call, // Store original data for details modal
-                agentDetails: group.agentDetails, // Store agent details
-              });
-            });
-          });
+          // Flatten calls
+          const transformedCalls = groupedRecords.flatMap((group) =>
+            group.calls.map((call) => transformCall(call, group.agentDetails))
+          );
 
           setIncomingCalls(transformedCalls);
           setStats({
@@ -244,21 +272,16 @@ const IncomingCallPage = () => {
           setPagination(pagination);
         }
       } else {
-        // Agent API: /calls/incoming (Updated for new API structure)
+        // Agent API
         const userRole = userData?.EmployeeRole;
         let agentNumber = userData?.EmployeePhone;
 
-        // For role 3, use selected employee phone if available
-        if (userRole === 3 && selectedEmployeePhone) {
+        if (userRole === 3 && selectedEmployeePhone)
           agentNumber = selectedEmployeePhone;
-        }
-
-        // For userRole !== 3, require agentNumber
-        if (userRole !== 3 && !agentNumber) {
+        if (userRole !== 3 && !agentNumber)
           throw new Error("Agent phone number not found. Please login again.");
-        }
 
-        // Calculate date range based on dateFilter
+        // Determine date range
         let apiStartDate, apiEndDate;
         switch (dateFilter) {
           case "today":
@@ -282,17 +305,6 @@ const IncomingCallPage = () => {
             apiEndDate = getTodayDate();
         }
 
-        console.log(
-          "📞 Fetching incoming calls for agent:",
-          agentNumber,
-          "Date range:",
-          apiStartDate,
-          "to",
-          apiEndDate
-        );
-        console.log("📞 User role:", userRole);
-        console.log("📞 Selected employee phone:", selectedEmployeePhone);
-
         const params = {
           page: currentPage,
           limit: 10,
@@ -300,8 +312,6 @@ const IncomingCallPage = () => {
           endDate: apiEndDate,
         };
 
-        // UPDATED: Only add agentNumber to params if userRole is NOT 3 AND agentNumber exists
-        // OR if userRole IS 3 AND selectedEmployeePhone exists
         if (
           (userRole !== 3 && agentNumber) ||
           (userRole === 3 && selectedEmployeePhone)
@@ -309,71 +319,21 @@ const IncomingCallPage = () => {
           params.agentNumber = agentNumber;
         }
 
-        // Add search parameter for server-side search
-        if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+        if (debouncedSearchTerm?.trim())
           params.search = debouncedSearchTerm.trim();
-        }
-
-        // Add connected filter for server-side filtering
-        if (connectedFilterAgent && connectedFilterAgent !== "") {
+        if (connectedFilterAgent && connectedFilterAgent !== "")
           params.connected = connectedFilterAgent === "true";
-        }
 
         console.log("📞 Final API params:", params);
 
-        response = await axiosInstance.get("/calls/incoming", {
-          params,
-        });
+        response = await axiosInstance.get("/calls/incoming", { params });
 
         console.log("📞 Agent incoming calls API response:", response.data);
 
         if (response.data.success && response.data.data) {
           const { stats, pagination, records } = response.data.data;
 
-          // Transform the data to match new API structure
-          const transformedCalls = records.map((call) => {
-            // Use trader_master info if available, otherwise use callerNumber
-            const callerName =
-              call.trader_master?.Trader_Name ||
-              call.trader_master?.Trader_business_Name ||
-              "Unknown Caller";
-
-            // Use agent region from agentDetails
-            const region = call.agentDetails?.EmployeeRegion || "Unknown";
-            const zone = call.trader_master?.Zone || "Unknown";
-            const agentName =
-              call.agentDetails?.EmployeeName || "Unknown Agent";
-
-            // Determine status based on ogCallStatus and duration
-            let status = "missed";
-            if (
-              call.ogCallStatus === "Connected" &&
-              call.totalCallDuration > 0
-            ) {
-              status = "answered";
-            }
-
-            return {
-              id: call.CallId,
-              callId: call.CallId,
-              callerName: callerName,
-              callerNumber: call.callerNumber,
-              region: region,
-              zone: zone,
-              callDateTime: call.callStartTime,
-              duration: formatDurationFromSeconds(call.totalCallDuration),
-              status: status,
-              ogCallStatus: call.ogCallStatus, // Store original status for retry logic
-              agentName: agentName,
-              remarks: call.formDetails?.remarks || null,
-              rawData: call, // Store original data for details modal
-              // Additional data from new API
-              agentDetails: call.agentDetails,
-              trader_master: call.trader_master,
-              formDetails: call.formDetails,
-              voiceRecording: call.voiceRecording,
-            };
-          });
+          const transformedCalls = records.map((call) => transformCall(call));
 
           setIncomingCalls(transformedCalls);
           setStats({
@@ -524,7 +484,11 @@ const IncomingCallPage = () => {
     if (userData?.EmployeeRole === 3) {
       fetchEmployees();
     }
-  }, [userData?.EmployeeRole]);
+    // Fetch agents for manager's filter dropdown
+    if (isManager) {
+      fetchAvailableAgents();
+    }
+  }, [userData?.EmployeeRole, isManager]);
 
   // Load data when component mounts or filters change
   useEffect(() => {
@@ -797,8 +761,13 @@ const IncomingCallPage = () => {
                     value={selectedAgent}
                     onChange={(e) => setSelectedAgent(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    disabled={isLoadingAgents}
                   >
-                    <option value="">All Agents</option>
+                    <option value="">
+                      {isLoadingAgents
+                        ? "Loading agents..."
+                        : `All Agents (${availableAgents.length})`}
+                    </option>
                     {availableAgents.map((agent) => (
                       <option key={agent.id} value={agent.id}>
                         {agent.name} ({agent.phone})
@@ -1241,7 +1210,7 @@ const IncomingCallPage = () => {
                               <EyeIcon className="w-4 h-4 mr-1" />
                               View Details
                             </button>
-                            {call.voiceRecording && (
+                            {call.voiceRecording !== "No Voice" && (
                               <a
                                 href={call.voiceRecording}
                                 target="_blank"
@@ -1433,7 +1402,7 @@ const IncomingCallPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Agent Number:</span>
                       <span className="font-medium">
-                        {selectedCall.rawData?.agentNumber}
+                        {selectedCall.agentPhone || "N/A"}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1467,7 +1436,7 @@ const IncomingCallPage = () => {
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {selectedCall.rawData?.ogCallStatus}
+                        {selectedCall.rawData?.ogCallStatus || "N/A"}
                       </span>
                     </div>
                   </div>
@@ -1536,43 +1505,45 @@ const IncomingCallPage = () => {
                 )}
 
                 {/* Agent Details */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Agent Details
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Employee ID:</span>
-                      <span className="font-medium">
-                        {selectedCall.rawData?.agentDetails?.EmployeeId}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Name:</span>
-                      <span className="font-medium">
-                        {selectedCall.rawData?.agentDetails?.EmployeeName}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Phone:</span>
-                      <span className="font-medium">
-                        {selectedCall.rawData?.agentDetails?.EmployeePhone}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Email:</span>
-                      <span className="font-medium">
-                        {selectedCall.rawData?.agentDetails?.EmployeeMailId}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Region:</span>
-                      <span className="font-medium">
-                        {selectedCall.rawData?.agentDetails?.EmployeeRegion}
-                      </span>
+                {selectedCall.agentDetails && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Agent Details
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Employee ID:</span>
+                        <span className="font-medium">
+                          {selectedCall.agentDetails?.EmployeeId}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Name:</span>
+                        <span className="font-medium">
+                          {selectedCall.agentDetails?.EmployeeName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Phone:</span>
+                        <span className="font-medium">
+                          {selectedCall.agentDetails?.EmployeePhone}
+                        </span>
+                      </div>
+                      {/* <div className="flex justify-between">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-medium">
+                          {selectedCall.agentDetails?.EmployeeMailId}
+                        </span>
+                      </div> */}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Region:</span>
+                        <span className="font-medium">
+                          {selectedCall.agentDetails?.EmployeeRegion}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Form Details */}
                 {selectedCall.rawData?.formDetails && (
@@ -1594,7 +1565,7 @@ const IncomingCallPage = () => {
                             "N/A"}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Support Type:</span>
                         <span className="font-medium">
                           {selectedCall.rawData.formDetails.SupportType
@@ -1613,6 +1584,20 @@ const IncomingCallPage = () => {
                         <span className="font-medium">
                           {selectedCall.rawData.formDetails.QueryType
                             ?.queryName || "N/A"}
+                        </span>
+                      </div> */}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Inquiry Type:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.ProblemCategory
+                            ?.problemName || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Inquiry Details:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.ProblemSubCategory
+                            ?.subProblemName || "N/A"}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1656,7 +1641,7 @@ const IncomingCallPage = () => {
               </div>
 
               {/* Voice Recording */}
-              {selectedCall.rawData?.voiceRecording && (
+              {selectedCall.rawData?.voiceRecording !== "No Voice" && (
                 <div className="mt-6 bg-purple-50 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Voice Recording

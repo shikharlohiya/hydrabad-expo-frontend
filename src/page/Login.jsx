@@ -113,13 +113,12 @@ export default function Login() {
   };
 
   /**
-   * Allows users to submit the form by pressing the Enter key.
-   * @param {React.KeyboardEvent} e - The keyboard event.
+   * Prevents default form submission and triggers the login logic.
+   * @param {React.FormEvent} e - The form event.
    */
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleLogin();
-    }
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    handleLogin();
   };
 
   // --- JSX RENDER ---
@@ -149,7 +148,7 @@ export default function Login() {
             <p className="text-sm text-gray-500">Sign in to continue</p>
           </div>
 
-          <div className="space-y-6">
+          <form onSubmit={handleFormSubmit} className="space-y-6">
             {/* Username Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -162,7 +161,6 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  onKeyDown={handleKeyDown}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Enter your Employee ID"
                   disabled={loading}
@@ -181,7 +179,6 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={handleKeyDown}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Enter your password"
                   disabled={loading}
@@ -199,7 +196,7 @@ export default function Login() {
 
             {/* Submit Button */}
             <button
-              onClick={handleLogin}
+              type="submit"
               disabled={loading}
               className="w-full bg-[#F68A1F] text-white py-3 rounded-lg hover:bg-opacity-80 disabled:opacity-80 disabled:cursor-not-allowed font-medium transition-all shadow-sm hover:shadow-md"
             >
@@ -212,7 +209,7 @@ export default function Login() {
                 "Sign In"
               )}
             </button>
-          </div>
+          </form>
         </div>
       </div>
 
@@ -261,7 +258,7 @@ export default function Login() {
               <p className="text-gray-600">Please sign in to your account</p>
             </div>
 
-            <div className="space-y-6">
+            <form onSubmit={handleFormSubmit} className="space-y-6">
               {/* Username Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -274,7 +271,6 @@ export default function Login() {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    onKeyDown={handleKeyDown}
                     className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200"
                     placeholder="Enter your Employee ID"
                     disabled={loading}
@@ -293,7 +289,6 @@ export default function Login() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={handleKeyDown}
                     className="w-full pl-12 pr-14 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200"
                     placeholder="Enter your password"
                     disabled={loading}
@@ -311,7 +306,7 @@ export default function Login() {
 
               {/* Submit Button */}
               <button
-                onClick={handleLogin}
+                type="submit"
                 disabled={loading}
                 className="w-full bg-[#F68A1F] text-white py-4 rounded-xl hover:bg-opacity-80 disabled:opacity-80 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
@@ -324,7 +319,7 @@ export default function Login() {
                   "Sign In"
                 )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>

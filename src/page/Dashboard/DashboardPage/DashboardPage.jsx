@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import useDialer from "../../../hooks/useDialer";
 import UserContext from "../../../context/UserContext";
 import axiosInstance from "../../../library/axios";
+import moment from "moment-timezone";
 
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import ErrorDisplay from "./components/ErrorDisplay";
@@ -386,14 +387,17 @@ const DashboardPage = () => {
           throw new Error("Manager ID not found. Please login again.");
         }
         console.log("📞 Fetching recent calls for manager:", employeeId);
-        response = await axiosInstance.get("/calls/recent-calls", {
-          params: {
-            managerId: employeeId,
-            startDate: startDate,
-            endDate: endDate,
-            ...(search && { search }),
-          },
-        });
+        response = await axiosInstance.get(
+          `/calls/manager-recent-calls/${employeeId}`,
+          {
+            params: {
+              // managerId: employeeId,
+              startDate: startDate,
+              endDate: endDate,
+              ...(search && { search }),
+            },
+          }
+        );
       } else {
         // Agent
         if (!agentNumber) {
@@ -464,8 +468,9 @@ const DashboardPage = () => {
 
           // Get agent information (for manager and admin view)
           const agentName =
-            call.employee?.EmployeeName || call.agent?.name || null;
-          const agentId = call.employee?.EmployeeId || call.agent?.id || null;
+            call.employee?.EmployeeName || call.agent?.EmployeeName || null;
+          const agentId =
+            call.employee?.EmployeeId || call.agent?.EmployeeId || null;
 
           return {
             id: call.CallId || `call_${Date.now()}_${Math.random()}`,
@@ -554,9 +559,19 @@ const DashboardPage = () => {
         params.agentNumber = userData?.EmployeePhone || employeeId;
       }
 
-      const response = await axiosInstance.get("/calls/follow-ups", {
-        params,
-      });
+      let response;
+      if (userRole === 2) {
+        response = await axiosInstance.get(
+          `/calls/manager-follow-ups/${employeeId}`,
+          {
+            params,
+          }
+        );
+      } else {
+        response = await axiosInstance.get("/calls/follow-ups", {
+          params,
+        });
+      }
 
       console.log(
         `📋 ${
@@ -813,10 +828,10 @@ const DashboardPage = () => {
 
   // Format follow-up date helper
   const formatFollowUpDate = (dateTime) => {
-    const date = new Date(dateTime);
-    const today = new Date();
-    const diffTime = date - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const dateIST = moment.tz(dateTime, "Asia/Kolkata").startOf("day");
+    const todayIST = moment().tz("Asia/Kolkata").startOf("day");
+
+    const diffDays = dateIST.diff(todayIST, "days");
 
     if (diffDays < 0) {
       return { text: `${Math.abs(diffDays)} days overdue`, isOverdue: true };

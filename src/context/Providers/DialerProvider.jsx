@@ -1672,40 +1672,127 @@ const DialerProvider = ({ children }) => {
   };
 
   const mergeCall = async (cpartyNumber) => {
-    // if (!activeCallId || !bearerToken) {
-    //   setLastError("Cannot merge call - missing call ID or token");
-    //   return;
-    // }
+    if (!activeCallId) {
+      setLastError("Cannot merge call: No active call.");
+      return;
+    }
+    if (!cpartyNumber || cpartyNumber.trim() === "") {
+      setLastError("Please enter a valid number to merge.");
+      return;
+    }
+
+    let currentToken = bearerToken;
+    if (!currentToken || currentToken.trim() === "") {
+      try {
+        currentToken = await getAuthToken();
+      } catch (error) {
+        return; // getAuthToken already sets an error message
+      }
+    }
+
+    const mergeData = {
+      cli: cliNumber,
+      call_id: String(activeCallId),
+      cparty_number: cpartyNumber,
+    };
 
     try {
       setIsLoading(true);
       setLastError(null);
 
-      const response = await axiosInstance.post(
-        "/merge-call",
-        {
-          cli: cliNumber,
-          call_id: String(activeCallId),
-          cparty_number: cpartyNumber,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${bearerToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const requestHeaders = new Headers();
+      requestHeaders.append("Authorization", `Bearer ${currentToken.trim()}`);
+      requestHeaders.append("Content-Type", "application/json");
+      requestHeaders.append("Accept", "application/json");
+      requestHeaders.append("X-Requested-With", "XMLHttpRequest");
 
-      // if (status === 1) {
-      //   console.log("✅ Merge call successful:", message);
-      //   // Optionally update UI state if needed (e.g., mark as merged)
-      // } else {
-      //   setLastError(message || "Merge failed");
-      // }
-      console.log("📞 Merge call response:", response.data);
+      const response = await fetch(`${baseURL}/merge-call`, {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify(mergeData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        const error = new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
+        error.response = { status: response.status, data: errorData };
+        throw error;
+      }
+
+      const responseData = await response.json();
+      console.log("📞 Merge call response:", responseData);
+
+      if (responseData?.status !== 1) {
+        throw new Error(responseData.message || "Merge call failed");
+      }
+
+      console.log("✅ Merge call successful:", responseData.message);
     } catch (error) {
-      console.error("❌ Error merging call:", error);
-      setLastError("Unable to merge call");
+      if (error.response?.status === 403) {
+        try {
+          setBearerToken(null);
+          localStorage.removeItem("clickToCallToken");
+          const newToken = await getAuthToken();
+
+          if (newToken) {
+            const retryHeaders = new Headers();
+            retryHeaders.append("Authorization", `Bearer ${newToken.trim()}`);
+            retryHeaders.append("Content-Type", "application/json");
+            retryHeaders.append("Accept", "application/json");
+            retryHeaders.append("X-Requested-With", "XMLHttpRequest");
+
+            const retryResponse = await fetch(`${baseURL}/merge-call`, {
+              method: "POST",
+              headers: retryHeaders,
+              body: JSON.stringify(mergeData),
+            });
+
+            if (!retryResponse.ok) {
+              const errorData = await retryResponse
+                .json()
+                .catch(() => ({
+                  message: `HTTP error! status: ${retryResponse.status}`,
+                }));
+              const retryError = new Error(
+                errorData.message ||
+                  `HTTP error! status: ${retryResponse.status}`
+              );
+              retryError.response = {
+                status: retryResponse.status,
+                data: errorData,
+              };
+              throw retryError;
+            }
+
+            const retryResponseData = await retryResponse.json();
+
+            if (retryResponseData?.status === 1) {
+              console.log(
+                "✅ Merge call successful on retry:",
+                retryResponseData.message
+              );
+              return;
+            } else {
+              throw new Error(
+                retryResponseData.message || "Merge call retry failed"
+              );
+            }
+          }
+        } catch (retryError) {
+          setLastError(
+            retryError.message ||
+              "Authentication failed after retry. Please login again."
+          );
+        }
+      } else {
+        setLastError(
+          error.message || "Unable to merge call. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
