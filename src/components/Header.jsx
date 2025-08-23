@@ -407,7 +407,7 @@ const Header = ({ collapsed, setCollapsed }) => {
 
             {/* Dialer Panel - Positioned to align with right edge of screen */}
             {isDialerOpen && (
-              <div className="absolute top-full -right-50 mt-2 z-50">
+              <div className="absolute top-full -right-30 mt-2 z-50">
                 <div className="bg-white rounded-lg shadow-2xl border z-50 border-gray-200">
                   <DialerPanel
                     onClose={closeDialer}
