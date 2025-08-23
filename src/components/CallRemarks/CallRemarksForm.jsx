@@ -113,76 +113,113 @@ const CallRemarksForm = ({
   ]);
 
   useEffect(() => {
+    // When currentNumber changes, it signifies a new call, and we must reset the form state
+    // for the new contact, only keeping the new phone number.
+    // The subsequent effect for `customerData` will then populate the fields if an existing user is found.
     setTraderNotFoundData((prev) => {
-      let newPhoneNumber = prev.phoneNumber; // default to old value
-
-      if (savedContactData?.Contact_no) {
-        newPhoneNumber = savedContactData.Contact_no;
-      } else if (currentNumber && currentNumber !== prev.phoneNumber) {
-        // only update if new currentNumber is different
-        newPhoneNumber = currentNumber;
+      // If the number is new, reset everything but the phone number.
+      if (currentNumber && currentNumber !== prev.phoneNumber) {
+        return {
+          name: "",
+          region: "",
+          type: "Trader",
+          phoneNumber: currentNumber,
+        };
       }
 
-      return {
-        ...prev,
-        name: savedContactData?.Trader_Name || prev.name || "",
-        region: savedContactData?.Region || prev.region || "",
-        type: savedContactData?.Type || prev.type || "Trader",
-        phoneNumber: newPhoneNumber || "",
-      };
+      // If the number is the same, but we got savedContactData (e.g. on refresh), populate from it.
+      if (savedContactData && savedContactData.Contact_no === prev.phoneNumber) {
+        return {
+          ...prev,
+          name: savedContactData.Trader_Name || prev.name,
+          region: savedContactData.Region || prev.region,
+          type: savedContactData.Type || prev.type,
+        };
+      }
+
+      // Otherwise, don't change the state.
+      return prev;
     });
   }, [savedContactData, currentNumber, setTraderNotFoundData]);
+
+  // Pre-fill form with fetched customer data, prioritizing contact directory
+  useEffect(() => {
+    if (customerData) {
+      const { contactInfo, traderMaster, phoneNumber } = customerData;
+
+      // Prioritize contactInfo as the source of truth
+      if (contactInfo) {
+        setTraderNotFoundData((prev) => ({
+          ...prev,
+          name: contactInfo.Contact_Name || "",
+          region: contactInfo.Region || "",
+          type: contactInfo.Type || "Trader",
+          phoneNumber: phoneNumber || prev.phoneNumber,
+        }));
+      }
+      // Fallback to traderMaster if contactInfo is not available
+      else if (traderMaster) {
+        setTraderNotFoundData((prev) => ({
+          ...prev,
+          name: traderMaster.Trader_Name || "",
+          region: traderMaster.Region || "",
+          type: "Trader", // Master records are always 'Trader'
+          phoneNumber: phoneNumber || prev.phoneNumber,
+        }));
+      }
+    }
+  }, [customerData, setTraderNotFoundData]);
 
   // Fetch dropdown options from APIs
   useEffect(() => {
     const fetchDropdownOptions = async () => {
       // Fetch support types
-      try {
-        setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
-        const supportTypesResponse = await axiosInstance.get("/support-types");
-        if (supportTypesResponse.data.success) {
-          setDropdownOptions((prev) => ({
-            ...prev,
-            supportTypes: supportTypesResponse.data.data,
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching support types:", error);
-      } finally {
-        setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
-      }
+      // try {
+      //   setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
+      //   const supportTypesResponse = await axiosInstance.get("/support-types");
+      //   if (supportTypesResponse.data.success) {
+      //     setDropdownOptions((prev) => ({
+      //       ...prev,
+      //       supportTypes: supportTypesResponse.data.data,
+      //     }));
+      //   }
+      // } catch (error) {
+      //   console.error("Error fetching support types:", error);
+      // } finally {
+      //   setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
+      // }
 
-      // Fetch process types
-      try {
-        setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
-        const processTypesResponse = await axiosInstance.get("/process-types");
-        if (processTypesResponse.data.success) {
-          setDropdownOptions((prev) => ({
-            ...prev,
-            processTypes: processTypesResponse.data.data,
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching process types:", error);
-      } finally {
-        setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
-      }
+      // // Fetch process types
+      // try {
+      //   setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
+      //   const processTypesResponse = await axiosInstance.get("/process-types");
+      //   if (processTypesResponse.data.success) {
+      //     setDropdownOptions((prev) => ({
+      //       ...prev,
+      //       processTypes: processTypesResponse.data.data,
+      //     }));
+      //   }
+      // } catch (error) {
+      //   console.error("Error fetching process types:", error);
+      // } finally {
+      //   setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
+      // }
 
-      // Fetch query types
-      try {
-        setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
-        const queryTypesResponse = await axiosInstance.get("/query-types");
-        if (queryTypesResponse.data.success) {
-          setDropdownOptions((prev) => ({
-            ...prev,
-            queryTypes: queryTypesResponse.data.data,
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching query types:", error);
-      } finally {
-        setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
-      }
+      // // Fetch query types
+      // try {
+      //   setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
+      //   const queryTypesResponse = await axiosInstance.get("/query-types");
+      //   if (queryTypesResponse.data.success) {
+      //     setDropdownOptions((prev) => ({
+      //       ...prev,
+      //       queryTypes: queryTypesResponse.data.data,
+      //     }));
+      //   }
+      // } catch (error) {
+      //   console.error("Error fetching query types:", error);
+      // } finally {
+      //   setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
+      // }
       // Fetch problem types
       try {
         setLoadingOptions((prev) => ({ ...prev, problemTypes: true }));
@@ -464,8 +501,8 @@ const CallRemarksForm = ({
                       ? "Loading..."
                       : "Select problem type"}
                   </option>
-                  {dropdownOptions.problemTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
+                  {dropdownOptions.problemTypes.map((type, index) => (
+                    <option key={`${type.id}-${index}`} value={type.id}>
                       {type.problemName}
                     </option>
                   ))}
@@ -503,8 +540,8 @@ const CallRemarksForm = ({
                         ? "Loading..."
                         : "Select sub-problem type"}
                     </option>
-                    {dropdownOptions.subProblemTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
+                    {dropdownOptions.subProblemTypes.map((type, index) => (
+                      <option key={`${type.id}-${index}`} value={type.id}>
                         {type.subProblemName}
                       </option>
                     ))}
