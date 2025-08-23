@@ -479,6 +479,9 @@ const Header = ({ collapsed, setCollapsed }) => {
                         <span className="font-medium">Assigned Regions:</span>{" "}
                         {userData?.EmployeeRegion}
                       </p>
+                      <p className="text-xs text-gray-600 whitespace-normal break-words">
+                        <span className="font-medium">version:</span> 6.0.0
+                      </p>
                     </div>
                   </div>
                 </div>
