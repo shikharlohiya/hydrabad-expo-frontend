@@ -171,6 +171,25 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
   };
 
   // Number input handlers
+  const handleDisplayNumberChange = (e) => {
+    if (callStatus === CALL_STATUS.IDLE && !isIncomingCall) {
+      const rawValue = e.target.value.replace(/\D/g, "");
+      if (rawValue.length <= 10) {
+        setCurrentNumber(rawValue);
+        setDisplayNumber(formatPhoneNumber(rawValue));
+      }
+    }
+  };
+
+  const handleConferenceInputChange = (e) => {
+    if (isConferenceMode) {
+      const rawValue = e.target.value.replace(/\D/g, "");
+      if (rawValue.length <= 10) {
+        setConferenceNumber(formatPhoneNumber(rawValue));
+      }
+    }
+  };
+
   const handleNumberClick = (digit) => {
     if (callStatus === CALL_STATUS.IDLE && !isIncomingCall) {
       const currentDigits = displayNumber.replace(/\D/g, "");
@@ -217,13 +236,12 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
   };
 
   // Call actions
-  const handleCall = async () => {
+  const handleCall = useCallback(async () => {
     const digitsOnly = displayNumber.replace(/\D/g, "");
     if (isValidPhoneNumber(displayNumber)) {
-      // await playSound(dialToneAudioRef);
       await initiateCall(digitsOnly, { name: contactName });
     }
-  };
+  }, [displayNumber, initiateCall, contactName]);
 
   const handleEndCall = () => {
     [ringingAudioRef, dialToneAudioRef].forEach((ref) => {
@@ -244,15 +262,15 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
     setConferenceNumber("");
   };
 
-  const addConferenceParticipant = () => {
+  const addConferenceParticipant = useCallback(() => {
     const digitsOnly = conferenceNumber.replace(/\D/g, "");
-    if (digitsOnly.length === 10) {
+    if (isValidPhoneNumber(digitsOnly)) {
       mergeCall(digitsOnly);
       setConferenceParticipants([...conferenceParticipants, digitsOnly]);
       setConferenceNumber("");
       setIsConferenceMode(false);
     }
-  };
+  }, [conferenceNumber, mergeCall, conferenceParticipants]);
 
   const toggleRingingSound = () => {
     setIsRingingSoundEnabled(!isRingingSoundEnabled);
@@ -265,13 +283,36 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
   // Keyboard handling
   const handleKeyPress = useCallback(
     (e) => {
+      const { key } = e;
+      const isInputFocused = e.target.tagName === "INPUT";
+
+      // Handle global actions
+      if (key === "Enter") {
+        e.preventDefault();
+        if (isConferenceMode && isValidPhoneNumber(conferenceNumber)) {
+          addConferenceParticipant();
+        } else if (!isConferenceMode && isValidPhoneNumber(displayNumber)) {
+          handleCall();
+        }
+        return;
+      }
+      if (key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      // If input is focused, we're done.
+      if (isInputFocused) return;
+
+      // The rest is for keyboard dialing when not in an input
       if (
         (callStatus !== CALL_STATUS.IDLE && !isConferenceMode) ||
         isIncomingCall
-      )
+      ) {
         return;
+      }
 
-      const { key } = e;
       e.preventDefault();
 
       if (/^[0-9*#]$/.test(key)) {
@@ -280,14 +321,6 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
           : handleNumberClick(key);
       } else if (key === "Backspace") {
         isConferenceMode ? handleConferenceBackspace() : handleBackspace();
-      } else if (key === "Enter") {
-        if (isConferenceMode && isValidPhoneNumber(conferenceNumber)) {
-          addConferenceParticipant();
-        } else if (isValidPhoneNumber(displayNumber)) {
-          handleCall();
-        }
-      } else if (key === "Escape") {
-        onClose();
       }
     },
     [
@@ -298,6 +331,8 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
       isIncomingCall,
       handleBackspace,
       onClose,
+      handleCall,
+      addConferenceParticipant,
     ]
   );
 
@@ -431,14 +466,29 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
             }`}
           >
             <div className="flex-1 text-center">
-              <div className="text-lg font-mono text-gray-800 tracking-wider">
-                {isConferenceMode
-                  ? conferenceNumber || "Enter conference number"
-                  : shouldShowIncomingCallUI() ||
-                    callStatus !== CALL_STATUS.IDLE
-                  ? formatPhoneNumber(currentNumber) || "Unknown Number"
-                  : displayNumber || "Enter number"}
-              </div>
+              {isConferenceMode ? (
+                <input
+                  type="text"
+                  value={conferenceNumber}
+                  onChange={handleConferenceInputChange}
+                  placeholder="Enter conference number"
+                  className="w-full bg-transparent text-center text-lg font-mono text-gray-800 tracking-wider focus:outline-none"
+                />
+              ) : shouldShowIncomingCallUI() ||
+                callStatus !== CALL_STATUS.IDLE ? (
+                <div className="text-lg font-mono text-gray-800 tracking-wider">
+                  {formatPhoneNumber(currentNumber) || "Unknown Number"}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={displayNumber}
+                  onChange={handleDisplayNumberChange}
+                  placeholder="Enter number"
+                  className="w-full bg-transparent text-center text-lg font-mono text-gray-800 tracking-wider focus:outline-none"
+                  autoFocus
+                />
+              )}
 
               {conferenceParticipants.length > 0 && !isConferenceMode && (
                 <div className="text-xs text-gray-500 mt-1">
@@ -446,10 +496,6 @@ const DialerPanel = ({ onClose, isOpen, onToggle }) => {
                   {conferenceParticipants.length > 1 ? "s" : ""}
                 </div>
               )}
-
-              {/* {shouldShowIncomingCallUI() && contactName && (
-                <div className="text-sm text-gray-600 mt-1">{contactName}</div>
-              )} */}
             </div>
 
             {/* Backspace button */}

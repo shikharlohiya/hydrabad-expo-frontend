@@ -1,5 +1,5 @@
 import { useContext, useState, useRef, useEffect } from "react";
-import { FaSignOutAlt, FaUserCircle } from "react-icons/fa";
+import { FaSignOutAlt, FaUserCircle, FaDownload } from "react-icons/fa";
 import { IoIosArrowDown } from "react-icons/io";
 import { MdDialpad } from "react-icons/md";
 import {
@@ -14,6 +14,7 @@ import AuthContext from "../context/AuthContext";
 import useDialer from "../hooks/useDialer";
 import { CALL_STATUS } from "../context/Providers/DialerProvider";
 import DialerPanel from "../components/Dialer/DialerPanel";
+import ExportPanel from "./ExportPanel";
 
 const Header = ({ collapsed, setCollapsed }) => {
   const { userData, clearUser } = useContext(UserContext);
@@ -37,11 +38,28 @@ const Header = ({ collapsed, setCollapsed }) => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDialerOpen, setIsDialerOpen] = useState(false);
+  const [isExportPanelOpen, setIsExportPanelOpen] = useState(false);
   const menuRef = useRef(null);
   const dialerContainerRef = useRef(null);
+  const exportPanelRef = useRef(null);
   const autoOpenedRef = useRef(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        exportPanelRef.current &&
+        !exportPanelRef.current.contains(event.target)
+      ) {
+        setIsExportPanelOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [exportPanelRef]);
 
   // Simplified click outside detection - only for user menu
   // Separate click outside detection for dialer
@@ -71,6 +89,27 @@ const Header = ({ collapsed, setCollapsed }) => {
       };
     }
   }, [isDialerOpen]);
+
+  // Separate click outside detection for menu
+  useEffect(() => {
+    const handleMenuClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      // Small delay to prevent immediate closing
+      const timer = setTimeout(() => {
+        document.addEventListener("mousedown", handleMenuClickOutside);
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener("mousedown", handleMenuClickOutside);
+      };
+    }
+  }, [isMenuOpen]);
 
   // Separate click outside detection for dialer
   useEffect(() => {
@@ -306,6 +345,20 @@ const Header = ({ collapsed, setCollapsed }) => {
             </div>
           )}
 
+          {/* Export Button */}
+          <div className="relative" ref={exportPanelRef}>
+            <button
+              onClick={() => setIsExportPanelOpen(!isExportPanelOpen)}
+              className="p-3 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors"
+              title="Export Data"
+            >
+              <FaDownload className="w-4 h-4" />
+            </button>
+            {isExportPanelOpen && (
+              <ExportPanel onClose={() => setIsExportPanelOpen(false)} />
+            )}
+          </div>
+
           {/* Dialer Button */}
           {/* Dialer Button and Panel Container */}
           <div className="relative" ref={dialerContainerRef}>
@@ -354,7 +407,7 @@ const Header = ({ collapsed, setCollapsed }) => {
 
             {/* Dialer Panel - Positioned to align with right edge of screen */}
             {isDialerOpen && (
-              <div className="absolute top-full -right-56 mt-2 z-50">
+              <div className="absolute top-full -right-50 mt-2 z-50">
                 <div className="bg-white rounded-lg shadow-2xl border z-50 border-gray-200">
                   <DialerPanel
                     onClose={closeDialer}
@@ -398,21 +451,33 @@ const Header = ({ collapsed, setCollapsed }) => {
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                 {/* User Info Section */}
                 <div className="px-4 py-3 border-b border-gray-100">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center shadow-md">
-                      <span className="text-sm font-semibold text-white">
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    {/* Avatar */}
+                    <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+                      <span className="text-base font-semibold text-white">
                         {getInitials(userData?.EmployeeName)}
                       </span>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
+
+                    {/* User Info */}
+                    <div className="space-y-0.5 max-w-[14rem] overflow-hidden">
+                      <p className="text-sm font-semibold text-gray-900">
                         {userData?.EmployeeName}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 break-words">
                         {userData?.EmployeeMailId}
                       </p>
-                      <p className="text-xs text-gray-800 font-medium">
-                        ID: {userData?.EmployeeId}
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">ID:</span>{" "}
+                        {userData?.EmployeeId}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">Phone:</span>{" "}
+                        {userData?.EmployeePhone}
+                      </p>
+                      <p className="text-xs text-gray-600 whitespace-normal break-words">
+                        <span className="font-medium">Assigned Regions:</span>{" "}
+                        {userData?.EmployeeRegion}
                       </p>
                     </div>
                   </div>

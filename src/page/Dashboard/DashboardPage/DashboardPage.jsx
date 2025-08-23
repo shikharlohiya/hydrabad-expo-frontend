@@ -24,18 +24,41 @@ import {
 } from "@heroicons/react/24/outline";
 
 // Configuration
-const SHOW_FLAG_BACKGROUND = true; // Set to true to show Indian flag animation background
+const SHOW_FLAG_BACKGROUND = false; // Set to true to show Indian flag animation background
+
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
+};
+
+// Helper function to get initial date filter state from local storage
+const getInitialDateFilterState = () => {
+  try {
+    const savedFilter = localStorage.getItem("dashboardDateFilter");
+    if (savedFilter) {
+      const parsed = JSON.parse(savedFilter);
+      // Basic validation
+      if (parsed.dateFilter && parsed.customStartDate && parsed.customEndDate) {
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load date filter from local storage", error);
+    localStorage.removeItem("dashboardDateFilter");
+  }
+  // Default state if nothing is saved or data is corrupt
+  return {
+    dateFilter: "today",
+    customStartDate: getTodayDate(),
+    customEndDate: getTodayDate(),
+  };
+};
 
 const DashboardPage = () => {
   const { initiateCall, setCurrentNumber } = useDialer();
   const { userData } = useContext(UserContext);
   const navigate = useNavigate();
-
-  // Helper function to get today's date in YYYY-MM-DD format
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  };
 
   // Helper function to get yesterday's date in YYYY-MM-DD format
   const getYesterdayDate = () => {
@@ -69,11 +92,32 @@ const DashboardPage = () => {
     employeeKPIs: null,
   });
 
-  // Enhanced Date Filter State - Dynamic dates based on current date
-  const [dateFilter, setDateFilter] = useState("today");
-  const [customStartDate, setCustomStartDate] = useState(getTodayDate());
-  const [customEndDate, setCustomEndDate] = useState(getTodayDate());
-  const [showCustomDateRange, setShowCustomDateRange] = useState(false);
+  // Enhanced Date Filter State - Initialized from local storage
+  const [initialFilterState] = useState(getInitialDateFilterState);
+  const [dateFilter, setDateFilter] = useState(initialFilterState.dateFilter);
+  const [customStartDate, setCustomStartDate] = useState(
+    initialFilterState.customStartDate
+  );
+  const [customEndDate, setCustomEndDate] = useState(
+    initialFilterState.customEndDate
+  );
+  const [showCustomDateRange, setShowCustomDateRange] = useState(
+    initialFilterState.dateFilter === "custom"
+  );
+
+  // Persist date filter to local storage whenever it changes
+  useEffect(() => {
+    try {
+      const filterState = {
+        dateFilter,
+        customStartDate,
+        customEndDate,
+      };
+      localStorage.setItem("dashboardDateFilter", JSON.stringify(filterState));
+    } catch (error) {
+      console.error("Failed to save date filter to local storage", error);
+    }
+  }, [dateFilter, customStartDate, customEndDate]);
 
   // Function to get date range based on filter selection
   const getDateRange = () => {

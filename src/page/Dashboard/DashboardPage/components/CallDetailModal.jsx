@@ -165,12 +165,12 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                       {agentDetails.EmployeePhone || "N/A"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  {/* <div className="flex justify-between">
                     <span className="text-gray-600">Email:</span>
                     <span className="font-medium">
                       {agentDetails.EmployeeMailId || "N/A"}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
