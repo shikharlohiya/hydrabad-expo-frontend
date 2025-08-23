@@ -260,62 +260,60 @@ const FormProvider = ({ children }) => {
 
   // Fetch dropdown options from APIs
   const fetchDropdownOptions = async () => {
-    try {
-      // Fetch support types
-      setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
-      const supportTypesResponse = await axiosInstance.get("/support-types");
-      if (supportTypesResponse.data.success) {
-        setDropdownOptions((prev) => ({
-          ...prev,
-          supportTypes: supportTypesResponse.data.data,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching support types:", error);
-      setLastError("Failed to load support types");
-    } finally {
-      setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
-    }
-
-    try {
-      // Fetch process types
-      setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
-      const processTypesResponse = await axiosInstance.get("/process-types");
-      if (processTypesResponse.data.success) {
-        setDropdownOptions((prev) => ({
-          ...prev,
-          processTypes: processTypesResponse.data.data,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching process types:", error);
-      setLastError("Failed to load process types");
-    } finally {
-      setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
-    }
-
-    try {
-      // Fetch query types
-      setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
-      const queryTypesResponse = await axiosInstance.get("/query-types");
-      if (queryTypesResponse.data.success) {
-        setDropdownOptions((prev) => ({
-          ...prev,
-          queryTypes: queryTypesResponse.data.data,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching query types:", error);
-      setLastError("Failed to load query types");
-    } finally {
-      setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
-    }
+    // try {
+    //   // Fetch support types
+    //   setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
+    //   const supportTypesResponse = await axiosInstance.get("/support-types");
+    //   if (supportTypesResponse.data.success) {
+    //     setDropdownOptions((prev) => ({
+    //       ...prev,
+    //       supportTypes: supportTypesResponse.data.data,
+    //     }));
+    //   }
+    // } catch (error) {
+    //   console.error("Error fetching support types:", error);
+    //   setLastError("Failed to load support types");
+    // } finally {
+    //   setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
+    // }
+    // try {
+    //   // Fetch process types
+    //   setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
+    //   const processTypesResponse = await axiosInstance.get("/process-types");
+    //   if (processTypesResponse.data.success) {
+    //     setDropdownOptions((prev) => ({
+    //       ...prev,
+    //       processTypes: processTypesResponse.data.data,
+    //     }));
+    //   }
+    // } catch (error) {
+    //   console.error("Error fetching process types:", error);
+    //   setLastError("Failed to load process types");
+    // } finally {
+    //   setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
+    // }
+    // try {
+    //   // Fetch query types
+    //   setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
+    //   const queryTypesResponse = await axiosInstance.get("/query-types");
+    //   if (queryTypesResponse.data.success) {
+    //     setDropdownOptions((prev) => ({
+    //       ...prev,
+    //       queryTypes: queryTypesResponse.data.data,
+    //     }));
+    //   }
+    // } catch (error) {
+    //   console.error("Error fetching query types:", error);
+    //   setLastError("Failed to load query types");
+    // } finally {
+    //   setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
+    // }
   };
 
   // Initialize dropdown options on mount
-  useEffect(() => {
-    fetchDropdownOptions();
-  }, []);
+  // useEffect(() => {
+  //   fetchDropdownOptions();
+  // }, []);
 
   // Open form with call details
   const openForm = (callDetails) => {
