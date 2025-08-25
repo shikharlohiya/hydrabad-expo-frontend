@@ -21,6 +21,7 @@ import EmployeeKPIDashboard from "./components/EmployeeKPIDashboard";
 import {
   PhoneArrowDownLeftIcon,
   PhoneArrowUpRightIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 
 // Configuration
@@ -84,6 +85,8 @@ const DashboardPage = () => {
   const [expandedRemarks, setExpandedRemarks] = useState(new Set());
   const [selectedCallDetail, setSelectedCallDetail] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
 
   // Admin-specific state
   const [adminData, setAdminData] = useState({
@@ -136,6 +139,59 @@ const DashboardPage = () => {
         return { startDate: customStartDate, endDate: customEndDate };
       default:
         return { startDate: today, endDate: today };
+    }
+  };
+
+  const handleExcelExport = async () => {
+    setIsExporting(true);
+    setExportError(null);
+
+    try {
+      const { EmployeeRole, EmployeeId, EmployeePhone } = userData;
+      const { startDate, endDate } = getDateRange();
+
+      let url = '';
+      const params = new URLSearchParams();
+      params.append('startDate', startDate);
+      params.append('endDate', endDate);
+
+      if (EmployeeRole === 1) {
+        url = '/reports/all/download';
+        params.append('agentNumber', EmployeePhone);
+      } else if (EmployeeRole === 3) {
+        url = '/reports/all/download';
+      } else if (EmployeeRole === 2) {
+        url = `/reports/manager-all-calls/${EmployeeId}/download`;
+      } else {
+        setExportError('You do not have permission to export data.');
+        setIsExporting(false);
+        return;
+      }
+
+      const response = await axiosInstance.get(url, {
+        params,
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+      link.download = `report-${timestamp}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Excel export failed:', error);
+      setExportError('Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -943,6 +999,8 @@ const DashboardPage = () => {
         callStats={callStats}
         formatStatsDuration={formatStatsDuration}
         navigate={navigate}
+        isExporting={isExporting}
+        handleExcelExport={handleExcelExport}
       />
 
       {/* Admin-specific components - Only show for EmployeeRole === 3 */}

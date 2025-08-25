@@ -1,5 +1,5 @@
 import { useContext, useState, useRef, useEffect } from "react";
-import { FaSignOutAlt, FaUserCircle, FaDownload } from "react-icons/fa";
+import { FaSignOutAlt, FaUserCircle } from "react-icons/fa";
 import { IoIosArrowDown } from "react-icons/io";
 import { MdDialpad } from "react-icons/md";
 import {
@@ -14,7 +14,6 @@ import AuthContext from "../context/AuthContext";
 import useDialer from "../hooks/useDialer";
 import { CALL_STATUS } from "../context/Providers/DialerProvider";
 import DialerPanel from "../components/Dialer/DialerPanel";
-import ExportPanel from "./ExportPanel";
 
 const Header = ({ collapsed, setCollapsed }) => {
   const { userData, clearUser } = useContext(UserContext);
@@ -38,28 +37,11 @@ const Header = ({ collapsed, setCollapsed }) => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDialerOpen, setIsDialerOpen] = useState(false);
-  const [isExportPanelOpen, setIsExportPanelOpen] = useState(false);
   const menuRef = useRef(null);
   const dialerContainerRef = useRef(null);
-  const exportPanelRef = useRef(null);
   const autoOpenedRef = useRef(false);
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        exportPanelRef.current &&
-        !exportPanelRef.current.contains(event.target)
-      ) {
-        setIsExportPanelOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [exportPanelRef]);
 
   // Simplified click outside detection - only for user menu
   // Separate click outside detection for dialer
@@ -346,7 +328,7 @@ const Header = ({ collapsed, setCollapsed }) => {
           )}
 
           {/* Export Button */}
-          <div className="relative" ref={exportPanelRef}>
+          {/* <div className="relative" ref={exportPanelRef}>
             <button
               onClick={() => setIsExportPanelOpen(!isExportPanelOpen)}
               className="p-3 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors"
@@ -357,7 +339,7 @@ const Header = ({ collapsed, setCollapsed }) => {
             {isExportPanelOpen && (
               <ExportPanel onClose={() => setIsExportPanelOpen(false)} />
             )}
-          </div>
+          </div> */}
 
           {/* Dialer Button */}
           {/* Dialer Button and Panel Container */}

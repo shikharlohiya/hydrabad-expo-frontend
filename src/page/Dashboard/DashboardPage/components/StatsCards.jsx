@@ -3,6 +3,7 @@ import {
   ChartBarIcon,
   PhoneArrowDownLeftIcon,
   PhoneArrowUpRightIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 
 const StatsCards = ({
@@ -20,6 +21,8 @@ const StatsCards = ({
   callStats,
   formatStatsDuration,
   navigate,
+  isExporting,
+  handleExcelExport,
 }) => {
   return (
     <div className="mb-6">
@@ -96,6 +99,14 @@ const StatsCards = ({
                   </span>
                 </div>
               )}
+               <button
+                onClick={handleExcelExport}
+                disabled={isExporting}
+                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              >
+                <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                {isExporting ? "Exporting..." : "Export Excel"}
+              </button>
             </div>
           </div>
         </div>
