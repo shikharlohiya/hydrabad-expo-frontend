@@ -326,7 +326,7 @@ const CallRemarksPage = () => {
                   />
                 </div>
               </div>
-              {savedContactData && (
+              {/* {savedContactData && (
                 <div className="mt-6 mx-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
                   <h1> Saved Trader-</h1>
                   <div>
@@ -342,7 +342,7 @@ const CallRemarksPage = () => {
                     <strong>Region:</strong> {savedContactData.Region}
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto">
