@@ -11,6 +11,15 @@ export const FORM_STATUS = {
   ERROR: "error",
 };
 
+const getLocalDateTimeString = (date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 // Helper function to get persisted form state
 const getPersistedFormState = () => {
   try {
@@ -358,8 +367,8 @@ const FormProvider = ({ children }) => {
   // Populate form with call details
   const populateFormData = (callDetails) => {
     const callDateTime = callDetails?.startTime
-      ? new Date(callDetails.startTime).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16);
+      ? getLocalDateTimeString(new Date(callDetails.startTime))
+      : getLocalDateTimeString(new Date());
 
     // Debug logging to identify the issue
     console.log(
