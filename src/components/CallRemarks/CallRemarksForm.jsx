@@ -3,6 +3,15 @@ import axiosInstance from "../../library/axios";
 import { User, Phone, MapPin } from "lucide-react";
 import useForm from "../../hooks/useForm";
 
+const getLocalDateTimeString = (date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const CallRemarksForm = ({
   currentNumber,
   currentCallDetails,
@@ -81,8 +90,8 @@ const CallRemarksForm = ({
   useEffect(() => {
     const populateCallData = () => {
       const callDateTime = callStartTime
-        ? new Date(callStartTime).toISOString().slice(0, 16)
-        : new Date().toISOString().slice(0, 16);
+        ? getLocalDateTimeString(new Date(callStartTime))
+        : getLocalDateTimeString(new Date());
 
       const callType = callDirection === "incoming" ? "InBound" : "OutBound";
       const inquiryNumber = currentNumber || "";
@@ -287,6 +296,10 @@ const CallRemarksForm = ({
     // Clear follow-up date if status is changed to closed
     if (name === "status" && value === "closed") {
       updateFormData("followUpDate", "");
+    } else if (name === "status" && value === "open") {
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      updateFormData("followUpDate", getLocalDateTimeString(nextWeek));
     }
   };
 
@@ -336,7 +349,7 @@ const CallRemarksForm = ({
   const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
 
   const maxDate = new Date();
-  maxDate.setHours(maxDate.getHours() + 12);
+  maxDate.setDate(maxDate.getDate() + 7);
   const maxYear = maxDate.getFullYear();
   const maxMonth = (maxDate.getMonth() + 1).toString().padStart(2, "0");
   const maxDay = maxDate.getDate().toString().padStart(2, "0");
