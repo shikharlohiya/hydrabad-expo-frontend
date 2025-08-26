@@ -262,25 +262,32 @@ const DialerProvider = ({ children }) => {
 
   // Helper function to determine if a call event should be processed by current user
   const shouldProcessCallEvent = (data, eventType) => {
-    // Normalize phone numbers for comparison (remove spaces, handle different formats)
+    // Normalize phone numbers for comparison (remove spaces, handle different formats, country codes)
     const normalizePhone = (phone) => {
       if (!phone) return "";
-      return String(phone)
+      let normalized = String(phone)
         .replace(/[\s\-\+]/g, "")
         .trim();
+      
+      // Remove common country codes (91 for India)
+      if (normalized.startsWith("91") && normalized.length === 12) {
+        normalized = normalized.substring(2); // Remove +91
+      }
+      
+      return normalized;
     };
 
     const userPhone = normalizePhone(userData.EmployeePhone);
     const userId = userData.EmployeeId;
 
-    // For call-initiated events, check if apartyno matches current user
+    // For call-initiated events, check if apartyno/agentNumber matches current user
     if (eventType === "call-initiated") {
       const eventPhone = normalizePhone(
         data.apartyno || data.agentNumber || data.fromNumber
       );
       const isForCurrentUser = eventPhone === userPhone;
 
-      console.log("🔍 Call-initiated filter check:", {
+      console.log("🔍 Acefone Call-initiated filter check:", {
         eventApartyno: data.apartyno,
         eventAgentNumber: data.agentNumber,
         eventFromNumber: data.fromNumber,
@@ -302,14 +309,14 @@ const DialerProvider = ({ children }) => {
       return isForCurrentUser;
     }
 
-    // For other call events, only process if it's our active call or no filtering info available
+    // For other call events, only process if it's our active call or check agent number
     const eventCallId = String(data.callId || data.CALL_ID || "");
     const currentCallId = String(activeCallId || "");
 
     // If we have an active call, only process events for that call
     if (currentCallId && eventCallId) {
       const isOurCall = eventCallId === currentCallId;
-      console.log(`🔍 ${eventType} filter check:`, {
+      console.log(`🔍 Acefone ${eventType} filter check:`, {
         eventCallId,
         currentCallId,
         isOurCall,
@@ -317,7 +324,7 @@ const DialerProvider = ({ children }) => {
       return isOurCall;
     }
 
-    // If no active call but event has user identification, check if it's for us
+    // For Acefone events, also check agent number from the event data
     if (data.agentId || data.employeeId || data.agentNumber) {
       const eventUserId = data.agentId || data.employeeId;
       const eventUserPhone = normalizePhone(data.agentNumber);
@@ -326,23 +333,55 @@ const DialerProvider = ({ children }) => {
         (eventUserId && eventUserId.toString() === userId?.toString()) ||
         (eventUserPhone && eventUserPhone === userPhone);
 
-      console.log(`🔍 ${eventType} user filter check:`, {
+      console.log(`🔍 Acefone ${eventType} user filter check:`, {
         eventUserId,
         eventUserPhone,
         userId,
         userPhone,
         isForCurrentUser,
+        phoneComparison: {
+          rawAgentNumber: data.agentNumber,
+          normalizedEventPhone: eventUserPhone,
+          rawUserPhone: userData.EmployeePhone,
+          normalizedUserPhone: userPhone,
+          phoneMatch: eventUserPhone === userPhone
+        },
+        acefoneEventData: {
+          agentNumber: data.agentNumber,
+          customerNumber: data.customerNumber,
+          callId: data.callId,
+          eventType: data.eventType
+        }
       });
 
       return isForCurrentUser;
     }
 
-    // For events without clear user identification, be conservative and ignore
+    // For events without clear user identification, be conservative but allow if we have active call
+    // OR if this looks like the same call (same callId in event)
+    if (currentCallId && (currentCallId === eventCallId || !eventCallId)) {
+      console.log(
+        `⚠️ Acefone ${eventType} - No agent identification but we have active call ${currentCallId}, allowing`
+      );
+      return true;
+    }
+    
+    // FALLBACK: For Acefone softphone calls, if we can't match the user but the event looks legitimate, allow it
+    if (data.agentNumber && data.customerNumber && eventCallId) {
+      console.log(
+        `🚨 Acefone ${eventType} - Fallback: Allowing event for potential softphone call (callId: ${eventCallId})`
+      );
+      console.log(
+        `🚨 Acefone ${eventType} - Agent: ${data.agentNumber}, Customer: ${data.customerNumber}`
+      );
+      return true;
+    }
+
     console.log(
-      `⚠️ ${eventType} - No clear user identification, ignoring to prevent cross-user issues`
+      `⚠️ Acefone ${eventType} - No clear user identification and no active call, ignoring`
     );
     console.log(
-      `🛑 BLOCKING ${eventType} event - insufficient user identification:`,
+      `🛑 BLOCKING Acefone ${eventType} event - insufficient identification:`,
       {
         hasCallId: !!eventCallId,
         hasCurrentCallId: !!currentCallId,
@@ -357,12 +396,12 @@ const DialerProvider = ({ children }) => {
   useEffect(() => {
     registerCallEventHandlers({
       onCallInitiated: (data) => {
-        console.log("📞 Call initiated event:", data);
+        console.log("📞 Acefone call initiated event:", data);
 
         // Use centralized filtering logic
         if (!shouldProcessCallEvent(data, "call-initiated")) {
           console.log(
-            "❌ Ignoring call-initiated event - not for current user"
+            "❌ Acefone - Ignoring call-initiated event - not for current user"
           );
           return;
         }
@@ -384,16 +423,21 @@ const DialerProvider = ({ children }) => {
           return;
         }
 
-        console.log("✅ Processing call-initiated event for current user");
+        console.log("✅ Acefone - Processing call-initiated event for current user");
         setActiveCallId(data.callId);
         setCallStatus(CALL_STATUS.RINGING);
         setCallDirection("outgoing");
         setHasFormBeenSubmitted(false);
         setCallDetailsForForm(null);
+        
+        // Set the current number if provided in Acefone data
+        if (data.bPartyNo || data.customerNumber) {
+          setCurrentNumber(data.bPartyNo || data.customerNumber);
+        }
       },
 
       onCallConnected: (data) => {
-        console.log("🔗 Call connected event:", data);
+        console.log("🔗 Acefone call connected event:", data);
 
         // Use centralized filtering logic
         if (!shouldProcessCallEvent(data, "call-connected")) {
@@ -407,7 +451,7 @@ const DialerProvider = ({ children }) => {
         const currentCallId = String(activeCallId);
 
         console.log(
-          `🔍 Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
+          `🔍 Acefone - Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
         );
 
         if (callId === currentCallId) {
@@ -420,9 +464,10 @@ const DialerProvider = ({ children }) => {
           }
 
           console.log(
-            `✅ Call IDs match! Outgoing call ${callId} is connected`
+            `✅ Acefone - Call IDs match! Outgoing call ${callId} is connected`
           );
           setCallStatus(CALL_STATUS.CONNECTED);
+          setUserInitiatedCall(false); // Reset flag when call connects
 
           // Set call start time from webhook data or current time
           const startTime = data.callStartTime || data.CALL_START_TIME;
@@ -433,18 +478,19 @@ const DialerProvider = ({ children }) => {
             setCallStartTime(Date.now());
           }
 
-          // Open form when call connects
-          console.log("📋 Opening form for connected call");
+          // ACEFONE INTEGRATION: Directly open form when outgoing call connects
+          console.log("📋 Acefone - Auto-opening form for connected outgoing call");
+          console.log("📋 Acefone - Call direction:", callDirection, "- Opening form immediately");
           openCallRemarksForm();
         } else {
           console.log(
-            `❌ Call ID mismatch: webhook="${callId}" vs active="${currentCallId}"`
+            `❌ Acefone - Call ID mismatch: webhook="${callId}" vs active="${currentCallId}"`
           );
         }
       },
 
       onCallDisconnected: (data) => {
-        console.log("📱 Call disconnected event received:", data);
+        console.log("📱 Acefone call disconnected event received:", data);
 
         // Use centralized filtering logic
         if (!shouldProcessCallEvent(data, "call-disconnected")) {
@@ -458,35 +504,35 @@ const DialerProvider = ({ children }) => {
         const currentCallId = String(activeCallId);
 
         console.log(
-          `🔍 Disconnect event - Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
+          `🔍 Acefone - Disconnect event - Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
         );
 
         if (callId === currentCallId) {
           console.log(
-            `✅ Call IDs match! Processing disconnect for call ${callId}`
+            `✅ Acefone - Call IDs match! Processing disconnect for call ${callId}`
           );
 
-          // Extract duration if available from webhook
+          // Extract duration if available from Acefone webhook
           if (data.callDuration) {
             console.log(
-              `⏱️ Setting call duration from webhook: ${data.callDuration} seconds`
+              `⏱️ Acefone - Setting call duration from webhook: ${data.callDuration} seconds`
             );
             setCallDuration(data.callDuration);
           }
 
-          console.log(`📱 Websocket disconnect - calling handleCallEnd() and resetting dialer`);
+          console.log(`📱 Acefone websocket disconnect - calling handleCallEnd() and resetting dialer`);
           handleCallEnd();
           
-          // Reset dialer immediately for websocket disconnects (external call end)
+          // Reset dialer immediately for Acefone websocket disconnects (external call end)
           setTimeout(() => {
-            console.log("🔄 Resetting dialer state after websocket disconnect");
+            console.log("🔄 Acefone - Resetting dialer state after websocket disconnect");
             resetCallState();
           }, 1500);
         }
       },
 
       onCallStatusUpdate: (data) => {
-        console.log("📱 Call status update event:", data);
+        console.log("📱 Acefone call status update event:", data);
 
         // Use centralized filtering logic
         if (!shouldProcessCallEvent(data, "call-status-update")) {
@@ -499,11 +545,23 @@ const DialerProvider = ({ children }) => {
         const callId = String(data.callId || data.CALL_ID);
         const currentCallId = String(activeCallId);
 
-        if (callId === currentCallId) {
+        // Handle both cases: matching call ID OR no active call ID but user matches (softphone scenario)
+        if (callId === currentCallId || (!currentCallId && data.agentNumber)) {
           const status = data.status;
-          console.log(
-            `📊 Processing status update for call ${callId}: ${status}`
-          );
+          
+          if (!currentCallId && data.agentNumber) {
+            console.log(
+              `📊 Acefone - Processing SOFTPHONE status update: ${status} (no active call ID, but user matches)`
+            );
+            // Set the call as active since it's for this user
+            setActiveCallId(callId);
+            setCallDirection("outgoing"); // Assume outgoing for softphone
+            setCurrentNumber(data.customerNumber);
+          } else {
+            console.log(
+              `📊 Acefone - Processing status update for call ${callId}: ${status}`
+            );
+          }
 
           if (status === "ringing") {
             // Additional check: Don't set ringing if user initiated the call
@@ -524,15 +582,107 @@ const DialerProvider = ({ children }) => {
               return;
             }
 
+            console.log("✅ Acefone - Call status connected, updating call state");
             setCallStatus(CALL_STATUS.CONNECTED);
-            if (!callStartTime) {
+            setUserInitiatedCall(false); // Reset flag when call connects
+            
+            // Set call start time from Acefone webhook data
+            if (data.callStartTime && !callStartTime) {
+              const parsedTime = parseWebhookTime(data.callStartTime);
+              setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
+              console.log("⏰ Acefone - Set call start time from webhook:", data.callStartTime);
+            } else if (data.agentConnectedTime && !callStartTime) {
+              const parsedTime = parseWebhookTime(data.agentConnectedTime);
+              setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
+              console.log("⏰ Acefone - Set call start time from agentConnectedTime:", data.agentConnectedTime);
+            } else if (!callStartTime) {
               setCallStartTime(Date.now());
+              console.log("⏰ Acefone - Set call start time to current time");
             }
+
+            // Set customer number if available and not already set
+            if (data.customerNumber && (!currentNumber || currentNumber !== data.customerNumber)) {
+              console.log("📞 Acefone - Setting customer number:", data.customerNumber);
+              setCurrentNumber(data.customerNumber);
+            }
+
+            // ACEFONE INTEGRATION: Open form when call connects via status update
+            console.log("📋 Acefone - Status update shows connected, opening form automatically");
+            console.log("📋 Acefone - Call direction:", callDirection, "- Opening form from status update");
+            
+            // Add a slight delay to ensure all state is updated before opening form
+            setTimeout(() => {
+              console.log("📋 Acefone - Opening form after state update delay");
+              openCallRemarksForm();
+            }, 100);
+            
           } else if (status === "ended") {
             console.log(
-              "📊 Status ended - but handleCallEnd will be called by disconnect event"
+              "📊 Acefone - Status ended - but handleCallEnd will be called by disconnect event"
             );
             // Don't call handleCallEnd here since onCallDisconnected already handles it
+          }
+        } else {
+          // Check if this might be a softphone call for this user that we should handle
+          // Re-use the same normalization function from shouldProcessCallEvent
+          const normalizePhone = (phone) => {
+            if (!phone) return "";
+            let normalized = String(phone)
+              .replace(/[\s\-\+]/g, "")
+              .trim();
+            
+            // Remove common country codes (91 for India)
+            if (normalized.startsWith("91") && normalized.length === 12) {
+              normalized = normalized.substring(2); // Remove +91
+            }
+            
+            return normalized;
+          };
+          
+          const eventPhone = normalizePhone(data.agentNumber);
+          const userPhone = normalizePhone(userData.EmployeePhone);
+          
+          if (eventPhone === userPhone && data.customerNumber) {
+            console.log(
+              `🎯 Acefone - SOFTPHONE detected: Call ID mismatch but phone matches, processing anyway`
+            );
+            console.log(
+              `🎯 Agent: ${data.agentNumber}, Customer: ${data.customerNumber}, CallId: ${callId}`
+            );
+            
+            // Set this as the active call and process it
+            setActiveCallId(callId);
+            setCallDirection("outgoing");
+            setCurrentNumber(data.customerNumber);
+            
+            const status = data.status;
+            if (status === "connected") {
+              console.log("✅ Acefone - SOFTPHONE call connected, updating call state");
+              setCallStatus(CALL_STATUS.CONNECTED);
+              setUserInitiatedCall(false);
+              
+              // Set call start time
+              if (data.callStartTime && !callStartTime) {
+                const parsedTime = parseWebhookTime(data.callStartTime);
+                setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
+              } else if (data.agentConnectedTime && !callStartTime) {
+                const parsedTime = parseWebhookTime(data.agentConnectedTime);
+                setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
+              } else if (!callStartTime) {
+                setCallStartTime(Date.now());
+              }
+              
+              // Open form for softphone call
+              console.log("📋 Acefone - SOFTPHONE connected, opening form automatically");
+              setTimeout(() => {
+                console.log("📋 Acefone - Opening form for SOFTPHONE call");
+                openCallRemarksForm();
+              }, 100);
+            }
+          } else {
+            console.log(
+              `❌ Acefone - Call ID mismatch in status update: webhook="${callId}" vs active="${currentCallId}"`
+            );
           }
         }
       },
@@ -879,7 +1029,7 @@ const DialerProvider = ({ children }) => {
     };
   }, []);
 
-  // Initiate call
+  // OLD DIALOR IMPLEMENTATION - COMMENTED OUT FOR ACEFONE
   // const initiateCall = async (number, contactInfo = null) => {
   //   // Validation
   //   if (!number || number.trim() === "") {
@@ -1022,7 +1172,7 @@ const DialerProvider = ({ children }) => {
   //     setIsLoading(false);
   //   }
   // };
-  // Initiate call
+  // ACEFONE DIALOR IMPLEMENTATION - Updated for Acefone integration
   const initiateCall = async (number, contactInfo = null) => {
     // Validation
     if (!number || number.trim() === "") {
@@ -1077,7 +1227,8 @@ const DialerProvider = ({ children }) => {
       requestHeaders.append("Accept", "application/json");
       requestHeaders.append("X-Requested-With", "XMLHttpRequest");
 
-      const response = await fetch(`${baseURL}/initiate-call`, {
+      // Updated endpoint for Acefone dialor integration
+      const response = await fetch(`${baseURL}/acefone-initiate-call`, {
         method: "POST",
         headers: requestHeaders,
         body: JSON.stringify(callData),
@@ -1282,7 +1433,7 @@ const DialerProvider = ({ children }) => {
       }
 
       console.log("🔚 Final token being used:", currentToken ? currentToken.substring(0, 20) + "..." : "NULL");
-      console.log("🔚 Making fetch API call to /call-disconnection for callId:", activeCallId);
+      console.log("🔚 Making fetch API call to /acefone-call-disconnection for callId:", activeCallId);
 
       const requestHeaders = new Headers();
       requestHeaders.append("Authorization", `Bearer ${currentToken.trim()}`);
@@ -1290,7 +1441,8 @@ const DialerProvider = ({ children }) => {
       requestHeaders.append("Accept", "application/json");
       requestHeaders.append("X-Requested-With", "XMLHttpRequest");
 
-      const response = await fetch(`${baseURL}/call-disconnection`, {
+      // Updated endpoint for Acefone dialor integration
+      const response = await fetch(`${baseURL}/acefone-call-disconnection`, {
         method: "POST",
         headers: requestHeaders,
         body: JSON.stringify({
@@ -1356,7 +1508,8 @@ const DialerProvider = ({ children }) => {
             retryHeaders.append("Accept", "application/json");
             retryHeaders.append("X-Requested-With", "XMLHttpRequest");
 
-            const retryResponse = await fetch(`${baseURL}/call-disconnection`, {
+            // Updated endpoint for Acefone dialor integration
+            const retryResponse = await fetch(`${baseURL}/acefone-call-disconnection`, {
               method: "POST",
               headers: retryHeaders,
               body: JSON.stringify({
@@ -1532,6 +1685,13 @@ const DialerProvider = ({ children }) => {
 
   // Open call remarks form
   const openCallRemarksForm = () => {
+    console.log("🚀 openCallRemarksForm() called - Current state:");
+    console.log("🔍 activeCallId:", activeCallId);
+    console.log("🔍 currentNumber:", currentNumber);
+    console.log("🔍 callDirection:", callDirection);
+    console.log("🔍 callStartTime:", callStartTime);
+    console.log("🔍 userData.EmployeeId:", userData.EmployeeId);
+
     // Use preserved call details if available, otherwise use current state
     const callDetails = callDetailsForForm || {
       CallId: activeCallId,
@@ -1559,10 +1719,17 @@ const DialerProvider = ({ children }) => {
       callDuration: callDetails.callDuration || callDuration,
     };
 
-    console.log("📋 Opening form with call details:", formData);
-    console.log("📋 Call direction being passed:", formData.callDirection);
-    console.log("📋 Call type being passed:", formData.callType);
-    openForm(formData);
+    console.log("📋 ACEFONE - Opening form with call details:", formData);
+    console.log("📋 ACEFONE - Call direction being passed:", formData.callDirection);
+    console.log("📋 ACEFONE - Call type being passed:", formData.callType);
+    console.log("📋 ACEFONE - Calling openForm() now...");
+    
+    try {
+      openForm(formData);
+      console.log("✅ ACEFONE - openForm() called successfully!");
+    } catch (error) {
+      console.error("❌ ACEFONE - Error opening form:", error);
+    }
   };
 
   // Handle form submission - this should be called when form is successfully submitted

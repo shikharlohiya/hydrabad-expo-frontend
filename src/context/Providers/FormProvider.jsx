@@ -326,7 +326,9 @@ const FormProvider = ({ children }) => {
 
   // Open form with call details
   const openForm = (callDetails) => {
-    console.log("📝 Opening form with call details:", callDetails);
+    console.log("🚀 ACEFONE - FormProvider.openForm() called!");
+    console.log("📝 ACEFONE - Opening form with call details:", callDetails);
+    console.log("📝 ACEFONE - Current isFormOpen state:", isFormOpen);
 
     setCurrentCallDetails(callDetails);
     setIsFormOpen(true);
@@ -334,16 +336,20 @@ const FormProvider = ({ children }) => {
     setErrors({});
     setSubmissionError(null);
 
+    console.log("✅ ACEFONE - Form state updated: isFormOpen = true");
+
     // Auto-populate form data
+    console.log("📝 ACEFONE - Calling populateFormData...");
     populateFormData(callDetails);
 
     // Auto-search customer if phone number is available
     if (callDetails?.number) {
+      console.log("📝 ACEFONE - Auto-searching customer for number:", callDetails.number);
       searchCustomer(callDetails.number);
-    }
-    if (callDetails?.number) {
       fetchSavedContactData(callDetails.number);
     }
+
+    console.log("✅ ACEFONE - Form opening process completed!");
   };
 
   // Close form and reset state

@@ -782,7 +782,7 @@ import {
 } from "@heroicons/react/24/outline";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
-import useDialer from "../../../hooks/useDialer";
+// import useDialer from "../../../hooks/useDialer"; // Removed - now using direct Acefone API
 
 const ContactsPage = () => {
   const [traders, setTraders] = useState([]);
@@ -820,15 +820,9 @@ const ContactsPage = () => {
   const [employeeInfo, setEmployeeInfo] = useState(null);
 
   const { userData } = useContext(UserContext);
-  const {
-    initiateCall,
-    canInitiateCall,
-    isCallActive,
-    callStatus,
-    setCurrentNumber,
-    currentNumber,
-    CALL_STATUS,
-  } = useDialer();
+  
+  // State for managing current call (simplified for Acefone)
+  const [currentNumber, setCurrentNumber] = useState(null);
 
   // Helper function to format date
   const formatDate = (dateString) => {
@@ -1101,19 +1095,51 @@ const ContactsPage = () => {
     sessionStorage.setItem("contactsPage", "1"); // Reset to page 1 when filtering
   };
 
-  // Handle call button click
-  const handleCall = (phoneNumber, traderName) => {
-    console.log("🔍 handleCall called with:", { phoneNumber, traderName });
-    if (phoneNumber && phoneNumber.trim() !== "") {
-      console.log(`📞 Initiating call to ${phoneNumber} for ${traderName}`);
-      console.log("📋 Contact info being passed:", { name: traderName });
-
-      setCurrentNumber(phoneNumber);
-      initiateCall(phoneNumber, { name: traderName });
-
-      console.log("✅ Call initiated - form should open when call connects");
-    } else {
+  // Handle call button click with Acefone API
+  const handleCall = async (phoneNumber, traderName) => {
+    console.log("🔍 ACEFONE - handleCall called with:", { phoneNumber, traderName });
+    
+    if (!phoneNumber || phoneNumber.trim() === "") {
       console.error("❌ No phone number provided");
+      return;
+    }
+
+    if (!userData?.EmployeePhone) {
+      console.error("❌ User phone number not found");
+      return;
+    }
+
+    try {
+      console.log(`📞 ACEFONE - Initiating call to ${phoneNumber} for ${traderName}`);
+      
+      // Prepare Acefone API call
+      const acefonePayload = {
+        destination_number: phoneNumber.replace(/\s+/g, ""), // Remove any spaces
+        agent_number: userData.EmployeePhone.replace(/\s+/g, "") // Remove any spaces
+      };
+
+      console.log("📋 ACEFONE - API payload:", acefonePayload);
+
+      // Call Acefone initiate-call API
+      const response = await axiosInstance.post("/initiate-call", acefonePayload);
+
+      console.log("✅ ACEFONE - API Response:", response.data);
+
+      if (response.data.success || response.status === 200) {
+        console.log("✅ ACEFONE - Call initiated successfully");
+        
+        // Update dialer state for UI consistency
+        setCurrentNumber(phoneNumber);
+        
+        // Note: Form will open automatically when call connects via socket events
+        console.log("📋 ACEFONE - Call initiated - form will open when call connects via socket");
+      } else {
+        console.error("❌ ACEFONE - Call initiation failed:", response.data);
+      }
+
+    } catch (error) {
+      console.error("❌ ACEFONE - Error initiating call:", error);
+      console.error("❌ ACEFONE - Error details:", error.response?.data);
     }
   };
 
@@ -1531,8 +1557,8 @@ const ContactsPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() =>
-                            handleCall(trader.Contact_no, trader.Trader_Name)
+                          onClick={async () =>
+                            await handleCall(trader.Contact_no, trader.Trader_Name)
                           }
                           disabled={!trader.Contact_no}
                           className={`inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white focus:outline-none focus:ring-1 focus:ring-offset-1 ${
@@ -1543,7 +1569,7 @@ const ContactsPage = () => {
                           title={
                             !trader.Contact_no
                               ? "No phone number"
-                              : "Click to call"
+                              : "Click to call via Acefone"
                           }
                         >
                           <PhoneIcon className="h-3 w-3 mr-1" />
@@ -1994,8 +2020,8 @@ const ContactsPage = () => {
                 <div className="flex space-x-3">
                   {selectedTrader.Contact_no && (
                     <button
-                      onClick={() => {
-                        handleCall(
+                      onClick={async () => {
+                        await handleCall(
                           selectedTrader.Contact_no,
                           selectedTrader.Trader_Name
                         );
@@ -2004,7 +2030,7 @@ const ContactsPage = () => {
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
                     >
                       <PhoneIcon className="w-4 h-4 mr-2" />
-                      Call Now
+                      Call Now (Acefone)
                     </button>
                   )}
                 </div>

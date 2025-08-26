@@ -24,6 +24,12 @@ const DashboardLayout = () => {
   // This handles both connected calls and manual form opens
   const showCallRemarksForm = isFormOpen;
 
+  // Debug logging for form state
+  useEffect(() => {
+    console.log("🖼️ ACEFONE - DashboardLayout: isFormOpen changed to:", isFormOpen);
+    console.log("🖼️ ACEFONE - DashboardLayout: showCallRemarksForm =", showCallRemarksForm);
+  }, [isFormOpen, showCallRemarksForm]);
+
   // Handle mobile detection
   useEffect(() => {
     const checkMobile = () => {
@@ -94,7 +100,17 @@ const DashboardLayout = () => {
         `}
         >
           {/* Conditional Content */}
-          {showCallRemarksForm ? <CallRemarksPage /> : <Outlet />}
+          {showCallRemarksForm ? (
+            <>
+              {console.log("🖼️ ACEFONE - Rendering CallRemarksPage")}
+              <CallRemarksPage />
+            </>
+          ) : (
+            <>
+              {console.log("🖼️ ACEFONE - Rendering Outlet")}
+              <Outlet />
+            </>
+          )}
         </main>
       </div>
     </div>
