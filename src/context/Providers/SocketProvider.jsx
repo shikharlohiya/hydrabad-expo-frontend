@@ -13,7 +13,7 @@ export const CONNECTION_STATUS = {
 
 const SocketProvider = ({ children }) => {
   // const baseURL = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "");
-  const baseURL = "https://crm-trader-api.abisibg.com/";
+  const baseURL = "https://crm-trader-api.abisexport.com/";
 
   // Connection state
   const [socket, setSocket] = useState(null);
@@ -169,13 +169,13 @@ const SocketProvider = ({ children }) => {
       "call-initiated",
       "call-status-update",
       "call-connected", // Acefone connected event from webhook
-      "call-disconnected", // Acefone disconnected event from webhook  
+      "call-disconnected", // Acefone disconnected event from webhook
       "call-hold-status",
       "call-ended", // Keep for backward compatibility
       "call-failed",
       "call-error",
       "incomingCall",
-      "incomingCallStatus", 
+      "incomingCallStatus",
       "incomingCallCdr",
       "incomingCallEnded",
       "callStatusUpdate", // Keep for backward compatibility
