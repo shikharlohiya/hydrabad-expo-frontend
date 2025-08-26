@@ -6,7 +6,8 @@ import CallRemarksForm from "./CallRemarksForm";
 import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
-import { ChevronRight } from "lucide-react";
+import PhoneBook from "./PhoneBook"; // Import PhoneBook
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import UserContext from "../../context/UserContext";
 import axiosInstance from "../../library/axios";
 
@@ -188,6 +189,7 @@ const CallRemarksPage = () => {
     setIsSearching(true);
     setSearchError(null);
     setHasSearched(true);
+    setShowCustomerPanel(true); // Always show panel on search
     setNewContactData(null); // Reset new contact data
 
     try {
@@ -196,19 +198,16 @@ const CallRemarksPage = () => {
       if (customer) {
         setCustomerData(customer);
         setCallHistory(history);
-        setShowCustomerPanel(true);
         setSearchError(null);
         setNewContactData(null); // Clear new contact data if existing customer found
       } else if (history && history.length > 0) {
         setCustomerData(null);
         setCallHistory(history);
-        setShowCustomerPanel(true);
         setActiveTab("history");
         setSearchError("Note: You can update the trader information below");
       } else {
         setCustomerData(null);
         setCallHistory([]);
-        setShowCustomerPanel(false);
         setSearchError("Note: You can update the trader information below");
       }
     } catch (error) {
@@ -216,7 +215,6 @@ const CallRemarksPage = () => {
       setSearchError(error.message);
       setCustomerData(null);
       setCallHistory([]);
-      setShowCustomerPanel(false);
       setNewContactData(null);
     } finally {
       setIsSearching(false);
@@ -274,6 +272,17 @@ const CallRemarksPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Floating button to open panel */}
+      {!showCustomerPanel && (
+        <button
+          onClick={() => setShowCustomerPanel(true)}
+          className="fixed top-1/2 right-0 transform -translate-y-1/2 bg-white p-2 rounded-l-md shadow-lg hover:bg-gray-100 transition-colors z-50 border-t border-l border-b border-gray-200"
+          aria-label="Open trader panel"
+        >
+          <ChevronLeft size={20} className="text-gray-600" />
+        </button>
+      )}
+
       {/* Main Content Area */}
       <div
         className={`flex-1 transition-all duration-300 ${
@@ -454,38 +463,56 @@ const CallRemarksPage = () => {
               >
                 Call History
               </button>
+              <button
+                onClick={() => setActiveTab("phonebook")}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "phonebook"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Phone Book
+              </button>
             </div>
           </div>
 
           {/* Panel Content */}
           <div className="flex-1 overflow-y-auto">
-            {activeTab === "info" ? (
-              customerData ? (
-                <CustomerInfoPanel
-                  customerData={customerData}
-                  phoneNumber={currentNumber}
-                />
-              ) : (
-                <div className="p-4 text-center">
-                  <div className="text-gray-500 text-sm">
-                    {hasSearched
-                      ? "No trader information found for this number."
-                      : "Search for trader information to view details"}
+            {activeTab === "info" && (
+              <>
+                {customerData ? (
+                  <CustomerInfoPanel
+                    customerData={customerData}
+                    phoneNumber={currentNumber}
+                  />
+                ) : (
+                  <div className="p-4 text-center">
+                    <div className="text-gray-500 text-sm">
+                      {hasSearched
+                        ? "No trader information found for this number."
+                        : "Search for trader information to view details"}
+                    </div>
                   </div>
-                </div>
-              )
-            ) : callHistory.length > 0 ? (
-              <CustomerCallHistory
-                callHistory={callHistory}
-                phoneNumber={currentNumber}
-              />
-            ) : (
-              <div className="p-4 text-center">
-                <div className="text-gray-500 text-sm">
-                  No call history available.
-                </div>
-              </div>
+                )}
+              </>
             )}
+            {activeTab === "history" && (
+              <>
+                {callHistory.length > 0 ? (
+                  <CustomerCallHistory
+                    callHistory={callHistory}
+                    phoneNumber={currentNumber}
+                  />
+                ) : (
+                  <div className="p-4 text-center">
+                    <div className="text-gray-500 text-sm">
+                      No call history available.
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {activeTab === "phonebook" && <PhoneBook />}
           </div>
         </div>
       </div>
