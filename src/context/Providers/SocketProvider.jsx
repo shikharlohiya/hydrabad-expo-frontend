@@ -13,7 +13,7 @@ export const CONNECTION_STATUS = {
 
 const SocketProvider = ({ children }) => {
   // const baseURL = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "");
-  const baseURL = "https://crm-trader-api.abisibg.com/";
+  const baseURL = "https://crm-trader-api.abisexport.com/";
 
   // Connection state
   const [socket, setSocket] = useState(null);
