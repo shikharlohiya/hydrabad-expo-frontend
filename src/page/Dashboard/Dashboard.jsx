@@ -11,6 +11,7 @@ import ProfilePage from "./Profile/ProfilePage";
 import FollowUpPage from "./FollowUp/FollowUpPage";
 import UserSettings from "./UserSettings/UserSettings";
 import PhoneBook from "../../components/CallRemarks/PhoneBook";
+import TraderBusinessUpload from "../../components/TraderBusinessUpload";
 
 const Dashboard = () => {
   return (
@@ -31,6 +32,7 @@ const Dashboard = () => {
 
         {/* admin routes */}
         <Route path="user-settings" element={<UserSettings />} />
+        <Route path="bulk-upload" element={<TraderBusinessUpload />} />
 
         {/* Redirect /dashboard/dashboard to /dashboard */}
         <Route
