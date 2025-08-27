@@ -512,7 +512,7 @@ const CallRemarksPage = () => {
                 )}
               </>
             )}
-            {activeTab === "phonebook" && <PhoneBook />}
+            {activeTab === "phonebook" && <PhoneBook isCompact={true} />}
           </div>
         </div>
       </div>
