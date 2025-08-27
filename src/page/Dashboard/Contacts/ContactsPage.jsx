@@ -1123,84 +1123,84 @@ const ContactsPage = () => {
     : [];
   const uniqueStatuses = traderCounts?.statusCounts?.map((s) => s.status) || [];
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="animate-pulse">
-          {/* Header Skeleton with Shimmer */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="h-6 bg-gray-200 rounded w-48 mb-2 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="h-4 bg-gray-200 rounded w-64 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                </div>
-              </div>
+  // if (loading) {
+  //   return (
+  //     <div className="space-y-4">
+  //       <div className="animate-pulse">
+  //         {/* Header Skeleton with Shimmer */}
+  //         <div className="bg-white shadow rounded-lg">
+  //           <div className="px-6 py-4">
+  //             <div className="flex items-center justify-between mb-4">
+  //               <div>
+  //                 <div className="h-6 bg-gray-200 rounded w-48 mb-2 relative overflow-hidden">
+  //                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+  //                 </div>
+  //                 <div className="h-4 bg-gray-200 rounded w-64 relative overflow-hidden">
+  //                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+  //                 </div>
+  //               </div>
+  //             </div>
 
-              {/* Stats Cards Skeleton */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-4">
-                    <div className="h-4 bg-gray-200 rounded w-20 mb-2 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="h-8 bg-gray-200 rounded w-12 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+  //             {/* Stats Cards Skeleton */}
+  //             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+  //               {[...Array(4)].map((_, i) => (
+  //                 <div key={i} className="bg-gray-50 rounded-lg p-4">
+  //                   <div className="h-4 bg-gray-200 rounded w-20 mb-2 relative overflow-hidden">
+  //                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+  //                   </div>
+  //                   <div className="h-8 bg-gray-200 rounded w-12 relative overflow-hidden">
+  //                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+  //                   </div>
+  //                 </div>
+  //               ))}
+  //             </div>
+  //           </div>
+  //         </div>
 
-          {/* Table Skeleton */}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="p-6">
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="w-10 h-10 bg-gray-200 rounded-full relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="ml-4 flex-1">
-                      <div className="h-4 bg-gray-200 rounded w-32 mb-2 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                      </div>
-                      <div className="h-3 bg-gray-200 rounded w-24 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+  //         {/* Table Skeleton */}
+  //         <div className="bg-white shadow rounded-lg overflow-hidden">
+  //           <div className="p-6">
+  //             <div className="space-y-4">
+  //               {[...Array(5)].map((_, i) => (
+  //                 <div
+  //                   key={i}
+  //                   className="flex items-center p-4 border border-gray-200 rounded-lg"
+  //                 >
+  //                   <div className="w-10 h-10 bg-gray-200 rounded-full relative overflow-hidden">
+  //                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+  //                   </div>
+  //                   <div className="ml-4 flex-1">
+  //                     <div className="h-4 bg-gray-200 rounded w-32 mb-2 relative overflow-hidden">
+  //                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+  //                     </div>
+  //                     <div className="h-3 bg-gray-200 rounded w-24 relative overflow-hidden">
+  //                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
+  //                     </div>
+  //                   </div>
+  //                 </div>
+  //               ))}
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
 
-        <style jsx>{`
-          @keyframes shimmer {
-            0% {
-              transform: translateX(-100%);
-            }
-            100% {
-              transform: translateX(100%);
-            }
-          }
+  //       <style jsx>{`
+  //         @keyframes shimmer {
+  //           0% {
+  //             transform: translateX(-100%);
+  //           }
+  //           100% {
+  //             transform: translateX(100%);
+  //           }
+  //         }
 
-          .animate-shimmer {
-            animation: shimmer 1.5s infinite;
-          }
-        `}</style>
-      </div>
-    );
-  }
+  //         .animate-shimmer {
+  //           animation: shimmer 1.5s infinite;
+  //         }
+  //       `}</style>
+  //     </div>
+  //   );
+  // }
 
   if (error) {
     return (
