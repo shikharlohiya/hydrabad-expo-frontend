@@ -1,3 +1,7 @@
+
+
+
+
 import { useState, useEffect, useRef } from "react";
 import DialerContext from "../DialerContext";
 import useSocket from "../../hooks/useSocket";
@@ -309,52 +313,53 @@ const DialerProvider = ({ children }) => {
       return isForCurrentUser;
     }
 
-    // For other call events, only process if it's our active call or check agent number
+    // For other call events, check both call ID match AND phone number match
     const eventCallId = String(data.callId || data.CALL_ID || "");
     const currentCallId = String(activeCallId || "");
 
-    // If we have an active call, only process events for that call
-    if (currentCallId && eventCallId) {
-      const isOurCall = eventCallId === currentCallId;
-      console.log(`🔍 Acefone ${eventType} filter check:`, {
+    // ACEFONE SOFTPHONE: Prioritize phone number matching over call ID matching
+    // For Acefone events, check agent number first (softphone may have different call IDs)
+    if (data.agentNumber) {
+      const eventUserPhone = normalizePhone(data.agentNumber);
+      const isPhoneMatch = eventUserPhone === userPhone;
+
+      console.log(`🔍 Acefone ${eventType} phone-priority filter check:`, {
         eventCallId,
         currentCallId,
-        isOurCall,
-      });
-      return isOurCall;
-    }
-
-    // For Acefone events, also check agent number from the event data
-    if (data.agentId || data.employeeId || data.agentNumber) {
-      const eventUserId = data.agentId || data.employeeId;
-      const eventUserPhone = normalizePhone(data.agentNumber);
-
-      const isForCurrentUser =
-        (eventUserId && eventUserId.toString() === userId?.toString()) ||
-        (eventUserPhone && eventUserPhone === userPhone);
-
-      console.log(`🔍 Acefone ${eventType} user filter check:`, {
-        eventUserId,
         eventUserPhone,
-        userId,
         userPhone,
-        isForCurrentUser,
+        isPhoneMatch,
+        callIdMatch: eventCallId === currentCallId,
         phoneComparison: {
           rawAgentNumber: data.agentNumber,
           normalizedEventPhone: eventUserPhone,
           rawUserPhone: userData.EmployeePhone,
-          normalizedUserPhone: userPhone,
-          phoneMatch: eventUserPhone === userPhone
-        },
-        acefoneEventData: {
-          agentNumber: data.agentNumber,
-          customerNumber: data.customerNumber,
-          callId: data.callId,
-          eventType: data.eventType
+          normalizedUserPhone: userPhone
         }
       });
 
-      return isForCurrentUser;
+      // For softphone: Accept if phone matches, regardless of call ID match
+      if (isPhoneMatch) {
+        console.log(`✅ Acefone ${eventType} - Phone number matches, accepting event (softphone)`);
+        return true;
+      }
+    }
+
+    // If we have matching call IDs, accept the event
+    if (currentCallId && eventCallId && eventCallId === currentCallId) {
+      console.log(`✅ Acefone ${eventType} - Call ID matches, accepting event`);
+      return true;
+    }
+
+    // Final check: if we have agent number but no active call, might be a new softphone call
+    if (data.agentNumber && !currentCallId) {
+      const eventUserPhone = normalizePhone(data.agentNumber);
+      const isPhoneMatch = eventUserPhone === userPhone;
+      
+      if (isPhoneMatch) {
+        console.log(`✅ Acefone ${eventType} - No active call but phone matches, accepting (new softphone call)`);
+        return true;
+      }
     }
 
     // For events without clear user identification, be conservative but allow if we have active call
@@ -450,22 +455,65 @@ const DialerProvider = ({ children }) => {
         const callId = String(data.callId || data.CALL_ID);
         const currentCallId = String(activeCallId);
 
+        // Re-define normalizePhone here to avoid reference error
+        const normalizePhone = (phone) => {
+          if (!phone) return "";
+          let normalized = String(phone)
+            .replace(/[\s\-\+]/g, "")
+            .trim();
+          
+          // Remove common country codes (91 for India)
+          if (normalized.startsWith("91") && normalized.length === 12) {
+            normalized = normalized.substring(2); // Remove +91
+          }
+          
+          return normalized;
+        };
+
+        // Check both call ID match AND phone number match for softphone support
+        const phoneMatches = (data.agentNumber || data.agentPhone) && 
+          normalizePhone(data.agentNumber || data.agentPhone) === normalizePhone(userData.EmployeePhone);
+        const shouldProcessCall = callId === currentCallId || phoneMatches;
+
         console.log(
-          `🔍 Acefone - Comparing callIds: webhook="${callId}" vs active="${currentCallId}"`
+          `🔍 Acefone - Call connection check: callId="${callId}" vs active="${currentCallId}", phoneMatch=${phoneMatches}, agentNumber="${data.agentNumber}", agentPhone="${data.agentPhone}", userPhone="${userData.EmployeePhone}"`
         );
 
-        if (callId === currentCallId) {
-          // **NEW: Check if this is a stale event (call already ended)**
-          if (callStatus === CALL_STATUS.ENDED || hasFormBeenSubmitted) {
+        if (shouldProcessCall) {
+          // **NEW: Check if this is a stale event, but be more lenient for softphone calls**
+          if (callStatus === CALL_STATUS.ENDED && hasFormBeenSubmitted && !phoneMatches) {
             console.log(
-              "🔍 Ignoring stale call-connected event - call already ended or form submitted"
+              "🔍 Ignoring stale call-connected event - call already ended and form submitted (non-softphone)"
             );
             return;
           }
+          
+          // For softphone calls with phone matches, allow processing even if form was submitted for a previous call
+          if (phoneMatches && (callStatus === CALL_STATUS.ENDED || hasFormBeenSubmitted)) {
+            console.log(
+              "✅ Processing softphone call-connected event despite previous form submission - new call detected via phone match"
+            );
+            // Reset the form submission flag for the new softphone call
+            setHasFormBeenSubmitted(false);
+          }
 
-          console.log(
-            `✅ Acefone - Call IDs match! Outgoing call ${callId} is connected`
-          );
+          // Handle softphone calls (different call ID but phone matches)
+          if (callId !== currentCallId && phoneMatches) {
+            console.log(
+              `✅ Acefone - SOFTPHONE call connected (ID mismatch but phone matches): ${callId}`
+            );
+            // Update to the new call ID from Acefone
+            setActiveCallId(callId);
+            setCallDirection("outgoing");
+            if (data.customerNumber) {
+              setCurrentNumber(data.customerNumber);
+            }
+          } else {
+            console.log(
+              `✅ Acefone - Call IDs match! Outgoing call ${callId} is connected`
+            );
+          }
+
           setCallStatus(CALL_STATUS.CONNECTED);
           setUserInitiatedCall(false); // Reset flag when call connects
 
@@ -484,7 +532,7 @@ const DialerProvider = ({ children }) => {
           openCallRemarksForm();
         } else {
           console.log(
-            `❌ Acefone - Call ID mismatch: webhook="${callId}" vs active="${currentCallId}"`
+            `❌ Acefone - Call rejected: ID mismatch="${callId}" vs "${currentCallId}" AND phone mismatch`
           );
         }
       },
@@ -545,18 +593,52 @@ const DialerProvider = ({ children }) => {
         const callId = String(data.callId || data.CALL_ID);
         const currentCallId = String(activeCallId);
 
-        // Handle both cases: matching call ID OR no active call ID but user matches (softphone scenario)
-        if (callId === currentCallId || (!currentCallId && data.agentNumber)) {
+        // Handle multiple cases: matching call ID OR phone number matches (softphone scenario)
+        // Re-define normalizePhone here to avoid reference error
+        const normalizePhone = (phone) => {
+          if (!phone) return "";
+          let normalized = String(phone)
+            .replace(/[\s\-\+]/g, "")
+            .trim();
+          
+          // Remove common country codes (91 for India)
+          if (normalized.startsWith("91") && normalized.length === 12) {
+            normalized = normalized.substring(2); // Remove +91
+          }
+          
+          return normalized;
+        };
+        
+        const phoneMatches = data.agentNumber && normalizePhone(data.agentNumber) === normalizePhone(userData.EmployeePhone);
+        const shouldProcessCall = callId === currentCallId || phoneMatches;
+        
+        if (shouldProcessCall) {
           const status = data.status;
           
-          if (!currentCallId && data.agentNumber) {
+          // Handle softphone calls (different call ID but phone matches)
+          if (callId !== currentCallId && phoneMatches) {
+            console.log(
+              `📊 Acefone - Processing SOFTPHONE status update: ${status} (call ID different but phone matches)`
+            );
+            console.log(
+              `📊 Acefone - Updating activeCallId from ${currentCallId} to ${callId} for softphone call`
+            );
+            // Update to the new call ID from Acefone
+            setActiveCallId(callId);
+            setCallDirection("outgoing"); // Assume outgoing for softphone
+            if (data.customerNumber) {
+              setCurrentNumber(data.customerNumber);
+            }
+          } else if (!currentCallId && phoneMatches) {
             console.log(
               `📊 Acefone - Processing SOFTPHONE status update: ${status} (no active call ID, but user matches)`
             );
             // Set the call as active since it's for this user
             setActiveCallId(callId);
             setCallDirection("outgoing"); // Assume outgoing for softphone
-            setCurrentNumber(data.customerNumber);
+            if (data.customerNumber) {
+              setCurrentNumber(data.customerNumber);
+            }
           } else {
             console.log(
               `📊 Acefone - Processing status update for call ${callId}: ${status}`
@@ -574,12 +656,21 @@ const DialerProvider = ({ children }) => {
             }
             setCallStatus(CALL_STATUS.RINGING);
           } else if (status === "connected") {
-            // **NEW: Check if this is a stale event**
-            if (callStatus === CALL_STATUS.ENDED || hasFormBeenSubmitted) {
+            // **NEW: Check if this is a stale event, but be more lenient for softphone calls**
+            if (callStatus === CALL_STATUS.ENDED && hasFormBeenSubmitted && !phoneMatchesSoftphone) {
               console.log(
-                "🔍 Ignoring stale connected status - call already ended or form submitted"
+                "🔍 Ignoring stale connected status - call already ended and form submitted (non-softphone)"
               );
               return;
+            }
+            
+            // For softphone calls, allow processing even if form was submitted for a previous call
+            if (phoneMatchesSoftphone && (callStatus === CALL_STATUS.ENDED || hasFormBeenSubmitted)) {
+              console.log(
+                "✅ Processing softphone connected status despite previous form submission - new call detected"
+              );
+              // Reset the form submission flag for the new softphone call
+              setHasFormBeenSubmitted(false);
             }
 
             console.log("✅ Acefone - Call status connected, updating call state");
@@ -661,12 +752,10 @@ const DialerProvider = ({ children }) => {
               setCallStatus(CALL_STATUS.CONNECTED);
               setUserInitiatedCall(false);
               
-              // Set call start time
-              if (data.callStartTime && !callStartTime) {
-                const parsedTime = parseWebhookTime(data.callStartTime);
-                setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
-              } else if (data.agentConnectedTime && !callStartTime) {
-                const parsedTime = parseWebhookTime(data.agentConnectedTime);
+              // Set call start time - check multiple possible field names
+              if ((data.callStartTime || data.agentConnectedTime || data.startTime || data.connectedTime) && !callStartTime) {
+                const timeField = data.callStartTime || data.agentConnectedTime || data.startTime || data.connectedTime;
+                const parsedTime = parseWebhookTime(timeField);
                 setCallStartTime(parsedTime ? parsedTime.getTime() : Date.now());
               } else if (!callStartTime) {
                 setCallStartTime(Date.now());
@@ -905,27 +994,30 @@ const DialerProvider = ({ children }) => {
 
   // Handle incoming call status updates
   const handleIncomingCallStatus = (data) => {
-    const callId = data.callid || data.call_id || data.callId;
+    console.log("📞 ACEFONE Incoming call status:", data);
+    
     const eventType = data.event || data.eventType;
+    const callId = data.callid || data.call_id || data.callId || data.uuid;
+    const callerNumber = data.caller_display_number || data.caller_id_number;
 
-    if (callId !== activeCallId) return;
+    console.log("📞 ACEFONE Event details:", { eventType, callId, callerNumber });
 
     if (eventType === "oncallconnect") {
-      setCallStatus(CALL_STATUS.CONNECTED);
+      console.log("✅ ACEFONE - Incoming call connected, opening form directly");
+      
+      // Set basic call info for the form
+      setActiveCallId(callId);
+      setCallDirection("incoming");
+      setCurrentNumber(callerNumber);
       setCallStartTime(Date.now());
-      setIsIncomingCall(false);
-      stopIncomingCallTimer();
-      // Open form when incoming call connects
+      
+      // Open form immediately - no dialer display needed
+      console.log("📋 ACEFONE - Opening form for incoming call");
       openCallRemarksForm();
     } else if (eventType === "call_ended") {
-      console.log(`📱 Incoming call ended - calling handleCallEnd() and resetting dialer`);
-      handleCallEnd();
-      
-      // Reset dialer immediately for incoming call end events
-      setTimeout(() => {
-        console.log("🔄 Resetting dialer state after incoming call end");
-        resetCallState();
-      }, 1500);
+      console.log("📱 ACEFONE - Incoming call ended");
+      // Just reset state, no need to show anything in dialer
+      resetCallState();
     }
   };
 
@@ -2157,3 +2249,15 @@ const DialerProvider = ({ children }) => {
 };
 
 export default DialerProvider;
+
+
+
+
+
+
+
+
+
+
+
+
