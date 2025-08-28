@@ -4,7 +4,8 @@ import CallRemarksForm from "./CallRemarksForm";
 import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
-import { ChevronRight } from "lucide-react";
+import PhoneBook from "./PhoneBook"; // Import PhoneBook
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import UserContext from "../../context/UserContext";
 import axiosInstance from "../../library/axios";
 
@@ -303,6 +304,17 @@ const CallRemarksPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Floating button to open panel */}
+      {!showCustomerPanel && (
+        <button
+          onClick={() => setShowCustomerPanel(true)}
+          className="fixed top-1/2 right-0 transform -translate-y-1/2 bg-white p-2 rounded-l-md shadow-lg hover:bg-gray-100 transition-colors z-50 border-t border-l border-b border-gray-200"
+          aria-label="Open trader panel"
+        >
+          <ChevronLeft size={20} className="text-gray-600" />
+        </button>
+      )}
+
       {/* Main Content Area */}
       <div
         className={`flex-1 transition-all duration-300 ${
@@ -537,6 +549,31 @@ const CallRemarksPage = () => {
                     {callHistory.length}
                   </span>
                 )}
+                {callHistory.length > 0 && (
+                  <span className="ml-1 text-xs bg-blue-100 text-blue-800 px-1 rounded">
+                    {callHistory.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("phonebook")}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "phonebook"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Phone Book
+              </button>
+              <button
+                onClick={() => setActiveTab("phonebook")}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "phonebook"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Phone Book
               </button>
             </div>
           </div>
@@ -544,7 +581,8 @@ const CallRemarksPage = () => {
           {/* Panel Content */}
           <div className="flex-1 overflow-y-auto">
             {activeTab === "info" ? (
-              customerData ? (
+              <>
+                {customerData ? (
                 <CustomerInfoPanel
                   customerData={customerData}
                   phoneNumber={
@@ -590,6 +628,23 @@ const CallRemarksPage = () => {
                 </div>
               </div>
             )}
+            {activeTab === "history" && (
+              <>
+                {callHistory.length > 0 ? (
+                  <CustomerCallHistory
+                    callHistory={callHistory}
+                    phoneNumber={currentNumber}
+                  />
+                ) : (
+                  <div className="p-4 text-center">
+                    <div className="text-gray-500 text-sm">
+                      No call history available.
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {activeTab === "phonebook" && <PhoneBook isCompact={true} />}
           </div>
         </div>
       </div>

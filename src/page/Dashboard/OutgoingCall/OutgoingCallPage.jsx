@@ -1525,10 +1525,18 @@ const OutgoingCallPage = () => {
                                   : "bg-red-100 text-red-800"
                               }`}
                             >
-                              {call.callStatus ||
-                                (call.bDialStatus === ""
-                                  ? "No Status"
-                                  : call.bDialStatus)}
+                              {(call.bDialStatus === ""
+                                ? "No Status"
+                                : call.bDialStatus === "A party Disconnected"
+                                ? "Agent Disconnected"
+                                : call.bDialStatus) ||
+                              call.callStatus === "A party Disconnected"
+                                ? "Agent Disconnected"
+                                : call.callStatus
+                                ? call.callStatus === "not connected"
+                                  ? "Call failed"
+                                  : call.callStatus
+                                : "No Status"}
                             </span>
                           </div>
                         </td>

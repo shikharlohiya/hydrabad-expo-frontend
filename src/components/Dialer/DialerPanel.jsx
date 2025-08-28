@@ -17,6 +17,7 @@
 //   BellIcon,
 //   ArrowPathIcon,
 // } from "@heroicons/react/24/outline";
+// import { LiaWindowMinimize } from "react-icons/lia";
 // import useDialer from "../../hooks/useDialer";
 // import { CALL_STATUS } from "../../context/Providers/DialerProvider";
 
@@ -49,11 +50,13 @@
 //     isIncomingCall,
 //     incomingCallTimer,
 //     getAuthToken,
-//   } = useDialer();
+//     resetDialer, // Added this function for the reset button
+// } = useDialer();
 
 //   const [displayNumber, setDisplayNumber] = useState("");
 //   const [isRingingSoundEnabled, setIsRingingSoundEnabled] = useState(true);
 //   const [showError, setShowError] = useState(false);
+// const [showResetConfirmation, setShowResetConfirmation] = useState(false);
 
 //   // Conference call states
 //   const [isConferenceMode, setIsConferenceMode] = useState(false);
@@ -243,19 +246,49 @@
 //     }
 //   }, [displayNumber, initiateCall, contactName]);
 
-//   const handleEndCall = () => {
-//     [ringingAudioRef, dialToneAudioRef].forEach((ref) => {
-//       if (ref.current) {
-//         ref.current.pause();
-//         ref.current.currentTime = 0;
-//       }
-//     });
-//     endCall();
-//     setDisplayNumber("");
-//     setIsConferenceMode(false);
-//     setConferenceNumber("");
-//     setConferenceParticipants([]);
-//   };
+// const handleEndCall = () => {
+//   [ringingAudioRef, dialToneAudioRef].forEach((ref) => {
+//     if (ref.current) {
+//       ref.current.pause();
+//       ref.current.currentTime = 0;
+//     }
+//   });
+//   endCall();
+//   setDisplayNumber("");
+//   setIsConferenceMode(false);
+//   setConferenceNumber("");
+//   setConferenceParticipants([]);
+// };
+
+// // Reset dialer handler with confirmation
+// const handleResetDialerClick = () => {
+//   setShowResetConfirmation(true);
+// };
+
+// const handleConfirmReset = () => {
+//   // Stop all audio
+//   [ringingAudioRef, dialToneAudioRef, buttonClickAudioRef].forEach((ref) => {
+//     if (ref.current) {
+//       ref.current.pause();
+//       ref.current.currentTime = 0;
+//     }
+//   });
+
+//   // Reset local state
+//   setDisplayNumber("");
+//   setIsConferenceMode(false);
+//   setConferenceNumber("");
+//   setConferenceParticipants([]);
+//   setShowError(false);
+//   setShowResetConfirmation(false);
+
+//   // Call the main reset function from the hook
+//   resetDialer();
+// };
+
+// const handleCancelReset = () => {
+//   setShowResetConfirmation(false);
+// };
 
 //   const toggleConferenceMode = () => {
 //     setIsConferenceMode(!isConferenceMode);
@@ -411,38 +444,46 @@
 //             </h3>
 //           </div>
 
-//           <div className="flex items-center space-x-2">
-//             <button
-//               onClick={getAuthToken}
-//               className={`p-1.5 rounded-full transition-all duration-200 text-gray-600 hover:bg-white/60`}
-//               title="Refresh token"
-//             >
-//               <ArrowPathIcon className="w-4 h-4" />
-//             </button>
-//             <button
-//               onClick={toggleRingingSound}
-//               className={`p-1.5 rounded-full transition-all duration-200 ${
-//                 isRingingSoundEnabled
-//                   ? "text-gray-600 hover:bg-white/60"
-//                   : "text-gray-400 bg-gray-100/50"
-//               }`}
-//               title={isRingingSoundEnabled ? "Disable sound" : "Enable sound"}
-//             >
-//               {isRingingSoundEnabled ? (
-//                 <SpeakerWaveIcon className="w-4 h-4" />
-//               ) : (
-//                 <SpeakerXMarkIcon className="w-4 h-4" />
-//               )}
-//             </button>
-//             <button
-//               onClick={onClose}
-//               className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-white/60 transition-all duration-200"
-//             >
-//               <XMarkIcon className="w-4 h-4" />
-//             </button>
-//           </div>
-//         </div>
-//       </div>
+//     <div className="flex items-center space-x-2">
+//       <button
+//         onClick={getAuthToken}
+//         className={`p-1.5 rounded-full transition-all duration-200 text-gray-600 hover:bg-white/60`}
+//         title="Refresh token"
+//       >
+//         <ArrowPathIcon className="w-4 h-4" />
+//       </button>
+//       <button
+//         onClick={toggleRingingSound}
+//         className={`p-1.5 rounded-full transition-all duration-200 ${
+//           isRingingSoundEnabled
+//             ? "text-gray-600 hover:bg-white/60"
+//             : "text-gray-400 bg-gray-100/50"
+//         }`}
+//         title={isRingingSoundEnabled ? "Disable sound" : "Enable sound"}
+//       >
+//         {isRingingSoundEnabled ? (
+//           <SpeakerWaveIcon className="w-4 h-4" />
+//         ) : (
+//           <SpeakerXMarkIcon className="w-4 h-4" />
+//         )}
+//       </button>
+//       {/* Reset Dialer Button */}
+//       <button
+//         onClick={handleResetDialerClick}
+//         className="p-1.5 rounded-full transition-all duration-200 text-gray-600 hover:bg-red-50 hover:text-red-600"
+//         title="Reset dialer"
+//       >
+//         <XMarkIcon className="w-4 h-4" />
+//       </button>
+//       <button
+//         onClick={onClose}
+//         className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-white/60 transition-all duration-200"
+//       >
+//         <LiaWindowMinimize className="w-4 h-4" />
+//       </button>
+//     </div>
+//   </div>
+// </div>
 
 //       {/* Error Display */}
 //       {showError && lastError && (
@@ -456,6 +497,38 @@
 
 //       {/* Content */}
 //       <div className="p-4 space-y-4">
+//         {/* Reset Confirmation Dialog */}
+//         {showResetConfirmation && (
+//           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+//             <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm mx-4">
+//               <div className="flex items-center space-x-3 mb-4">
+//                 <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />
+//                 <h3 className="text-lg font-semibold text-gray-900">
+//                   Reset Dialer
+//                 </h3>
+//               </div>
+//               <p className="text-gray-600 mb-6">
+//                 This will end any active call and clear all dialer data. Are you
+//                 sure you want to continue?
+//               </p>
+//               <div className="flex space-x-3">
+//                 <button
+//                   onClick={handleCancelReset}
+//                   className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200"
+//                 >
+//                   Cancel
+//                 </button>
+//                 <button
+//                   onClick={handleConfirmReset}
+//                   className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200"
+//                 >
+//                   Reset
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
 //         {/* Number Display */}
 //         <div className="relative">
 //           <div
@@ -490,7 +563,7 @@
 //                 />
 //               )}
 
-//               {conferenceParticipants.length > 0 && !isConferenceMode && (
+// //               {conferenceParticipants.length > 0 && !isConferenceMode && (
 //                 <div className="text-xs text-gray-500 mt-1">
 //                   +{conferenceParticipants.length} participant
 //                   {conferenceParticipants.length > 1 ? "s" : ""}
@@ -545,8 +618,9 @@
 //           )}
 //         </div>
 
-//         {/* Incoming Call Interface - SIMPLIFIED */}
-//         {/* Incoming Call Interface - SIMPLIFIED */}
+{
+  /* Incoming Call Interface - SIMPLIFIED */
+}
 //         {shouldShowIncomingCallUI() && (
 //           <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
 //             <div className="flex items-center justify-center space-x-2 text-blue-600 mb-2">
@@ -554,49 +628,31 @@
 //               <span className="text-sm font-medium">Incoming Call</span>
 //             </div>
 
-//             {/* {contactName && (
-//               <div className="text-lg font-semibold text-gray-900 mb-1">
-//                 {contactName}
-//               </div>
-//             )} */}
-
 //             <div className="text-xs text-gray-500">
 //               Call will be handled automatically
 //             </div>
 //           </div>
 //         )}
 
-//         {/* Call Controls */}
-//         {isCallActive() && !shouldShowIncomingCallUI() && (
-//           <div className="flex justify-center space-x-3">
-//             {/* <button
-//               onClick={toggleMute}
-//               className={`p-2.5 rounded-full transition-all duration-200 ${
-//                 isMuted
-//                   ? "bg-red-500 text-white shadow-lg"
-//                   : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-//               }`}
-//               title={isMuted ? "Unmute" : "Mute"}
-//             >
-//               <MicrophoneIcon className="w-4 h-4" />
-//             </button> */}
-
-//             <button
-//               onClick={toggleHold}
-//               disabled={callStatus !== CALL_STATUS.CONNECTED}
-//               className={`p-2.5 rounded-full transition-all duration-200 ${
-//                 isOnHold
-//                   ? "bg-amber-500 text-white shadow-lg"
-//                   : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-//               } disabled:opacity-50 disabled:cursor-not-allowed`}
-//               title={isOnHold ? "Resume" : "Hold"}
-//             >
-//               {isOnHold ? (
-//                 <PlayIcon className="w-4 h-4" />
-//               ) : (
-//                 <PauseIcon className="w-4 h-4" />
-//               )}
-//             </button>
+// {/* Call Controls */}
+// {isCallActive() && !shouldShowIncomingCallUI() && (
+//   <div className="flex justify-center space-x-3">
+//     <button
+//       onClick={toggleHold}
+//       disabled={callStatus !== CALL_STATUS.CONNECTED}
+//       className={`p-2.5 rounded-full transition-all duration-200 ${
+//         isOnHold
+//           ? "bg-amber-500 text-white shadow-lg"
+//           : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+//       } disabled:opacity-50 disabled:cursor-not-allowed`}
+//       title={isOnHold ? "Resume" : "Hold"}
+//     >
+//       {isOnHold ? (
+//         <PlayIcon className="w-4 h-4" />
+//       ) : (
+//         <PauseIcon className="w-4 h-4" />
+//       )}
+//     </button>
 
 //             <button
 //               onClick={toggleConferenceMode}
@@ -698,50 +754,19 @@
 //           </div>
 //         )}
 
-//         {/* Outgoing Call Interface */}
-//         {shouldShowOutgoingCallUI() && (
-//           <div className="text-center space-y-3">
-//             <div className="text-sm text-gray-600 flex items-center justify-center space-x-2">
-//               <span>Calling {formatPhoneNumber(currentNumber)}</span>
-//               <ClockIcon className="w-4 h-4 animate-spin" />
-//             </div>
-//             {/* <button
-//               onClick={handleEndCall}
-//               className="px-6 py-3 rounded-2xl bg-red-500 text-white hover:bg-red-600 transition-all duration-200 shadow-lg flex items-center space-x-2 mx-auto"
-//             >
-//               <PhoneXMarkIcon className="w-5 h-5" />
-//               <span className="text-sm font-medium">End Call</span>
-//             </button> */}
-//           </div>
-//         )}
+// {/* Outgoing Call Interface */}
+// {shouldShowOutgoingCallUI() && (
+//   <div className="text-center space-y-3">
+//     <div className="text-sm text-gray-600 flex items-center justify-center space-x-2">
+//       <span>Calling {formatPhoneNumber(currentNumber)}</span>
+//       <ClockIcon className="w-4 h-4 animate-spin" />
+//     </div>
+//   </div>
+// )}
 
 //         {/* Connection Status Footer */}
 //         <div className="text-xs text-gray-500 text-center">
-//           {/* {connectionStatus === "connected" && bearerToken && (
-//             <span className="text-green-600">● Connected</span>
-//           )}
-//           {(connectionStatus === "connecting" ||
-//             connectionStatus === "reconnecting") && (
-//             <span className="text-yellow-600">● Connecting...</span>
-//           )}
-//           {connectionStatus === "error" && (
-//             <span className="text-red-600">● Connection Error</span>
-//           )}
-//           {!bearerToken && (
-//             <span className="text-red-600">● Authentication Required</span>
-//           )} */}
-
-//           {/* Debug info */}
-//           {/* {import.meta.NODE_ENV === "development" && (
-//             <div className="mt-1 text-xs text-gray-400 space-y-1">
-//               <div>Status: {callStatus}</div>
-//               <div>Incoming: {isIncomingCall ? "YES" : "NO"}</div>
-//               <div>Direction: {callDirection}</div>
-//               {activeCallId && (
-//                 <div>Call ID: {String(activeCallId).slice(-6)}</div>
-//               )}
-//             </div>
-//           )} */}
+//           {/* Footer content removed as per original code */}
 //         </div>
 //       </div>
 //     </div>
