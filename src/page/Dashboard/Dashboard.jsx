@@ -10,6 +10,8 @@ import ContactsPage from "./Contacts/ContactsPage";
 import ProfilePage from "./Profile/ProfilePage";
 import FollowUpPage from "./FollowUp/FollowUpPage";
 import UserSettings from "./UserSettings/UserSettings";
+import PhoneBook from "../../components/CallRemarks/PhoneBook";
+import TraderBusinessUpload from "../../components/TraderBusinessUpload";
 
 const Dashboard = () => {
   return (
@@ -26,9 +28,11 @@ const Dashboard = () => {
         {/* <Route path="call-history" element={<CallHistoryPage />} /> */}
         <Route path="follow-up" element={<FollowUpPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="phone-book" element={<PhoneBook />} />
 
         {/* admin routes */}
         <Route path="user-settings" element={<UserSettings />} />
+        <Route path="bulk-upload" element={<TraderBusinessUpload />} />
 
         {/* Redirect /dashboard/dashboard to /dashboard */}
         <Route

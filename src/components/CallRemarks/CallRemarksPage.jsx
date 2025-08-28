@@ -4,7 +4,8 @@ import CallRemarksForm from "./CallRemarksForm";
 import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
-import { ChevronRight } from "lucide-react";
+import PhoneBook from "./PhoneBook"; // Import PhoneBook
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import UserContext from "../../context/UserContext";
 import axiosInstance from "../../library/axios";
 
@@ -303,6 +304,17 @@ const CallRemarksPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Floating button to open panel */}
+      {!showCustomerPanel && (
+        <button
+          onClick={() => setShowCustomerPanel(true)}
+          className="fixed top-1/2 right-0 transform -translate-y-1/2 bg-white p-2 rounded-l-md shadow-lg hover:bg-gray-100 transition-colors z-50 border-t border-l border-b border-gray-200"
+          aria-label="Open trader panel"
+        >
+          <ChevronLeft size={20} className="text-gray-600" />
+        </button>
+      )}
+
       {/* Main Content Area */}
       <div
         className={`flex-1 transition-all duration-300 ${
@@ -383,7 +395,7 @@ const CallRemarksPage = () => {
                   />
 
                   {/* Toggle Panel Button */}
-                  {(customerData || callHistory.length > 0) && (
+                  {/* {(customerData || callHistory.length > 0) && (
                     <button
                       onClick={() => setShowCustomerPanel(!showCustomerPanel)}
                       className={`p-2 rounded-lg transition-colors ${
@@ -404,7 +416,7 @@ const CallRemarksPage = () => {
                         }`}
                       />
                     </button>
-                  )}
+                  )} */}
                 </div>
               </div>
 
@@ -538,58 +550,76 @@ const CallRemarksPage = () => {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setActiveTab("phonebook")}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "phonebook"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Phone Book
+              </button>
             </div>
           </div>
 
           {/* Panel Content */}
           <div className="flex-1 overflow-y-auto">
-            {activeTab === "info" ? (
-              customerData ? (
-                <CustomerInfoPanel
-                  customerData={customerData}
-                  phoneNumber={
-                    activeCallState?.customerNumber ||
-                    activeCallState?.callerNumber
-                  }
-                />
-              ) : hasSearched ? (
-                <div className="p-4 text-center">
-                  <div className="text-gray-500 text-sm">
-                    No customer information found for this number.
+            {activeTab === "info" && (
+              <>
+                {customerData ? (
+                  <CustomerInfoPanel
+                    customerData={customerData}
+                    phoneNumber={
+                      activeCallState?.customerNumber ||
+                      activeCallState?.callerNumber
+                    }
+                  />
+                ) : hasSearched ? (
+                  <div className="p-4 text-center">
+                    <div className="text-gray-500 text-sm">
+                      No customer information found for this number.
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      This might be a new customer or the number is not
+                      registered.
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    This might be a new customer or the number is not
-                    registered.
+                ) : (
+                  <div className="p-4 text-center">
+                    <div className="text-gray-500 text-sm">
+                      Search for customer information to view details
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4 text-center">
-                  <div className="text-gray-500 text-sm">
-                    Search for customer information to view details
-                  </div>
-                </div>
-              )
-            ) : callHistory.length > 0 ? (
-              <CustomerCallHistory
-                callHistory={callHistory}
-                phoneNumber={
-                  activeCallState?.customerNumber ||
-                  activeCallState?.callerNumber
-                }
-              />
-            ) : hasSearched ? (
-              <div className="p-4 text-center">
-                <div className="text-gray-500 text-sm">
-                  No call history found for this customer.
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 text-center">
-                <div className="text-gray-500 text-sm">
-                  Search for customer to view call history
-                </div>
-              </div>
+                )}
+              </>
             )}
+            {activeTab === "history" && (
+              <>
+                {callHistory.length > 0 ? (
+                  <CustomerCallHistory
+                    callHistory={callHistory}
+                    phoneNumber={
+                      activeCallState?.customerNumber ||
+                      activeCallState?.callerNumber
+                    }
+                  />
+                ) : hasSearched ? (
+                  <div className="p-4 text-center">
+                    <div className="text-gray-500 text-sm">
+                      No call history found for this customer.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 text-center">
+                    <div className="text-gray-500 text-sm">
+                      Search for customer to view call history
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {activeTab === "phonebook" && <PhoneBook isCompact={true} />}
           </div>
         </div>
       </div>

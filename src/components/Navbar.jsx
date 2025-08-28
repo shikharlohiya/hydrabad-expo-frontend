@@ -6,6 +6,8 @@ import { GiHamburgerMenu } from "react-icons/gi";
 import { LuContactRound } from "react-icons/lu";
 import { RiHistoryLine } from "react-icons/ri";
 import { GrUserSettings } from "react-icons/gr";
+import { MdOutlinePersonSearch } from "react-icons/md";
+import { FaUpload } from "react-icons/fa6";
 
 // navItems with role restrictions
 const navItems = [
@@ -20,6 +22,18 @@ const navItems = [
     label: "User Settings",
     icon: <GrUserSettings className="w-5 h-5" />,
     roles: [3],
+  },
+  {
+    to: "/dashboard/bulk-upload",
+    label: "Bulk Upload",
+    icon: <FaUpload className="w-5 h-5" />,
+    roles: [3],
+  },
+  {
+    to: "/dashboard/phone-book",
+    label: "Phone Book",
+    icon: <MdOutlinePersonSearch className="w-5 h-5" />,
+    roles: [1, 2, 3],
   },
   {
     to: "/dashboard/contacts",
