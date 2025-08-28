@@ -25,17 +25,12 @@ import {
 import moment from "moment-timezone";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
-import useDialer from "../../../hooks/useDialer";
+import { useCall } from "../../../hooks/useCall";
+// import useDialer from "../../../hooks/useDialer";
 
 const FollowUpPage = () => {
   const { userData } = useContext(UserContext);
-  const {
-    initiateCall,
-    canInitiateCall,
-    isCallActive,
-    callStatus,
-    setCurrentNumber,
-  } = useDialer();
+  const { initiateCall } = useCall();
 
   // Role-based management: Check if user is manager (EmployeeRole = 2)
   const isManager = userData?.EmployeeRole === 2;
@@ -302,8 +297,7 @@ const FollowUpPage = () => {
       console.log(`📞 Initiating call to ${phoneNumber} for ${traderName}`);
 
       // Set the current number first, then initiate call
-      setCurrentNumber(phoneNumber);
-      initiateCall(phoneNumber, { name: traderName });
+      initiateCall(phoneNumber);
 
       console.log("✅ Call initiated");
     } else {

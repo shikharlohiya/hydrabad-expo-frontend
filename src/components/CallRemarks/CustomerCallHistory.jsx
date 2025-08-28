@@ -11,6 +11,19 @@ import {
 } from "lucide-react";
 
 const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
+  // Create unique key for each call record
+  const getUniqueKey = (call, index) => {
+    const keyParts = [
+      call.id || call.CallId || "",
+      call.startTime || "",
+      call.agentId || call.agent || "",
+      call.customerNumber || "",
+      call.duration || "",
+      index,
+    ];
+    return keyParts.join("-");
+  };
+
   const getCallTypeColor = (type) => {
     switch (type?.toLowerCase()) {
       case "inbound":
@@ -147,7 +160,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
       <div className="space-y-3">
         {callHistory.map((call, index) => (
           <div
-            key={call.id || call.CallId || index}
+            key={getUniqueKey(call, index)}
             className="border border-gray-200 rounded-lg bg-white p-3 hover:shadow-sm transition-shadow"
           >
             {/* Call Header */}
@@ -193,7 +206,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
                 )}
               </div>
 
-              {/* Call ID */}
+              {/* Call ID - Uncomment if needed */}
               {/* {(call.id || call.CallId) && (
                 <span className="text-xs text-gray-500 font-mono">
                   #{call.id || call.CallId}
@@ -203,7 +216,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
 
             {/* Call Details */}
             <div className="space-y-1">
-              {/* Agent Information */}
+              {/* Agent Information - Uncomment if needed */}
               {/* {call.agent && (
                 <div className="flex items-center space-x-2 text-xs text-gray-600">
                   <User className="w-3 h-3" />
@@ -215,7 +228,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
                 </div>
               )} */}
 
-              {/* Phone Numbers */}
+              {/* Phone Numbers - Uncomment if needed */}
               {/* <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                 {call.customerNumber && (
                   <div>
@@ -249,7 +262,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
                 </div>
               )}
 
-              {/* Voice Recording */}
+              {/* Voice Recording - Uncomment if needed */}
               {/* {call.voiceRecording && call.voiceRecording !== "No Voice" && (
                 <div className="text-xs text-gray-600">
                   <span className="font-medium">Recording:</span>{" "}
@@ -264,7 +277,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
                   <span className="text-green-600 ml-1">Completed</span>
                 </div>
               )}
-              {call.formDetail && (
+              {call.formDetail && call.formDetail.remarks && (
                 <div className="text-xs text-gray-600">
                   <span className="font-medium">Remark:</span>
                   <span className="text-black ml-1">
@@ -273,7 +286,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
                 </div>
               )}
 
-              {/* Legacy fields for backward compatibility */}
+              {/* Legacy fields for backward compatibility - Uncomment if needed */}
               {/* {(call.category || call.subject) && (
                 <div className="text-xs text-gray-600">
                   <span className="font-medium">Category:</span>{" "}
@@ -289,7 +302,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
               )} */}
             </div>
 
-            {/* Additional Info */}
+            {/* Additional Info - Uncomment if needed */}
             {/* {(call.satisfaction || call.priority) && (
               <div className="mt-2 pt-2 border-t border-gray-100">
                 <div className="flex items-center justify-between text-xs">

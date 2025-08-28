@@ -1,14 +1,14 @@
-import { useContext } from "react";
-import DialerContext from "../context/DialerContext";
+// import { useContext } from "react";
+// import DialerContext from "../context/DialerContext";
 
-const useDialer = () => {
-    const context = useContext(DialerContext);
+// const useDialer = () => {
+//     const context = useContext(DialerContext);
 
-    if (!context) {
-        throw new Error('useDialer must be used within a DialerProvider');
-    }
+//     if (!context) {
+//         throw new Error('useDialer must be used within a DialerProvider');
+//     }
 
-    return context;
-};
+//     return context;
+// };
 
-export default useDialer;
+// export default useDialer;

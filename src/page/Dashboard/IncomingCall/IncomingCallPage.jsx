@@ -25,18 +25,12 @@ import {
 } from "@heroicons/react/24/outline";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
-import useDialer from "../../../hooks/useDialer";
+import { useCall } from "../../../hooks/useCall";
 
 const IncomingCallPage = () => {
   const location = useLocation();
   const { userData } = useContext(UserContext);
-  const {
-    initiateCall,
-    canInitiateCall,
-    isCallActive,
-    callStatus,
-    setCurrentNumber,
-  } = useDialer();
+  const { initiateCall } = useCall();
 
   // Role-based management: Check if user is manager (EmployeeRole = 2)
   const isManager = userData?.EmployeeRole === 2;
@@ -547,8 +541,7 @@ const IncomingCallPage = () => {
       console.log(`📞 Initiating callback to ${phoneNumber} for ${callerName}`);
 
       // Set the current number first, then initiate call
-      setCurrentNumber(phoneNumber);
-      initiateCall(phoneNumber, { name: callerName });
+      initiateCall(phoneNumber);
 
       console.log("✅ Callback call initiated");
     } else {

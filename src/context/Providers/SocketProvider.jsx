@@ -12,7 +12,6 @@ export const CONNECTION_STATUS = {
 };
 
 const SocketProvider = ({ children }) => {
-  // const baseURL = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "");
   const baseURL = "https://crm-trader-api.abisexport.com/";
 
   // Connection state
@@ -72,7 +71,6 @@ const SocketProvider = ({ children }) => {
 
       const serverUrl = baseURL || "http://localhost:5000";
       console.log("🌐 SocketProvider - Connecting to server:", serverUrl);
-      console.log("⚙️ SocketProvider - Socket config:", socketConfig);
 
       const newSocket = io(serverUrl, socketConfig);
       socketRef.current = newSocket;
@@ -101,11 +99,6 @@ const SocketProvider = ({ children }) => {
 
       newSocket.on("connect_error", (error) => {
         console.error("❌ SocketProvider - Connection error:", error);
-        console.log("🔍 SocketProvider - Error details:", {
-          message: error.message,
-          type: error.type,
-          description: error.description,
-        });
         setConnectionStatus(CONNECTION_STATUS.ERROR);
         setLastError(`Connection failed: ${error.message}`);
         handleReconnection();
@@ -148,7 +141,7 @@ const SocketProvider = ({ children }) => {
         setLastError("Unable to reconnect to server. Please refresh the page.");
       });
 
-      // Call-specific event handlers
+      // Setup call event listeners
       setupCallEventListeners(newSocket);
 
       console.log("🔗 SocketProvider - Attempting to connect...");
@@ -163,22 +156,26 @@ const SocketProvider = ({ children }) => {
     }
   };
 
-  // Setup call event listeners
+  // Setup call event listeners - Updated for new events
   const setupCallEventListeners = (socket) => {
     const callEvents = [
-      "call-initiated",
-      "call-status-update",
-      "call-connected", // Acefone connected event from webhook
-      "call-disconnected", // Acefone disconnected event from webhook
-      "call-hold-status",
-      "call-ended", // Keep for backward compatibility
-      "call-failed",
-      "call-error",
-      "incomingCall",
-      "incomingCallStatus",
-      "incomingCallCdr",
-      "incomingCallEnded",
-      "callStatusUpdate", // Keep for backward compatibility
+      // New standardized events
+      "callConnected", // Outgoing calls connected
+      "callDisconnected", // Any call disconnected
+      "incomingCallConnected", // Incoming calls connected
+
+      // Legacy events (keep for backward compatibility)
+      // "call-initiated",
+      // "call-status-update",
+      // "call-hold-status",
+      // "call-ended",
+      // "call-failed",
+      // "call-error",
+      // "incomingCall",
+      // "incomingCallStatus",
+      // "incomingCallCdr",
+      // "incomingCallEnded",
+      // "callStatusUpdate",
     ];
 
     console.log(
@@ -192,19 +189,23 @@ const SocketProvider = ({ children }) => {
 
         const handlers = callEventHandlersRef.current;
         const handlerMap = {
-          "call-initiated": "onCallInitiated",
-          "call-status-update": "onCallStatusUpdate",
-          "call-connected": "onCallConnected", // Maps to your new handler
-          "call-disconnected": "onCallDisconnected", // Maps to your new handler
-          "call-hold-status": "onCallHoldStatus",
-          "call-ended": "onCallEnded", // Legacy
-          "call-failed": "onCallFailed",
-          "call-error": "onCallError",
-          incomingCall: "onIncomingCall",
-          incomingCallStatus: "incomingCallStatus",
-          incomingCallCdr: "incomingCallCdr",
-          incomingCallEnded: "onIncomingCallEnded",
-          callStatusUpdate: "onCallStatusUpdate", // Legacy
+          // New standardized event mappings
+          callConnected: "onCallConnected",
+          callDisconnected: "onCallDisconnected",
+          incomingCallConnected: "onIncomingCallConnected",
+
+          // Legacy event mappings
+          // "call-initiated": "onCallInitiated",
+          // "call-status-update": "onCallStatusUpdate",
+          // "call-hold-status": "onCallHoldStatus",
+          // "call-ended": "onCallEnded",
+          // "call-failed": "onCallFailed",
+          // "call-error": "onCallError",
+          // incomingCall: "onIncomingCall",
+          // incomingCallStatus: "onIncomingCallStatus",
+          // incomingCallCdr: "onIncomingCallCdr",
+          // incomingCallEnded: "onIncomingCallEnded",
+          // callStatusUpdate: "onCallStatusUpdate",
         };
 
         const handlerName = handlerMap[eventName];
@@ -212,7 +213,14 @@ const SocketProvider = ({ children }) => {
           console.log(
             `🎯 SocketProvider - Calling handler '${handlerName}' for event '${eventName}'`
           );
-          handlers[handlerName](data);
+          try {
+            handlers[handlerName](data);
+          } catch (error) {
+            console.error(
+              `❌ SocketProvider - Error in handler '${handlerName}':`,
+              error
+            );
+          }
         } else {
           console.warn(
             `⚠️ SocketProvider - No handler found for event '${eventName}' (expected handler: ${handlerName})`
@@ -324,7 +332,7 @@ const SocketProvider = ({ children }) => {
     }
   };
 
-  // Register call event handlers from DialerProvider
+  // Register call event handlers
   const registerCallEventHandlers = (handlers) => {
     console.log(
       "📋 SocketProvider - Registering call event handlers:",
@@ -363,7 +371,6 @@ const SocketProvider = ({ children }) => {
   // Helper functions
   const isConnected = () => {
     const connected = connectionStatus === CONNECTION_STATUS.CONNECTED;
-    console.log("❓ SocketProvider - isConnected check:", connected);
     return connected;
   };
 

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import useDialer from "../../hooks/useDialer";
 import useForm from "../../hooks/useForm";
-import { CALL_STATUS } from "../../context/Providers/DialerProvider";
 import CallRemarksForm from "./CallRemarksForm";
 import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
@@ -12,77 +10,88 @@ import axiosInstance from "../../library/axios";
 
 const CallRemarksPage = () => {
   const {
-    callStatus,
-    currentNumber,
-    handleRemarksSubmit,
-    callDirection,
-    callStartTime,
-    callDuration,
-    activeCallId,
-  } = useDialer();
-
-  const {
+    // Form state
     isFormOpen,
-    closeForm,
+    activeCallState,
     formData,
     updateFormData,
     submitForm,
+    closeForm,
     errors,
     formStatus,
     savedContactData,
   } = useForm();
 
-  // UI state
-  const [showCustomerPanel, setShowCustomerPanel] = useState(false);
-  const [activeTab, setActiveTab] = useState("info");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [submissionError, setSubmissionError] = useState(null);
-
-  // Customer search states
+  // Customer search state (moved from FormProvider to this component)
   const [customerData, setCustomerData] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showCustomerPanel, setShowCustomerPanel] = useState(false);
+  const [activeTab, setActiveTab] = useState("info");
 
-  // New customer form states - modified to store contact data
+  // UI state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submissionError, setSubmissionError] = useState(null);
+
+  // New customer form states
   const [newContactData, setNewContactData] = useState(null);
 
   const { userData } = useContext(UserContext);
 
-  const isCallEnded =
-    callStatus === CALL_STATUS.IDLE || callStatus === CALL_STATUS.ENDED;
+  // Check if call has ended
+  const isCallEnded = !activeCallState?.isActive;
 
-  // Use formData.CallId (which is preserved) instead of activeCallId (which gets reset)
+  // Current call details from activeCallState
   const currentCallDetails = {
-    CallId: formData?.CallId || activeCallId, // Prioritize preserved CallId from formData
+    CallId: activeCallState?.callId || formData?.CallId,
     EmployeeId: userData?.EmployeeId,
-    startTime: callStartTime,
-    number: currentNumber,
-    contactName: null,
-    callType: callDirection,
-    callDuration: callDuration,
+    startTime: activeCallState?.startTime,
+    number: activeCallState?.customerNumber || activeCallState?.callerNumber,
+    contactName: customerData?.name || null,
+    callType: activeCallState?.callDirection,
+    callDirection: activeCallState?.callDirection,
+    callDuration: activeCallState?.duration,
+    recordingUrl: activeCallState?.recordingUrl,
+    hangupCause: activeCallState?.hangupCause,
   };
 
   // Auto-search when component mounts with current number
   useEffect(() => {
-    if (currentNumber && !hasSearched) {
-      handleCustomerSearch(currentNumber);
+    const phoneNumber =
+      activeCallState?.customerNumber || activeCallState?.callerNumber;
+    if (phoneNumber && !hasSearched) {
+      handleCustomerSearch(phoneNumber);
     }
-  }, [currentNumber, hasSearched]);
+  }, [
+    activeCallState?.customerNumber,
+    activeCallState?.callerNumber,
+    hasSearched,
+  ]);
 
   // Reset search state when current number changes
   useEffect(() => {
-    if (currentNumber) {
+    const phoneNumber =
+      activeCallState?.customerNumber || activeCallState?.callerNumber;
+    if (phoneNumber) {
       setHasSearched(false);
       setCustomerData(null);
       setCallHistory([]);
-      setNewContactData(null); // Reset new contact data
+      setNewContactData(null);
+      setSearchError(null);
     }
-  }, [currentNumber]);
+  }, [activeCallState?.customerNumber, activeCallState?.callerNumber]);
 
-  // API call to get history (includes trader info and call records)
+  // Auto-show customer panel when search results are available
+  useEffect(() => {
+    if (customerData || callHistory.length > 0) {
+      setShowCustomerPanel(true);
+    }
+  }, [customerData, callHistory]);
+
+  // API call to get customer history and information
   const searchCustomerAPI = async (searchTerm) => {
     try {
       const response = await axiosInstance.get(
@@ -92,16 +101,14 @@ const CallRemarksPage = () => {
       if (response.data.success && response.data.data) {
         const historyData = response.data.data;
 
-        // Extract trader info - use trader_master or contact data
+        // Extract trader info
         const traderMaster = historyData.TraderInfo?.trader_master;
         const contactInfo = historyData.TraderInfo?.contact;
 
         let transformedCustomer = null;
 
-        // Prioritize trader_master, fallback to contact
         if (traderMaster || contactInfo) {
           const primaryData = traderMaster || contactInfo;
-          const secondaryData = traderMaster ? contactInfo : null;
 
           transformedCustomer = {
             id: primaryData.id,
@@ -121,7 +128,6 @@ const CallRemarksPage = () => {
             followUpDate: primaryData.follow_up_date,
             completedOn: primaryData.completed_on,
             agentId: primaryData.AgentId,
-            // Include both data sources for display
             traderMaster: traderMaster,
             contactInfo: contactInfo,
           };
@@ -134,7 +140,7 @@ const CallRemarksPage = () => {
             date: record.startTime,
             time: record.startTime,
             duration: record.duration,
-            type: record.type, // inbound/outbound
+            type: record.type,
             callType: record.type,
             status: record.status,
             agent: record.agent?.EmployeeName || "Unknown",
@@ -157,92 +163,94 @@ const CallRemarksPage = () => {
     } catch (error) {
       console.error("History API error:", error);
 
-      // Handle 404 - customer not found (this is expected behavior)
       if (error.response?.status === 404) {
         console.log(
-          "📝 Customer not found (404) - this is normal, showing add customer form"
+          "Customer not found (404) - this is normal for new customers"
         );
         return { customer: null, history: [] };
       }
 
-      // Handle other API errors that indicate the API response contains error info
       if (error.response?.data?.message) {
-        console.log(
-          "📝 API returned error message:",
-          error.response.data.message
-        );
+        console.log("API returned error message:", error.response.data.message);
         return { customer: null, history: [] };
       }
 
-      // Only throw for actual network/server errors
       throw new Error("Network error - please check your connection");
     }
   };
 
+  // Handle customer search
   const handleCustomerSearch = async (searchTerm) => {
     if (!searchTerm.trim()) {
-      setSearchError("Please enter a trader ID or phone number");
+      setSearchError("Please enter a customer ID or phone number");
       return;
     }
 
     setIsSearching(true);
     setSearchError(null);
-    setHasSearched(true);
-    setNewContactData(null); // Reset new contact data
+    setCustomerData(null);
+    setCallHistory([]);
 
     try {
-      const { customer, history } = await searchCustomerAPI(searchTerm.trim());
+      console.log("Searching for customer:", searchTerm);
 
-      if (customer) {
-        setCustomerData(customer);
-        setCallHistory(history);
-        setShowCustomerPanel(true);
-        setSearchError(null);
-        setNewContactData(null); // Clear new contact data if existing customer found
-      } else if (history && history.length > 0) {
-        setCustomerData(null);
-        setCallHistory(history);
-        setShowCustomerPanel(true);
-        setActiveTab("history");
-        setSearchError("Note: You can update the trader information below");
+      const result = await searchCustomerAPI(searchTerm);
+
+      if (result.customer) {
+        setCustomerData(result.customer);
+        console.log("Customer found:", result.customer);
       } else {
         setCustomerData(null);
+        console.log("No customer found for:", searchTerm);
+      }
+
+      if (result.history && result.history.length > 0) {
+        setCallHistory(result.history);
+        console.log("Call history found:", result.history.length, "records");
+      } else {
         setCallHistory([]);
-        setShowCustomerPanel(false);
-        setSearchError("Note: You can update the trader information below");
+      }
+
+      setHasSearched(true);
+
+      // Show customer panel if we have any results
+      if (result.customer || result.history.length > 0) {
+        setShowCustomerPanel(true);
       }
     } catch (error) {
-      console.error("Search error:", error);
+      console.error("Customer search error:", error);
       setSearchError(error.message);
       setCustomerData(null);
       setCallHistory([]);
-      setShowCustomerPanel(false);
-      setNewContactData(null);
+      setHasSearched(true);
     } finally {
       setIsSearching(false);
     }
   };
 
-  // Modified submit handler to include contact data
+  // Modified submit handler
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmissionError(null);
 
-      // If we have new contact data, include it in the form submission
+      // Include contact data if available
+      let contactDataToSubmit = null;
       if (newContactData) {
-        // Add contact fields to formData
-        updateFormData("Contact_Name", newContactData.Contact_Name);
-        updateFormData("Region", newContactData.Region);
-        updateFormData("Type", newContactData.Type);
+        contactDataToSubmit = {
+          name: newContactData.Contact_Name,
+          region: newContactData.Region,
+          type: newContactData.Type,
+        };
       } else if (customerData && customerData.name) {
-        // If we have existing customer data, include it
-        updateFormData("Contact_Name", customerData.name);
-        updateFormData("Region", customerData.region || "");
-        updateFormData("Type", "Trader");
+        contactDataToSubmit = {
+          name: customerData.name,
+          region: customerData.region || "",
+          type: customerData.accountType || "Trader",
+        };
       }
 
-      await submitForm();
+      await submitForm(contactDataToSubmit);
       setIsSubmitted(true);
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -268,8 +276,29 @@ const CallRemarksPage = () => {
     }
   };
 
+  // If form is not open, show a simple message
   if (!isFormOpen) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            No Active Call Form
+          </h2>
+          <p className="text-gray-600">
+            Forms will open automatically when calls are connected through
+            Acefone.
+          </p>
+          {activeCallState?.callId && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Call ID: {activeCallState.callId}
+                {activeCallState.isActive ? " (Active)" : " (Ended)"}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -292,16 +321,41 @@ const CallRemarksPage = () => {
                   <p className="text-sm text-gray-600 mt-1">
                     {isCallEnded
                       ? "Call has ended. Please complete the remarks form to continue."
-                      : "Please fill out the call details and remarks."}
+                      : "Call is active. Please fill out the call details and remarks."}
                   </p>
 
-                  {/* Call Status Indicator */}
-                  {isCallEnded && (
-                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        📞 Call disconnected - Form data will be saved once
-                        submitted
-                      </p>
+                  {/* Call Info Display */}
+                  {activeCallState?.callId && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-sm text-blue-800">
+                        <div>
+                          <strong>Call ID:</strong> {activeCallState.callId}
+                        </div>
+                        <div>
+                          <strong>Direction:</strong>{" "}
+                          {activeCallState.callDirection}
+                        </div>
+                        <div>
+                          <strong>Customer:</strong>{" "}
+                          {activeCallState.customerNumber ||
+                            activeCallState.callerNumber}
+                        </div>
+                        <div>
+                          <strong>Status:</strong>{" "}
+                          {activeCallState.isActive ? "Active" : "Ended"}
+                        </div>
+                        {activeCallState.duration && (
+                          <div>
+                            <strong>Duration:</strong>{" "}
+                            {activeCallState.duration}s
+                          </div>
+                        )}
+                        {customerData && (
+                          <div>
+                            <strong>Customer Name:</strong> {customerData.name}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -309,40 +363,50 @@ const CallRemarksPage = () => {
                   {submissionError && (
                     <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <p className="text-sm text-red-800">
-                        ❌ {submissionError}
+                        Error: {submissionError}
                       </p>
                     </div>
                   )}
                 </div>
 
                 {/* Customer Search Box */}
-                <div className="ml-4">
+                <div className="ml-4 flex items-center gap-2">
                   <CustomerSearchBox
                     onSearch={handleCustomerSearch}
                     isSearching={isSearching}
                     searchError={searchError}
-                    currentNumber={currentNumber}
+                    currentNumber={
+                      activeCallState?.customerNumber ||
+                      activeCallState?.callerNumber
+                    }
                     hasResults={customerData !== null}
                   />
+
+                  {/* Toggle Panel Button */}
+                  {(customerData || callHistory.length > 0) && (
+                    <button
+                      onClick={() => setShowCustomerPanel(!showCustomerPanel)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        showCustomerPanel
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                      title={
+                        showCustomerPanel
+                          ? "Hide customer panel"
+                          : "Show customer panel"
+                      }
+                    >
+                      <ChevronRight
+                        size={20}
+                        className={`transform transition-transform ${
+                          showCustomerPanel ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                  )}
                 </div>
               </div>
-              {/* {savedContactData && (
-                <div className="mt-6 mx-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
-                  <h1> Saved Trader-</h1>
-                  <div>
-                    <strong>Contact No:</strong> {savedContactData.Contact_no}
-                  </div>
-                  <div>
-                    <strong>Name:</strong> {savedContactData.Contact_Name}
-                  </div>
-                  <div>
-                    <strong>Type:</strong> {savedContactData.Type}
-                  </div>
-                  <div>
-                    <strong>Region:</strong> {savedContactData.Region}
-                  </div>
-                </div>
-              )} */}
 
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto">
@@ -368,24 +432,22 @@ const CallRemarksPage = () => {
                         Form Submitted Successfully!
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Your call remarks have been saved.{" "}
-                        {isCallEnded
-                          ? "You can now return to the dashboard."
-                          : "The call is still active."}
+                        Your call remarks have been saved.
                       </p>
-                      {isCallEnded && (
-                        <button
-                          onClick={() => closeForm()}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                        >
-                          Return to Dashboard
-                        </button>
-                      )}
+                      <button
+                        onClick={() => closeForm()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        Close Form
+                      </button>
                     </div>
                   </div>
                 ) : (
                   <CallRemarksForm
-                    currentNumber={currentNumber}
+                    currentNumber={
+                      activeCallState?.customerNumber ||
+                      activeCallState?.callerNumber
+                    }
                     currentCallDetails={currentCallDetails}
                     customerData={customerData}
                     formData={formData}
@@ -396,12 +458,13 @@ const CallRemarksPage = () => {
                     isSubmitting={isSubmitting}
                     isCallEnded={isCallEnded}
                     submissionError={submissionError}
-                    callDirection={callDirection}
-                    callStartTime={callStartTime}
-                    callDuration={callDuration}
-                    activeCallId={activeCallId}
+                    callDirection={activeCallState?.callDirection}
+                    callStartTime={activeCallState?.startTime}
+                    callDuration={activeCallState?.duration}
+                    activeCallId={activeCallState?.callId}
                     userData={userData}
                     searchError={searchError}
+                    onNewContactData={setNewContactData}
                   />
                 )}
               </div>
@@ -410,7 +473,7 @@ const CallRemarksPage = () => {
         </div>
       </div>
 
-      {/* Trader Info Sliding Panel */}
+      {/* Customer Info Sliding Panel */}
       <div
         className={`fixed top-16 right-0 bottom-0 w-[450px] bg-white shadow-lg border-l border-gray-200 transform transition-transform duration-300 ease-in-out z-40 ${
           showCustomerPanel ? "translate-x-0" : "translate-x-full"
@@ -421,16 +484,29 @@ const CallRemarksPage = () => {
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800">
-                Trader Information
+                Customer Information
               </h3>
               <button
                 onClick={() => setShowCustomerPanel(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                aria-label="Close trader panel"
+                aria-label="Close customer panel"
               >
                 <ChevronRight size={20} />
               </button>
             </div>
+
+            {/* Search Status */}
+            {isSearching && (
+              <div className="mt-2 text-sm text-blue-600">
+                Searching customer information...
+              </div>
+            )}
+
+            {searchError && (
+              <div className="mt-2 text-sm text-red-600">
+                Search Error: {searchError}
+              </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="flex mt-4 space-x-1 bg-gray-100 rounded-lg p-1">
@@ -442,7 +518,10 @@ const CallRemarksPage = () => {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Trader Info
+                Customer Info
+                {customerData && (
+                  <span className="ml-1 inline-flex items-center justify-center w-2 h-2 bg-green-500 rounded-full"></span>
+                )}
               </button>
               <button
                 onClick={() => setActiveTab("history")}
@@ -453,6 +532,11 @@ const CallRemarksPage = () => {
                 }`}
               >
                 Call History
+                {callHistory.length > 0 && (
+                  <span className="ml-1 text-xs bg-blue-100 text-blue-800 px-1 rounded">
+                    {callHistory.length}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -463,26 +547,46 @@ const CallRemarksPage = () => {
               customerData ? (
                 <CustomerInfoPanel
                   customerData={customerData}
-                  phoneNumber={currentNumber}
+                  phoneNumber={
+                    activeCallState?.customerNumber ||
+                    activeCallState?.callerNumber
+                  }
                 />
+              ) : hasSearched ? (
+                <div className="p-4 text-center">
+                  <div className="text-gray-500 text-sm">
+                    No customer information found for this number.
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    This might be a new customer or the number is not
+                    registered.
+                  </div>
+                </div>
               ) : (
                 <div className="p-4 text-center">
                   <div className="text-gray-500 text-sm">
-                    {hasSearched
-                      ? "No trader information found for this number."
-                      : "Search for trader information to view details"}
+                    Search for customer information to view details
                   </div>
                 </div>
               )
             ) : callHistory.length > 0 ? (
               <CustomerCallHistory
                 callHistory={callHistory}
-                phoneNumber={currentNumber}
+                phoneNumber={
+                  activeCallState?.customerNumber ||
+                  activeCallState?.callerNumber
+                }
               />
+            ) : hasSearched ? (
+              <div className="p-4 text-center">
+                <div className="text-gray-500 text-sm">
+                  No call history found for this customer.
+                </div>
+              </div>
             ) : (
               <div className="p-4 text-center">
                 <div className="text-gray-500 text-sm">
-                  No call history available.
+                  Search for customer to view call history
                 </div>
               </div>
             )}

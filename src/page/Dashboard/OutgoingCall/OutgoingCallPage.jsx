@@ -30,18 +30,12 @@ import {
 } from "@heroicons/react/24/outline";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
-import useDialer from "../../../hooks/useDialer";
+import { useCall } from "../../../hooks/useCall";
 
 const OutgoingCallPage = () => {
   const location = useLocation();
   const { userData } = useContext(UserContext);
-  const {
-    initiateCall,
-    canInitiateCall,
-    isCallActive,
-    callStatus,
-    setCurrentNumber,
-  } = useDialer();
+  const { initiateCall } = useCall();
 
   // ====== ROLE DETECTION ======
   // Determine if the current user is a manager (EmployeeRole = 2) or agent (EmployeeRole = 1)
@@ -790,8 +784,7 @@ const OutgoingCallPage = () => {
       );
 
       // Set the current number first, then initiate call
-      setCurrentNumber(phoneNumber);
-      initiateCall(phoneNumber, { name: traderName });
+      initiateCall(phoneNumber);
 
       console.log("✅ Retry call initiated");
     } else {

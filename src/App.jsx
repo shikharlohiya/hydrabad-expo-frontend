@@ -10,7 +10,7 @@ import AuthContext from "./context/AuthContext";
 import Login from "./page/Login";
 import NotFound from "./page/NotFound";
 import Dashboard from "./page/Dashboard/Dashboard";
-import DialerProvider from "./context/Providers/DialerProvider";
+// import DialerProvider from "./context/Providers/DialerProvider";
 import FormProvider from "./context/Providers/FormProvider";
 
 function App() {
@@ -47,9 +47,9 @@ function App() {
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 {/* DialerProvider wraps only the dashboard since it needs Socket and Form contexts */}
                 <FormProvider>
-                  <DialerProvider>
-                    <Dashboard />
-                  </DialerProvider>
+                  {/* <DialerProvider> */}
+                  <Dashboard />
+                  {/* </DialerProvider> */}
                 </FormProvider>
               </ProtectedRoute>
             }

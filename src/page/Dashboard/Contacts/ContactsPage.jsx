@@ -820,9 +820,9 @@ const ContactsPage = () => {
   const [employeeInfo, setEmployeeInfo] = useState(null);
 
   const { userData } = useContext(UserContext);
-  
+
   // State for managing current call (simplified for Acefone)
-  const [currentNumber, setCurrentNumber] = useState(null);
+  // const [currentNumber, setCurrentNumber] = useState(null);
 
   // Helper function to format date
   const formatDate = (dateString) => {
@@ -1097,8 +1097,11 @@ const ContactsPage = () => {
 
   // Handle call button click with Acefone API
   const handleCall = async (phoneNumber, traderName) => {
-    console.log("🔍 ACEFONE - handleCall called with:", { phoneNumber, traderName });
-    
+    console.log("🔍 ACEFONE - handleCall called with:", {
+      phoneNumber,
+      traderName,
+    });
+
     if (!phoneNumber || phoneNumber.trim() === "") {
       console.error("❌ No phone number provided");
       return;
@@ -1110,33 +1113,39 @@ const ContactsPage = () => {
     }
 
     try {
-      console.log(`📞 ACEFONE - Initiating call to ${phoneNumber} for ${traderName}`);
-      
+      console.log(
+        `📞 ACEFONE - Initiating call to ${phoneNumber} for ${traderName}`
+      );
+
       // Prepare Acefone API call
       const acefonePayload = {
         destination_number: phoneNumber.replace(/\s+/g, ""), // Remove any spaces
-        agent_number: userData.EmployeePhone.replace(/\s+/g, "") // Remove any spaces
+        agent_number: userData.EmployeePhone.replace(/\s+/g, ""), // Remove any spaces
       };
 
       console.log("📋 ACEFONE - API payload:", acefonePayload);
 
       // Call Acefone initiate-call API
-      const response = await axiosInstance.post("/initiate-call", acefonePayload);
+      const response = await axiosInstance.post(
+        "/initiate-call",
+        acefonePayload
+      );
 
       console.log("✅ ACEFONE - API Response:", response.data);
 
       if (response.data.success || response.status === 200) {
         console.log("✅ ACEFONE - Call initiated successfully");
-        
+
         // Update dialer state for UI consistency
-        setCurrentNumber(phoneNumber);
-        
+        // setCurrentNumber(phoneNumber);
+
         // Note: Form will open automatically when call connects via socket events
-        console.log("📋 ACEFONE - Call initiated - form will open when call connects via socket");
+        console.log(
+          "📋 ACEFONE - Call initiated - form will open when call connects via socket"
+        );
       } else {
         console.error("❌ ACEFONE - Call initiation failed:", response.data);
       }
-
     } catch (error) {
       console.error("❌ ACEFONE - Error initiating call:", error);
       console.error("❌ ACEFONE - Error details:", error.response?.data);
@@ -1148,85 +1157,6 @@ const ContactsPage = () => {
     ? userData.EmployeeRegion.split(",").map((r) => r.trim())
     : [];
   const uniqueStatuses = traderCounts?.statusCounts?.map((s) => s.status) || [];
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="animate-pulse">
-          {/* Header Skeleton with Shimmer */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="h-6 bg-gray-200 rounded w-48 mb-2 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="h-4 bg-gray-200 rounded w-64 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats Cards Skeleton */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-4">
-                    <div className="h-4 bg-gray-200 rounded w-20 mb-2 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="h-8 bg-gray-200 rounded w-12 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Table Skeleton */}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="p-6">
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="w-10 h-10 bg-gray-200 rounded-full relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="ml-4 flex-1">
-                      <div className="h-4 bg-gray-200 rounded w-32 mb-2 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                      </div>
-                      <div className="h-3 bg-gray-200 rounded w-24 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <style jsx>{`
-          @keyframes shimmer {
-            0% {
-              transform: translateX(-100%);
-            }
-            100% {
-              transform: translateX(100%);
-            }
-          }
-
-          .animate-shimmer {
-            animation: shimmer 1.5s infinite;
-          }
-        `}</style>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -1558,7 +1488,10 @@ const ContactsPage = () => {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={async () =>
-                            await handleCall(trader.Contact_no, trader.Trader_Name)
+                            await handleCall(
+                              trader.Contact_no,
+                              trader.Trader_Name
+                            )
                           }
                           disabled={!trader.Contact_no}
                           className={`inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white focus:outline-none focus:ring-1 focus:ring-offset-1 ${

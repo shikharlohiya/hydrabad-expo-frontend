@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import useDialer from "../../../hooks/useDialer";
+// import useDialer from "../../../hooks/useDialer";
 import UserContext from "../../../context/UserContext";
 import axiosInstance from "../../../library/axios";
 import moment from "moment-timezone";
@@ -23,6 +23,7 @@ import {
   PhoneArrowUpRightIcon,
   ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
+import { useCall } from "../../../hooks/useCall";
 
 // Configuration
 const SHOW_FLAG_BACKGROUND = false; // Set to true to show Indian flag animation background
@@ -57,7 +58,7 @@ const getInitialDateFilterState = () => {
 };
 
 const DashboardPage = () => {
-  const { initiateCall, setCurrentNumber } = useDialer();
+  const { initiateCall } = useCall();
   const { userData } = useContext(UserContext);
   const navigate = useNavigate();
 
@@ -150,46 +151,48 @@ const DashboardPage = () => {
       const { EmployeeRole, EmployeeId, EmployeePhone } = userData;
       const { startDate, endDate } = getDateRange();
 
-      let url = '';
+      let url = "";
       const params = new URLSearchParams();
-      params.append('startDate', startDate);
-      params.append('endDate', endDate);
+      params.append("startDate", startDate);
+      params.append("endDate", endDate);
 
       if (EmployeeRole === 1) {
-        url = '/reports/all/download';
-        params.append('agentNumber', EmployeePhone);
+        url = "/reports/all/download";
+        params.append("agentNumber", EmployeePhone);
       } else if (EmployeeRole === 3) {
-        url = '/reports/all/download';
+        url = "/reports/all/download";
       } else if (EmployeeRole === 2) {
         url = `/reports/manager-all-calls/${EmployeeId}/download`;
       } else {
-        setExportError('You do not have permission to export data.');
+        setExportError("You do not have permission to export data.");
         setIsExporting(false);
         return;
       }
 
       const response = await axiosInstance.get(url, {
         params,
-        responseType: 'blob',
+        responseType: "blob",
       });
 
       const blob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
       const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = downloadUrl;
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/[:.]/g, "-");
       link.download = `report-${timestamp}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
-
     } catch (error) {
-      console.error('Excel export failed:', error);
-      setExportError('Export failed. Please try again.');
+      console.error("Excel export failed:", error);
+      setExportError("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -899,8 +902,7 @@ const DashboardPage = () => {
       console.log("📋 Contact info being passed:", { name: traderName });
 
       // Set the current number first, then initiate call
-      setCurrentNumber(phoneNumber);
-      initiateCall(phoneNumber, { name: traderName });
+      initiateCall(phoneNumber);
 
       console.log("✅ Call initiated - form should open when call connects");
     } else {
@@ -960,8 +962,7 @@ const DashboardPage = () => {
       console.log(`📞 Calling ${phoneNumber} for ${traderName}`);
 
       // Set the current number first, then initiate call
-      setCurrentNumber(phoneNumber);
-      initiateCall(phoneNumber, { name: traderName });
+      initiateCall(phoneNumber);
 
       console.log("✅ Follow-up call initiated");
     } else {
