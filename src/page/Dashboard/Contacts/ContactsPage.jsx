@@ -27,10 +27,19 @@ const ContactsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("active");
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    const saved = sessionStorage.getItem("contactsRegion");
+    return saved || "";
+  });
+  const [selectedStatus, setSelectedStatus] = useState(() => {
+    const saved = sessionStorage.getItem("contactsStatus");
+    return saved || "active";
+  });
   const [campaigns, setCampaigns] = useState([]);
-  const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [selectedCampaign, setSelectedCampaign] = useState(() => {
+    const saved = sessionStorage.getItem("contactsCampaign");
+    return saved || "";
+  });
 
   // Modal state
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -360,18 +369,21 @@ const ContactsPage = () => {
 
   const handleStatusFilterChange = (status) => {
     setSelectedStatus(status);
+    sessionStorage.setItem("contactsStatus", status);
     setCurrentPage(1);
     sessionStorage.setItem("contactsPage", "1"); // Reset to page 1 when filtering
   };
 
   const handleRegionFilterChange = (region) => {
     setSelectedRegion(region);
+    sessionStorage.setItem("contactsRegion", region);
     setCurrentPage(1);
     sessionStorage.setItem("contactsPage", "1"); // Reset to page 1 when filtering
   };
 
   const handleCampaignChange = (campaign) => {
     setSelectedCampaign(campaign);
+    sessionStorage.setItem("contactsCampaign", campaign);
     setCurrentPage(1);
     sessionStorage.setItem("contactsPage", "1");
   };
