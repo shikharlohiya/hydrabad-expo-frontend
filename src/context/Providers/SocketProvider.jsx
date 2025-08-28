@@ -169,13 +169,13 @@ const SocketProvider = ({ children }) => {
       "call-initiated",
       "call-status-update",
       "call-connected", // Acefone connected event from webhook
-      "call-disconnected", // Acefone disconnected event from webhook  
+      "call-disconnected", // Acefone disconnected event from webhook
       "call-hold-status",
       "call-ended", // Keep for backward compatibility
       "call-failed",
       "call-error",
       "incomingCall",
-      "incomingCallStatus", 
+      "incomingCallStatus",
       "incomingCallCdr",
       "incomingCallEnded",
       "callStatusUpdate", // Keep for backward compatibility
