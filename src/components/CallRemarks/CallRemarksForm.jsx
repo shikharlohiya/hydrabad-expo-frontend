@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axiosInstance from "../../library/axios";
+import { User, Phone, MapPin } from "lucide-react";
+import useForm from "../../hooks/useForm";
+
+const getLocalDateTimeString = (date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 const CallRemarksForm = ({
   currentNumber,
   currentCallDetails,
   customerData,
-  orderData, // Add this prop for order data
   formData,
   updateFormData,
   errors,
@@ -14,57 +24,78 @@ const CallRemarksForm = ({
   isSubmitting,
   isCallEnded,
   submissionError,
-  // Add these props from your DialerProvider
   callDirection,
   callStartTime,
   callDuration,
   activeCallId,
   userData,
+  // New props for customer form
+  searchError,
 }) => {
-  // const [formData, setFormData] = useState({
-  //   CallId: "",
-  //   EmployeeId: "",
-  //   callDateTime: "",
-  //   callType: "",
-  //   supportTypeId: "",
-  //   inquiryNumber: "",
-  //   processTypeId: "",
-  //   queryTypeId: "",
-  //   remarks: "",
-  //   attachments: [],
-  //   status: "closed",
-  //   followUpDate: "",
-  // });
+  const { traderNotFoundData, setTraderNotFoundData, savedContactData } =
+    useForm();
 
   const [dropdownOptions, setDropdownOptions] = useState({
     supportTypes: [],
     processTypes: [],
     queryTypes: [],
+    problemTypes: [],
+    subProblemTypes: [],
   });
 
   const [loadingOptions, setLoadingOptions] = useState({
     supportTypes: false,
     processTypes: false,
     queryTypes: false,
+    problemTypes: false,
+    subProblemTypes: false,
   });
 
-  // const [errors, setErrors] = useState({});
+  // Common regions
+  const regions = [
+    { value: "AP00", label: "AP00" },
+    { value: "AP01", label: "AP01" },
+    { value: "AS00", label: "AS00" },
+    { value: "BH00", label: "BH00" },
+    { value: "CG00", label: "CG00" },
+    { value: "HP00", label: "HP00" },
+    { value: "GJ00", label: "GJ00" },
+    { value: "HR00", label: "HR00" },
+    { value: "JK00", label: "JK00" },
+    { value: "JH00", label: "JH00" },
+    { value: "KA00", label: "KA00" },
+    { value: "MP00", label: "MP00" },
+    { value: "MH00", label: "MH00" },
+    { value: "OD00", label: "OD00" },
+    { value: "PB00", label: "PB00" },
+    { value: "PB01", label: "PB01" },
+    { value: "PB02", label: "PB02" },
+    { value: "RJ00", label: "RJ00" },
+    { value: "TL00", label: "TL00" },
+    { value: "UP01", label: "UP01" },
+    { value: "UP00", label: "UP00" },
+    { value: "UP03", label: "UP03" },
+    { value: "UP02", label: "UP02" },
+    { value: "UK00", label: "UK00" },
+    { value: "WB01", label: "WB01" },
+    { value: "WB00", label: "WB00" },
+  ];
+
+  const typeOptions = [
+    { value: "Trader", label: "Trader" },
+    { value: "Non-Trader", label: "Non-Trader" },
+  ];
 
   // Auto-populate form data with actual call information
   useEffect(() => {
     const populateCallData = () => {
-      // Calculate call date and time
       const callDateTime = callStartTime
-        ? new Date(callStartTime).toISOString().slice(0, 16)
-        : new Date().toISOString().slice(0, 16);
+        ? getLocalDateTimeString(new Date(callStartTime))
+        : getLocalDateTimeString(new Date());
 
-      // Determine call type from direction
       const callType = callDirection === "incoming" ? "InBound" : "OutBound";
+      const inquiryNumber = currentNumber || "";
 
-      // Auto-populate inquiry number with phone number
-      const inquiryNumber = currentCallDetails?.number || "";
-
-      // Use updateFormData for each field instead of setFormData
       updateFormData(
         "CallId",
         activeCallId || currentCallDetails?.CallId || ""
@@ -80,92 +111,176 @@ const CallRemarksForm = ({
 
     populateCallData();
   }, [
-    // Only include primitive values and IDs to prevent infinite loops
     activeCallId,
     currentCallDetails?.CallId,
     currentCallDetails?.EmployeeId,
     userData?.EmployeeId,
     callStartTime,
     callDirection,
-    orderData?.orderId,
-    customerData?.accountId,
-    // Remove updateFormData from dependencies to prevent infinite loops
+    currentNumber,
+    updateFormData,
   ]);
+
+  useEffect(() => {
+    // When currentNumber changes, it signifies a new call, and we must reset the form state
+    // for the new contact, only keeping the new phone number.
+    // The subsequent effect for `customerData` will then populate the fields if an existing user is found.
+    setTraderNotFoundData((prev) => {
+      // If the number is new, reset everything but the phone number.
+      if (currentNumber && currentNumber !== prev.phoneNumber) {
+        return {
+          name: "",
+          region: "",
+          type: "Trader",
+          phoneNumber: currentNumber,
+        };
+      }
+
+      // If the number is the same, but we got savedContactData (e.g. on refresh), populate from it.
+      if (savedContactData && savedContactData.Contact_no === prev.phoneNumber) {
+        return {
+          ...prev,
+          name: savedContactData.Trader_Name || prev.name,
+          region: savedContactData.Region || prev.region,
+          type: savedContactData.Type || prev.type,
+        };
+      }
+
+      // Otherwise, don't change the state.
+      return prev;
+    });
+  }, [savedContactData, currentNumber, setTraderNotFoundData]);
+
+  // Pre-fill form with fetched customer data, prioritizing contact directory
+  useEffect(() => {
+    if (customerData) {
+      const { contactInfo, traderMaster, phoneNumber } = customerData;
+
+      // Prioritize contactInfo as the source of truth
+      if (contactInfo) {
+        setTraderNotFoundData((prev) => ({
+          ...prev,
+          name: contactInfo.Contact_Name || "",
+          region: contactInfo.Region || "",
+          type: contactInfo.Type || "Trader",
+          phoneNumber: phoneNumber || prev.phoneNumber,
+        }));
+      }
+      // Fallback to traderMaster if contactInfo is not available
+      else if (traderMaster) {
+        setTraderNotFoundData((prev) => ({
+          ...prev,
+          name: traderMaster.Trader_Name || "",
+          region: traderMaster.Region || "",
+          type: "Trader", // Master records are always 'Trader'
+          phoneNumber: phoneNumber || prev.phoneNumber,
+        }));
+      }
+    }
+  }, [customerData, setTraderNotFoundData]);
 
   // Fetch dropdown options from APIs
   useEffect(() => {
     const fetchDropdownOptions = async () => {
       // Fetch support types
-      try {
-        setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
-        const supportTypesResponse = await axiosInstance.get("/support-types");
-        if (supportTypesResponse.data.success) {
-          setDropdownOptions((prev) => ({
-            ...prev,
-            supportTypes: supportTypesResponse.data.data,
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching support types:", error);
-      } finally {
-        setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
-      }
+      // try {
+      //   setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
+      //   const supportTypesResponse = await axiosInstance.get("/support-types");
+      //   if (supportTypesResponse.data.success) {
+      //     setDropdownOptions((prev) => ({
+      //       ...prev,
+      //       supportTypes: supportTypesResponse.data.data,
+      //     }));
+      //   }
+      // } catch (error) {
+      //   console.error("Error fetching support types:", error);
+      // } finally {
+      //   setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
+      // }
 
-      // Fetch process types
-      try {
-        setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
-        const processTypesResponse = await axiosInstance.get("/process-types");
-        if (processTypesResponse.data.success) {
-          setDropdownOptions((prev) => ({
-            ...prev,
-            processTypes: processTypesResponse.data.data,
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching process types:", error);
-      } finally {
-        setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
-      }
+      // // Fetch process types
+      // try {
+      //   setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
+      //   const processTypesResponse = await axiosInstance.get("/process-types");
+      //   if (processTypesResponse.data.success) {
+      //     setDropdownOptions((prev) => ({
+      //       ...prev,
+      //       processTypes: processTypesResponse.data.data,
+      //     }));
+      //   }
+      // } catch (error) {
+      //   console.error("Error fetching process types:", error);
+      // } finally {
+      //   setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
+      // }
 
-      // Fetch query types
+      // // Fetch query types
+      // try {
+      //   setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
+      //   const queryTypesResponse = await axiosInstance.get("/query-types");
+      //   if (queryTypesResponse.data.success) {
+      //     setDropdownOptions((prev) => ({
+      //       ...prev,
+      //       queryTypes: queryTypesResponse.data.data,
+      //     }));
+      //   }
+      // } catch (error) {
+      //   console.error("Error fetching query types:", error);
+      // } finally {
+      //   setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
+      // }
+      // Fetch problem types
       try {
-        setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
-        const queryTypesResponse = await axiosInstance.get("/query-types");
-        if (queryTypesResponse.data.success) {
+        setLoadingOptions((prev) => ({ ...prev, problemTypes: true }));
+        const problemTypesResponse = await axiosInstance.get("/problem-types");
+        if (problemTypesResponse.data.success) {
           setDropdownOptions((prev) => ({
             ...prev,
-            queryTypes: queryTypesResponse.data.data,
+            problemTypes: problemTypesResponse.data.data,
           }));
         }
       } catch (error) {
-        console.error("Error fetching query types:", error);
+        console.error("Error fetching problem types:", error);
       } finally {
-        setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
+        setLoadingOptions((prev) => ({ ...prev, problemTypes: false }));
       }
     };
 
     fetchDropdownOptions();
   }, []);
 
-  const formatDuration = (seconds) => {
-    if (!seconds) return "00:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  // Fetch sub-problem types when problemId changes
+  useEffect(() => {
+    const fetchSubProblemTypes = async () => {
+      // Reset sub-problem types if no problem is selected
+      if (!formData.problemId) {
+        setDropdownOptions((prev) => ({ ...prev, subProblemTypes: [] }));
+        return;
+      }
 
-  const formatDateTime = (dateTime) => {
-    if (!dateTime) return "";
-    const date = new Date(dateTime);
-    return date.toLocaleString();
-  };
+      try {
+        setLoadingOptions((prev) => ({ ...prev, subProblemTypes: true }));
+        const response = await axiosInstance.get(
+          `/sub-problem-types?problemId=${formData.problemId}`
+        );
+        if (response.data.success) {
+          setDropdownOptions((prev) => ({
+            ...prev,
+            subProblemTypes: response.data.data,
+          }));
+        } else {
+          setDropdownOptions((prev) => ({ ...prev, subProblemTypes: [] }));
+        }
+      } catch (error) {
+        console.error("Error fetching sub-problem types:", error);
+        setDropdownOptions((prev) => ({ ...prev, subProblemTypes: [] }));
+      } finally {
+        setLoadingOptions((prev) => ({ ...prev, subProblemTypes: false }));
+      }
+    };
 
-  const callTypes = [
-    { value: "InBound", label: "Inbound Call" },
-    { value: "OutBound", label: "Outbound Call" },
-  ];
+    fetchSubProblemTypes();
+  }, [formData.problemId]);
 
   const statusOptions = [
     { value: "closed", label: "Closed" },
@@ -181,77 +296,66 @@ const CallRemarksForm = ({
     // Clear follow-up date if status is changed to closed
     if (name === "status" && value === "closed") {
       updateFormData("followUpDate", "");
+    } else if (name === "status" && value === "open") {
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      updateFormData("followUpDate", getLocalDateTimeString(nextWeek));
     }
   };
 
-  // Handle multiple file selection
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    updateFormData("attachments", files);
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Validate auto-populated fields exist
-    // if (!formData.CallId) {
-    //   newErrors.CallId = "Call ID is required";
-    // }
-
-    if (!formData.EmployeeId) {
-      newErrors.EmployeeId = "Employee ID is required";
-    }
-
-    if (!formData.callDateTime) {
-      newErrors.callDateTime = "Call date and time is required";
-    }
-
-    // Validate user input fields
-    if (!formData.supportTypeId) {
-      newErrors.supportTypeId = "Support type is required";
-    }
-
-    if (!formData.processTypeId) {
-      newErrors.processTypeId = "Process type is required";
-    }
-
-    if (!formData.queryTypeId) {
-      newErrors.queryTypeId = "Query type is required";
-    }
-
-    if (!formData.remarks.trim()) {
-      newErrors.remarks = "Remarks are required";
-    }
-
-    if (formData.status === "open" && !formData.followUpDate) {
-      newErrors.followUpDate = "Follow-up date is required for open tickets";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleCustomerInputChange = (e) => {
+    const { name, value } = e.target;
+    setTraderNotFoundData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Just call the parent's onSubmit
+    console.log("📝 Starting form submission...");
+
+    // Small delay to ensure state updates are applied
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    console.log("📝 Form data with customer info:", formData);
+
+    // Call parent's onSubmit which will handle the actual API call
     await onSubmit();
   };
 
   const handleCancel = () => {
-    // Only check for user-entered data (not auto-populated fields)
     const hasFormData =
       formData.supportTypeId ||
       formData.processTypeId ||
       formData.queryTypeId ||
-      formData.remarks.trim() ||
-      formData.attachments.length > 0 ||
+      formData.remarks?.trim() ||
+      formData.attachments?.length > 0 ||
       formData.status !== "closed" ||
-      formData.followUpDate;
+      formData.followUpDate ||
+      traderNotFoundData.name.trim();
 
     onCancel(hasFormData);
   };
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const day = now.getDate().toString().padStart(2, "0");
+  const hours = now.getHours().toString().padStart(2, "0");
+  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 7);
+  const maxYear = maxDate.getFullYear();
+  const maxMonth = (maxDate.getMonth() + 1).toString().padStart(2, "0");
+  const maxDay = maxDate.getDate().toString().padStart(2, "0");
+  const maxHours = maxDate.getHours().toString().padStart(2, "0");
+  const maxMinutes = maxDate.getMinutes().toString().padStart(2, "0");
+  const maxDateTime = `${maxYear}-${maxMonth}-${maxDay}T${maxHours}:${maxMinutes}`;
 
   return (
     <div className="relative">
@@ -275,8 +379,199 @@ const CallRemarksForm = ({
           </div>
         )}
 
+        {/* Customer Form - Only show if showNewCustomerForm is true */}
+        {
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                {searchError ? (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Save or Update Trader Information!
+                  </p>
+                ) : (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Enter The Trader Information Below
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Customer Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={traderNotFoundData.name}
+                  onChange={handleCustomerInputChange}
+                  className="w-full px-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400" />
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={traderNotFoundData.phoneNumber || ""}
+                    readOnly
+                    className="w-full pl-10 pr-3 py-2 border border-blue-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-text"
+                    placeholder="No phone number"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Region
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-400" />
+                  <select
+                    name="region"
+                    value={traderNotFoundData.region}
+                    onChange={handleCustomerInputChange}
+                    className="w-full pl-10 pr-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  >
+                    <option value="">Select region</option>
+                    {regions.map((region) => (
+                      <option key={region.value} value={region.value}>
+                        {region.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  Type
+                </label>
+                <select
+                  name="type"
+                  value={traderNotFoundData.type}
+                  onChange={handleCustomerInputChange}
+                  className="w-full px-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  {typeOptions.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Auto-save indicator */}
+            {traderNotFoundData.name.trim() && (
+              <div className="mt-4 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800 flex items-center">
+                  ✅ Customer details will be saved with call form
+                </p>
+              </div>
+            )}
+          </div>
+        }
+
+        {/* Problem Description Section */}
+        {traderNotFoundData.type !== "Non-Trader" && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+              Traders Inquiry
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Problem Type */}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  Problem Type *
+                </label>
+                <select
+                  name="problemId"
+                  value={formData.problemId || ""}
+                  onChange={handleInputChange}
+                  disabled={loadingOptions.problemTypes}
+                  className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
+                    errors.problemId ? "border-red-500" : "border-gray-300"
+                  } ${
+                    loadingOptions.problemTypes
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <option value="">
+                    {loadingOptions.problemTypes
+                      ? "Loading..."
+                      : "Select problem type"}
+                  </option>
+                  {dropdownOptions.problemTypes.map((type, index) => (
+                    <option key={`${type.id}-${index}`} value={type.id}>
+                      {type.problemName}
+                    </option>
+                  ))}
+                </select>
+                {errors.problemId && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.problemId}
+                  </p>
+                )}
+              </div>
+
+              {/* Sub Problem Type */}
+              {formData.problemId != 6 && (
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-2">
+                    Related Issue *
+                  </label>
+                  <select
+                    name="subProblemId"
+                    value={formData.subProblemId || ""}
+                    onChange={handleInputChange}
+                    disabled={
+                      loadingOptions.subProblemTypes || !formData.problemId
+                    }
+                    className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
+                      errors.subProblemId ? "border-red-500" : "border-gray-300"
+                    } ${
+                      loadingOptions.subProblemTypes || !formData.problemId
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                  >
+                    <option value="">
+                      {loadingOptions.subProblemTypes
+                        ? "Loading..."
+                        : "Select sub-problem type"}
+                    </option>
+                    {dropdownOptions.subProblemTypes.map((type, index) => (
+                      <option key={`${type.id}-${index}`} value={type.id}>
+                        {type.subProblemName}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.subProblemId && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.subProblemId}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Category Selection Section */}
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
             Category Selection
           </h3>
@@ -284,11 +579,11 @@ const CallRemarksForm = ({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-700 mb-2">
-                Support Type *
+                Support Type
               </label>
               <select
                 name="supportTypeId"
-                value={formData.supportTypeId}
+                value={formData.supportTypeId || ""}
                 onChange={handleInputChange}
                 disabled={loadingOptions.supportTypes}
                 className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
@@ -319,11 +614,11 @@ const CallRemarksForm = ({
 
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-700 mb-2">
-                Process Type *
+                Process Type
               </label>
               <select
                 name="processTypeId"
-                value={formData.processTypeId}
+                value={formData.processTypeId || ""}
                 onChange={handleInputChange}
                 disabled={loadingOptions.processTypes}
                 className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
@@ -354,11 +649,11 @@ const CallRemarksForm = ({
 
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-700 mb-2">
-                Query Type *
+                Query Type
               </label>
               <select
                 name="queryTypeId"
-                value={formData.queryTypeId}
+                value={formData.queryTypeId || ""}
                 onChange={handleInputChange}
                 disabled={loadingOptions.queryTypes}
                 className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
@@ -387,13 +682,13 @@ const CallRemarksForm = ({
               )}
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Call Details Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+          {/* <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
             Call Details
-          </h3>
+          </h3> */}
 
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-2">
@@ -401,7 +696,7 @@ const CallRemarksForm = ({
             </label>
             <textarea
               name="remarks"
-              value={formData.remarks}
+              value={formData.remarks || ""}
               onChange={handleInputChange}
               rows={4}
               className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors resize-vertical ${
@@ -416,66 +711,61 @@ const CallRemarksForm = ({
         </div>
 
         {/* Status Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
-            Status & Follow-up
-          </h3>
+        {traderNotFoundData.type !== "Non-Trader" && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+              Status & Follow-up
+            </h3>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Status *
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors"
-              >
-                {statusOptions.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Follow-up Date - Only show if status is open */}
-            {formData.status === "open" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-blue-800 mb-2">
-                  Follow-up Date *
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  Status *
                 </label>
-                <input
-                  type="date"
-                  name="followUpDate"
-                  value={formData.followUpDate}
+                <select
+                  name="status"
+                  value={formData.status || "closed"}
                   onChange={handleInputChange}
-                  min={new Date().toISOString().split("T")[0]}
-                  className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.followUpDate ? "border-red-500" : "border-blue-300"
-                  }`}
-                />
-                {errors.followUpDate && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.followUpDate}
-                  </p>
-                )}
+                  className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors"
+                >
+                  {statusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+
+              {/* Follow-up Date - Only show if status is open */}
+              {formData.status === "open" && (
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-blue-800 mb-2">
+                    Follow-up Date *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="followUpDate"
+                    value={formData.followUpDate || ""}
+                    onChange={handleInputChange}
+                    min={minDateTime}
+                    max={maxDateTime}
+                    className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                      errors.followUpDate ? "border-red-500" : "border-blue-300"
+                    }`}
+                  />
+                  {errors.followUpDate && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.followUpDate}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Form Actions */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-            className="px-6 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-2 sm:order-1"
-          >
-            Cancel
-          </button>
           <button
             type="button"
             onClick={handleSubmit}

@@ -1,197 +1,630 @@
 import React, { useState, useEffect, useContext } from "react";
-import {
-  PhoneIcon,
-  PhoneArrowUpRightIcon,
-  PhoneArrowDownLeftIcon,
-  ClockIcon,
-  UserGroupIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  ChartBarIcon,
-  CalendarIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  EllipsisVerticalIcon,
-  RocketLaunchIcon,
-  WrenchScrewdriverIcon,
-} from "@heroicons/react/24/outline";
-import useDialer from "../../../hooks/useDialer";
+import { useNavigate } from "react-router-dom";
+// import useDialer from "../../../hooks/useDialer";
 import UserContext from "../../../context/UserContext";
 import axiosInstance from "../../../library/axios";
+import moment from "moment-timezone";
+
+import LoadingSkeleton from "./components/LoadingSkeleton";
+import ErrorDisplay from "./components/ErrorDisplay";
+import DashboardHeader from "./components/DashboardHeader";
+import StatsCards from "./components/StatsCards";
+import RecentCalls from "./components/RecentCalls";
+import FollowUps from "./components/FollowUps";
+import CallDetailModal from "./components/CallDetailModal";
+
+// Admin Components
+import AdminCharts from "./components/AdminCharts";
+import EmployeePerformanceCards from "./components/EmployeePerformanceCards";
+import EmployeeKPIDashboard from "./components/EmployeeKPIDashboard";
+
+import {
+  PhoneArrowDownLeftIcon,
+  PhoneArrowUpRightIcon,
+  ArrowDownTrayIcon,
+} from "@heroicons/react/24/outline";
+import { useCall } from "../../../hooks/useCall";
 
 // Configuration
-const COMING_SOON_MODE = false; // Set to true to show coming soon page
-const MOCK_MODE = true; // Set to false when API is ready
+const SHOW_FLAG_BACKGROUND = false; // Set to true to show Indian flag animation background
 
-// Mock data for testing (remove when API is ready)
-const mockCallStats = {
-  totalCalls: 127,
-  answeredCalls: 98,
-  missedCalls: 29,
-  avgCallDuration: "4:32",
-  totalTalkTime: "8h 45m",
-  pendingFollowUps: 12,
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
 };
 
-const mockRecentCalls = [
-  {
-    id: 1,
-    number: "+91 98765 43210",
-    customerName: "Rajesh Kumar",
-    type: "incoming",
-    status: "completed",
-    duration: "5:23",
-    callDateTime: "2024-12-20T10:30:00Z",
-    category: "Technical Support",
-    remarks: "Login issue resolved",
-  },
-  {
-    id: 2,
-    number: "+91 87654 32109",
-    customerName: "Priya Sharma",
-    type: "outgoing",
-    status: "completed",
-    duration: "3:45",
-    callDateTime: "2024-12-20T08:15:00Z",
-    category: "Sales Inquiry",
-    remarks: "Account upgrade discussion",
-  },
-  {
-    id: 3,
-    number: "+91 76543 21098",
-    customerName: null,
-    type: "incoming",
-    status: "missed",
-    duration: "0:00",
-    callDateTime: "2024-12-20T06:45:00Z",
-    category: "General",
-    remarks: null,
-  },
-  {
-    id: 4,
-    number: "+91 65432 10987",
-    customerName: "Amit Patel",
-    type: "outgoing",
-    status: "completed",
-    duration: "7:12",
-    callDateTime: "2024-12-19T14:22:00Z",
-    category: "Billing Issue",
-    remarks: "Fee structure clarification",
-  },
-  {
-    id: 5,
-    number: "+91 54321 09876",
-    customerName: "Sneha Reddy",
-    type: "incoming",
-    status: "completed",
-    duration: "2:34",
-    callDateTime: "2024-12-19T11:18:00Z",
-    category: "Account Management",
-    remarks: "Document verification completed",
-  },
-];
-
-const mockFollowUps = [
-  {
-    id: 1,
-    customerName: "Rajesh Kumar",
-    phoneNumber: "+91 98765 43210",
-    followUpDate: "2024-12-21",
-    priority: "High",
-    issue: "Trading platform login issue",
-    callId: "CALL001",
-    status: "pending",
-  },
-  {
-    id: 2,
-    customerName: "Priya Sharma",
-    phoneNumber: "+91 87654 32109",
-    followUpDate: "2024-12-22",
-    priority: "Medium",
-    issue: "Account verification documents",
-    callId: "CALL002",
-    status: "pending",
-  },
-  {
-    id: 3,
-    customerName: "Amit Patel",
-    phoneNumber: "+91 65432 10987",
-    followUpDate: "2024-12-23",
-    priority: "Low",
-    issue: "Fee structure inquiry",
-    callId: "CALL003",
-    status: "pending",
-  },
-];
+// Helper function to get initial date filter state from local storage
+const getInitialDateFilterState = () => {
+  try {
+    const savedFilter = localStorage.getItem("dashboardDateFilter");
+    if (savedFilter) {
+      const parsed = JSON.parse(savedFilter);
+      // Basic validation
+      if (parsed.dateFilter && parsed.customStartDate && parsed.customEndDate) {
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load date filter from local storage", error);
+    localStorage.removeItem("dashboardDateFilter");
+  }
+  // Default state if nothing is saved or data is corrupt
+  return {
+    dateFilter: "today",
+    customStartDate: getTodayDate(),
+    customEndDate: getTodayDate(),
+  };
+};
 
 const DashboardPage = () => {
-  const { callHistory, formatDuration } = useDialer();
+  const { initiateCall } = useCall();
   const { userData } = useContext(UserContext);
+  const navigate = useNavigate();
+
+  // Helper function to get yesterday's date in YYYY-MM-DD format
+  const getYesterdayDate = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString().split("T")[0];
+  };
+
+  // Helper function to get date N days ago in YYYY-MM-DD format
+  const getDateNDaysAgo = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date.toISOString().split("T")[0];
+  };
 
   // State management
-  const [selectedPeriod, setSelectedPeriod] = useState("today");
   const [searchTerm, setSearchTerm] = useState("");
   const [callStats, setCallStats] = useState(null);
   const [recentCalls, setRecentCalls] = useState([]);
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedRemarks, setExpandedRemarks] = useState(new Set());
+  const [selectedCallDetail, setSelectedCallDetail] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
 
-  // API Functions
-  const fetchCallStats = async (period = "today") => {
-    if (MOCK_MODE) {
-      return new Promise((resolve) => {
-        setTimeout(() => resolve(mockCallStats), 800);
-      });
+  // Admin-specific state
+  const [adminData, setAdminData] = useState({
+    callsPerRegion: null,
+    callsPerEmployee: null,
+    employeeKPIs: null,
+  });
+
+  // Enhanced Date Filter State - Initialized from local storage
+  const [initialFilterState] = useState(getInitialDateFilterState);
+  const [dateFilter, setDateFilter] = useState(initialFilterState.dateFilter);
+  const [customStartDate, setCustomStartDate] = useState(
+    initialFilterState.customStartDate
+  );
+  const [customEndDate, setCustomEndDate] = useState(
+    initialFilterState.customEndDate
+  );
+  const [showCustomDateRange, setShowCustomDateRange] = useState(
+    initialFilterState.dateFilter === "custom"
+  );
+
+  // Persist date filter to local storage whenever it changes
+  useEffect(() => {
+    try {
+      const filterState = {
+        dateFilter,
+        customStartDate,
+        customEndDate,
+      };
+      localStorage.setItem("dashboardDateFilter", JSON.stringify(filterState));
+    } catch (error) {
+      console.error("Failed to save date filter to local storage", error);
     }
+  }, [dateFilter, customStartDate, customEndDate]);
+
+  // Function to get date range based on filter selection
+  const getDateRange = () => {
+    const today = getTodayDate();
+
+    switch (dateFilter) {
+      case "today":
+        return { startDate: today, endDate: today };
+      case "yesterday": {
+        const yesterday = getYesterdayDate();
+        return { startDate: yesterday, endDate: yesterday };
+      }
+      case "week":
+        return { startDate: getDateNDaysAgo(7), endDate: today };
+      case "custom":
+        return { startDate: customStartDate, endDate: customEndDate };
+      default:
+        return { startDate: today, endDate: today };
+    }
+  };
+
+  const handleExcelExport = async () => {
+    setIsExporting(true);
+    setExportError(null);
 
     try {
-      const response = await axiosInstance.get("/dashboard/call-stats", {
+      const { EmployeeRole, EmployeeId, EmployeePhone } = userData;
+      const { startDate, endDate } = getDateRange();
+
+      let url = "";
+      const params = new URLSearchParams();
+      params.append("startDate", startDate);
+      params.append("endDate", endDate);
+
+      if (EmployeeRole === 1) {
+        url = "/reports/all/download";
+        params.append("agentNumber", EmployeePhone);
+      } else if (EmployeeRole === 3) {
+        url = "/reports/all/download";
+      } else if (EmployeeRole === 2) {
+        url = `/reports/manager-all-calls/${EmployeeId}/download`;
+      } else {
+        setExportError("You do not have permission to export data.");
+        setIsExporting(false);
+        return;
+      }
+
+      const response = await axiosInstance.get(url, {
+        params,
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/[:.]/g, "-");
+      link.download = `report-${timestamp}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      setExportError("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Function to validate custom date range (max 30 days)
+  const validateCustomDateRange = (startDate, endDate) => {
+    if (!startDate || !endDate) {
+      return false;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      alert("Please select valid dates.");
+      return false;
+    }
+
+    if (start > end) {
+      alert("Start date cannot be later than end date.");
+      // Reset end date to start date
+      setCustomEndDate(startDate);
+      return false;
+    }
+
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 30) {
+      alert(
+        "Custom date range cannot exceed 30 days. Please select a shorter range."
+      );
+      // Reset to a valid 30-day range
+      const maxEndDate = new Date(start);
+      maxEndDate.setDate(maxEndDate.getDate() + 30);
+      setCustomEndDate(maxEndDate.toISOString().split("T")[0]);
+      return false;
+    }
+
+    return true;
+  };
+
+  // Helper function to format duration from seconds to MM:SS or HH:MM format
+  const formatStatsDuration = (seconds) => {
+    if (!seconds || seconds === 0) return "0:00";
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+    }
+  };
+
+  // Admin API Functions
+  const fetchAdminCallsPerRegion = async () => {
+    try {
+      const { startDate, endDate } = getDateRange();
+
+      console.log("📊 Fetching admin calls per region with date range:", {
+        startDate,
+        endDate,
+        dateFilter,
+      });
+
+      const response = await axiosInstance.get(`/admin/calls-per-region`, {
         params: {
-          period,
-          employeeId: userData?.EmployeeId,
+          startDate: startDate,
+          endDate: endDate,
         },
       });
-      return response.data.success ? response.data.data : null;
+
+      console.log("📊 Admin calls per region API response:", response.data);
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        console.warn(
+          "⚠️ Admin calls per region API response structure unexpected:",
+          response.data
+        );
+        return null;
+      }
     } catch (error) {
-      console.error("Error fetching call stats:", error);
+      console.error("❌ Error fetching admin calls per region:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch call statistics"
+        error.response?.data?.message || "Failed to fetch calls per region"
       );
     }
   };
 
-  const fetchRecentCalls = async (period = "today", search = "") => {
-    if (MOCK_MODE) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          let filteredCalls = mockRecentCalls;
-          if (search) {
-            filteredCalls = mockRecentCalls.filter(
-              (call) =>
-                call.customerName
-                  ?.toLowerCase()
-                  .includes(search.toLowerCase()) ||
-                call.number.includes(search)
-            );
-          }
-          resolve(filteredCalls);
-        }, 600);
-      });
-    }
-
+  const fetchAdminCallsPerEmployee = async () => {
     try {
-      const response = await axiosInstance.get("/dashboard/recent-calls", {
+      const { startDate, endDate } = getDateRange();
+
+      console.log("📊 Fetching admin calls per employee with date range:", {
+        startDate,
+        endDate,
+        dateFilter,
+      });
+
+      const response = await axiosInstance.get(`/admin/calls-per-employee`, {
         params: {
-          period,
-          search,
-          employeeId: userData?.EmployeeId,
-          limit: 10,
+          startDate: startDate,
+          endDate: endDate,
         },
       });
-      return response.data.success ? response.data.data : [];
+
+      console.log("📊 Admin calls per employee API response:", response.data);
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        console.warn(
+          "⚠️ Admin calls per employee API response structure unexpected:",
+          response.data
+        );
+        return null;
+      }
     } catch (error) {
-      console.error("Error fetching recent calls:", error);
+      console.error("❌ Error fetching admin calls per employee:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch calls per employee"
+      );
+    }
+  };
+
+  const fetchAdminEmployeeKPIs = async () => {
+    try {
+      const { startDate, endDate } = getDateRange();
+
+      console.log("📊 Fetching admin employee KPIs with date range:", {
+        startDate,
+        endDate,
+        dateFilter,
+      });
+
+      const response = await axiosInstance.get(`/admin/employees-kpi`, {
+        params: {
+          startDate: startDate,
+          endDate: endDate,
+        },
+      });
+
+      console.log("📊 Admin employee KPIs API response:", response.data);
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        console.warn(
+          "⚠️ Admin employee KPIs API response structure unexpected:",
+          response.data
+        );
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error fetching admin employee KPIs:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch employee KPIs"
+      );
+    }
+  };
+
+  // API Functions
+  const fetchCallStats = async () => {
+    try {
+      const userRole = userData?.EmployeeRole;
+      const employeeId = userData?.EmployeeId;
+      const agentNumber = userData?.EmployeePhone;
+      const { startDate, endDate } = getDateRange();
+
+      console.log("📊 Fetching call stats with date range:", {
+        startDate,
+        endDate,
+        dateFilter,
+      });
+
+      // Check if user is admin (EmployeeRole = 3), manager (EmployeeRole = 2) or agent (EmployeeRole = 1)
+      if (userRole === 3) {
+        // Admin - fetch overall system statistics
+        console.log("📊 Fetching admin call stats");
+
+        const response = await axiosInstance.get("/calls/stats", {
+          params: {
+            startDate: startDate,
+            endDate: endDate,
+          },
+        });
+        console.log("📊 Admin stats API response:", response.data);
+
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        } else {
+          throw new Error("Failed to fetch admin call stats");
+        }
+      } else if (userRole === 2) {
+        // Manager - fetch combined statistics with date range
+        if (!employeeId) {
+          throw new Error("Manager ID not found. Please login again.");
+        }
+
+        console.log("📊 Fetching manager call stats for:", employeeId);
+
+        const response = await axiosInstance.get(
+          `/calls/manager-call-stats/${employeeId}`,
+          {
+            params: {
+              startDate: startDate,
+              endDate: endDate,
+            },
+          }
+        );
+        console.log("📊 Manager stats API response:", response.data);
+
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        } else {
+          throw new Error("Failed to fetch manager call stats");
+        }
+      } else {
+        // Agent - fetch individual agent statistics with date range
+        if (!agentNumber) {
+          throw new Error("Agent phone number not found. Please login again.");
+        }
+
+        console.log(
+          "📊 Fetching call stats for agent:",
+          agentNumber,
+          "Date range:",
+          startDate,
+          "to",
+          endDate
+        );
+
+        const params = {
+          startDate: startDate,
+          endDate: endDate,
+          agentNumber: agentNumber,
+        };
+
+        const response = await axiosInstance.get("/calls/stats", {
+          params,
+        });
+
+        console.log("📊 Agent stats API response:", response.data);
+
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        } else {
+          throw new Error("Failed to fetch agent call stats");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error fetching call stats:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch call stats"
+      );
+    }
+  };
+
+  const fetchRecentCalls = async (search = "") => {
+    try {
+      const userRole = userData?.EmployeeRole;
+      const employeeId = userData?.EmployeeId;
+      const agentNumber = userData?.EmployeePhone;
+      const { startDate, endDate } = getDateRange();
+
+      console.log("📞 Fetching recent calls with date range:", {
+        startDate,
+        endDate,
+        dateFilter,
+      });
+
+      // Determine API call based on user role
+      let response;
+
+      if (userRole === 3) {
+        // Admin - fetch all calls
+        console.log("📞 Fetching recent calls for admin");
+        response = await axiosInstance.get("/calls/recent-calls", {
+          params: {
+            startDate: startDate,
+            endDate: endDate,
+            ...(search && { search }),
+          },
+        });
+      } else if (userRole === 2) {
+        // Manager
+        if (!employeeId) {
+          throw new Error("Manager ID not found. Please login again.");
+        }
+        console.log("📞 Fetching recent calls for manager:", employeeId);
+        response = await axiosInstance.get(
+          `/calls/manager-recent-calls/${employeeId}`,
+          {
+            params: {
+              // managerId: employeeId,
+              startDate: startDate,
+              endDate: endDate,
+              ...(search && { search }),
+            },
+          }
+        );
+      } else {
+        // Agent
+        if (!agentNumber) {
+          throw new Error("Agent phone number not found. Please login again.");
+        }
+        console.log("📞 Fetching recent calls for agent:", agentNumber);
+        response = await axiosInstance.get("/calls/recent-calls", {
+          params: {
+            agentNumber: agentNumber,
+            startDate: startDate,
+            endDate: endDate,
+            ...(search && { search }),
+          },
+        });
+      }
+
+      console.log(
+        `📞 ${
+          userRole === 3 ? "Admin" : userRole === 2 ? "Manager" : "Agent"
+        } recent calls API response:`,
+        response.data
+      );
+
+      if (response.data.success && response.data.data?.records) {
+        // Transform the API data to match our component structure
+        const transformedCalls = response.data.data.records.map((call) => {
+          // Calculate duration in MM:SS format
+          const formatDuration = (seconds) => {
+            if (!seconds || seconds === 0) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, "0")}`;
+          };
+
+          // Determine call status based on duration and type
+          const getCallStatus = (call) => {
+            if (call.duration > 0) return "completed";
+            if (call.type === "inbound" && call.duration === 0) return "missed";
+            if (call.type === "outbound" && call.duration === 0)
+              return "failed";
+            return "completed";
+          };
+
+          // Get trader name from trader_master data (updated to use new API structure)
+          const customerName =
+            call.trader_master?.Trader_Name ||
+            call.trader_master?.Trader_business_Name ||
+            call.contact?.Contact_Name ||
+            call.contact?.Trader_Name ||
+            call.contact?.trader_name ||
+            call.contact?.name ||
+            null;
+
+          // Extract region information from trader_master (using new API structure)
+          const region =
+            call.trader_master?.Region ||
+            call.trader_master?.Zone ||
+            call.contact?.Region ||
+            call.contact?.Zone ||
+            call.contact?.zone ||
+            "Unknown";
+
+          // Get status from API (using the status field or derive from duration)
+          const callStatus = call.status || getCallStatus(call);
+
+          // Get remarks from formDetail
+          const remarks = call.formDetail?.remarks || null;
+
+          // Get agent information (for manager and admin view)
+          const agentName =
+            call.employee?.EmployeeName || call.agent?.EmployeeName || null;
+          const agentId =
+            call.employee?.EmployeeId || call.agent?.EmployeeId || null;
+
+          return {
+            id: call.CallId || `call_${Date.now()}_${Math.random()}`,
+            number: call.number || "Unknown",
+            customerName: customerName,
+            type: call.type === "inbound" ? "incoming" : "outgoing",
+            status: callStatus,
+            duration: formatDuration(call.duration),
+            callDateTime: call.startTime || new Date().toISOString(),
+            callStartTime: call.startTime || new Date().toISOString(),
+            region: region,
+            remarks: remarks,
+            // Agent information (for manager and admin view)
+            agentName: agentName,
+            agentId: agentId,
+            // Additional data for future use
+            callId: call.CallId,
+            agentNumber: call.agentNumber,
+            endTime: call.endTime,
+            contactData: call.contact,
+            formDetail: call.formDetail,
+            // Store original call data for debugging
+            originalCallData: call,
+          };
+        });
+
+        // Apply client-side search filtering if needed
+        let filteredCalls = transformedCalls;
+        if (search) {
+          filteredCalls = transformedCalls.filter(
+            (call) =>
+              call.customerName?.toLowerCase().includes(search.toLowerCase()) ||
+              call.number.includes(search) ||
+              call.callId.toString().includes(search) ||
+              // For managers and admins, also search by agent name
+              ((userData?.EmployeeRole === 2 || userData?.EmployeeRole === 3) &&
+                call.agentName?.toLowerCase().includes(search.toLowerCase()))
+          );
+        }
+
+        console.log(
+          `📞 Successfully transformed ${filteredCalls.length} calls:`,
+          filteredCalls
+        );
+        return filteredCalls;
+      } else {
+        console.warn("⚠️ API response structure unexpected:", response.data);
+        return [];
+      }
+    } catch (error) {
+      console.error("❌ Error fetching recent calls:", error);
       throw new Error(
         error.response?.data?.message || "Failed to fetch recent calls"
       );
@@ -199,22 +632,132 @@ const DashboardPage = () => {
   };
 
   const fetchFollowUps = async () => {
-    if (MOCK_MODE) {
-      return new Promise((resolve) => {
-        setTimeout(() => resolve(mockFollowUps), 500);
-      });
-    }
-
     try {
-      const response = await axiosInstance.get("/dashboard/follow-ups", {
-        params: {
-          employeeId: userData?.EmployeeId,
-          status: "pending",
-        },
-      });
-      return response.data.success ? response.data.data : [];
+      const userRole = userData?.EmployeeRole;
+      const employeeId = userData?.EmployeeId;
+      const { startDate, endDate } = getDateRange();
+
+      if (!employeeId) {
+        throw new Error("Employee ID not found. Please login again.");
+      }
+
+      console.log(
+        `📋 Fetching follow-ups for ${
+          userRole === 3 ? "admin" : userRole === 2 ? "manager" : "agent"
+        }:`,
+        employeeId,
+        "Date range:",
+        startDate,
+        "to",
+        endDate
+      );
+
+      const params = {
+        startDate: startDate,
+        endDate: endDate,
+        limit: 5, // Only fetch 5 for dashboard widget
+      };
+
+      if (userRole === 1) {
+        params.agentNumber = userData?.EmployeePhone || employeeId;
+      }
+
+      let response;
+      if (userRole === 2) {
+        response = await axiosInstance.get(
+          `/calls/manager-follow-ups/${employeeId}`,
+          {
+            params,
+          }
+        );
+      } else {
+        response = await axiosInstance.get("/calls/follow-ups", {
+          params,
+        });
+      }
+
+      console.log(
+        `📋 ${
+          userRole === 3 ? "Admin" : userRole === 2 ? "Manager" : "Agent"
+        } follow-ups API response:`,
+        response.data
+      );
+
+      if (response.data.success && response.data.data) {
+        // Transform the API data to match component structure
+        const transformedFollowUps = (response.data.data.records || []).map(
+          (record) => {
+            // Safely destructure with fallbacks
+            const formDetail = record?.formDetail || {};
+            const agent = record?.agent || {};
+            const trader_master = record?.trader_master || {};
+
+            // Determine priority based on follow-up date
+            const followUpDate = new Date(formDetail.followUpDate);
+            const today = new Date();
+            const diffDays = Math.ceil(
+              (followUpDate - today) / (1000 * 60 * 60 * 24)
+            );
+
+            let priority = "Normal";
+            if (diffDays < 0) {
+              priority = "High"; // Overdue
+            } else if (diffDays <= 1) {
+              priority = "Medium"; // Due today or tomorrow
+            }
+
+            return {
+              id: formDetail.id,
+              customerName:
+                trader_master?.Trader_Name ||
+                trader_master?.Trader_business_Name ||
+                trader_master?.trader_name ||
+                trader_master?.business_name ||
+                "Unknown Trader",
+              traderName:
+                trader_master?.Trader_Name ||
+                trader_master?.Trader_business_Name ||
+                trader_master?.trader_name ||
+                trader_master?.business_name ||
+                "Unknown Trader",
+              phoneNumber:
+                trader_master?.Contact_no ||
+                trader_master?.contact_no ||
+                trader_master?.phone ||
+                formDetail.inquiryNumber ||
+                "N/A",
+              traderContact:
+                trader_master?.Contact_no ||
+                trader_master?.contact_no ||
+                trader_master?.phone ||
+                formDetail.inquiryNumber ||
+                "N/A",
+              followUpDate: formDetail.followUpDate,
+              priority: priority,
+              issue: formDetail.remarks || "No remarks provided",
+              remarks: formDetail.remarks || "No remarks provided",
+              callId: formDetail.CallId,
+              status: formDetail.status,
+              callType: formDetail.callType,
+              agentName: agent?.EmployeeName || "Unknown Agent",
+              supportType: formDetail.supportType?.supportName || "N/A",
+              processType: formDetail.processType?.processName || "N/A",
+              queryType: formDetail.queryType?.queryName || "N/A",
+              rawData: record, // Store original data
+            };
+          }
+        );
+
+        return transformedFollowUps;
+      } else {
+        console.warn(
+          "⚠️ Follow-ups API response structure unexpected:",
+          response.data
+        );
+        return [];
+      }
     } catch (error) {
-      console.error("Error fetching follow-ups:", error);
+      console.error("❌ Error fetching follow-ups:", error);
       throw new Error(
         error.response?.data?.message || "Failed to fetch follow-ups"
       );
@@ -227,15 +770,44 @@ const DashboardPage = () => {
     setError(null);
 
     try {
-      const [statsData, callsData, followUpsData] = await Promise.all([
-        fetchCallStats(selectedPeriod),
-        fetchRecentCalls(selectedPeriod, searchTerm),
-        fetchFollowUps(),
-      ]);
+      // For admin users, also fetch admin-specific data
+      if (userData?.EmployeeRole === 3) {
+        const [
+          statsData,
+          callsData,
+          followUpsData,
+          regionData,
+          employeeData,
+          kpiData,
+        ] = await Promise.all([
+          fetchCallStats(),
+          fetchRecentCalls(searchTerm),
+          fetchFollowUps(),
+          fetchAdminCallsPerRegion(),
+          fetchAdminCallsPerEmployee(),
+          fetchAdminEmployeeKPIs(),
+        ]);
 
-      setCallStats(statsData);
-      setRecentCalls(callsData);
-      setFollowUps(followUpsData);
+        setCallStats(statsData);
+        setRecentCalls(callsData);
+        setFollowUps(followUpsData);
+        setAdminData({
+          callsPerRegion: regionData,
+          callsPerEmployee: employeeData,
+          employeeKPIs: kpiData,
+        });
+      } else {
+        // For regular users, fetch only standard data
+        const [statsData, callsData, followUpsData] = await Promise.all([
+          fetchCallStats(),
+          fetchRecentCalls(searchTerm),
+          fetchFollowUps(),
+        ]);
+
+        setCallStats(statsData);
+        setRecentCalls(callsData);
+        setFollowUps(followUpsData);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -243,20 +815,32 @@ const DashboardPage = () => {
     }
   };
 
-  // Effects
+  // Effects - Combined to prevent duplicate API calls
   useEffect(() => {
-    loadDashboardData();
-  }, [selectedPeriod]);
+    // Only load data if userData is available (prevents initial double-load)
+    if (!userData?.EmployeeId && !userData?.EmployeePhone) {
+      return;
+    }
 
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      if (searchTerm !== undefined) {
+    if (searchTerm !== undefined && searchTerm !== "") {
+      // Debounce search-triggered loads
+      const delayedSearch = setTimeout(() => {
         loadDashboardData();
-      }
-    }, 500);
+      }, 500);
 
-    return () => clearTimeout(delayedSearch);
-  }, [searchTerm]);
+      return () => clearTimeout(delayedSearch);
+    } else {
+      // Immediate load for filter changes (non-search)
+      loadDashboardData();
+    }
+  }, [
+    dateFilter,
+    customStartDate,
+    customEndDate,
+    searchTerm,
+    userData?.EmployeeId,
+    userData?.EmployeePhone,
+  ]);
 
   // Utility functions
   const getCallTypeIcon = (type) => {
@@ -310,417 +894,156 @@ const DashboardPage = () => {
     }
   };
 
-  // Coming Soon Component - Overlay on actual dashboard
-  if (COMING_SOON_MODE) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 max-w-md mx-auto">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ChartBarIcon className="w-8 h-8 text-blue-600" />
-            </div>
-            <h2 className="text-3xl font-semibold text-gray-900 mb-4">
-              Coming Soon
-            </h2>
-            <p className="text-gray-600 leading-relaxed">
-              Dashboard features are currently under development.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Handle call button click
+  const handleCall = (phoneNumber, traderName) => {
+    console.log("🔍 handleCall called with:", { phoneNumber, traderName });
+    if (phoneNumber && phoneNumber.trim() !== "") {
+      console.log(`📞 Initiating call to ${phoneNumber} for ${traderName}`);
+      console.log("📋 Contact info being passed:", { name: traderName });
 
-  // Loading state
+      // Set the current number first, then initiate call
+      initiateCall(phoneNumber);
+
+      console.log("✅ Call initiated - form should open when call connects");
+    } else {
+      console.error("❌ No phone number provided");
+    }
+  };
+
+  // Handle view detail button click
+  const handleViewDetail = (call) => {
+    console.log("📋 Opening detail modal for call:", call);
+    console.log("📋 Current modal state:", {
+      isDetailModalOpen,
+      selectedCallDetail,
+    });
+    setSelectedCallDetail(call);
+    setIsDetailModalOpen(true);
+    console.log("📋 Modal should be opening now...");
+  };
+
+  // Close detail modal
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedCallDetail(null);
+  };
+
+  // Format follow-up date helper
+  const formatFollowUpDate = (dateTime) => {
+    const dateIST = moment.tz(dateTime, "Asia/Kolkata").startOf("day");
+    const todayIST = moment().tz("Asia/Kolkata").startOf("day");
+
+    const diffDays = dateIST.diff(todayIST, "days");
+
+    if (diffDays < 0) {
+      return { text: `${Math.abs(diffDays)} days overdue`, isOverdue: true };
+    } else if (diffDays === 0) {
+      return { text: "Today", isOverdue: false };
+    } else if (diffDays === 1) {
+      return { text: "Tomorrow", isOverdue: false };
+    } else {
+      return { text: `In ${diffDays} days`, isOverdue: false };
+    }
+  };
+
+  // Handle view follow-up details
+  const handleViewFollowUpDetails = (followUp) => {
+    console.log("📋 Viewing follow-up details:", followUp);
+    navigate("/dashboard/follow-up");
+  };
+
+  // Handle call from follow-up
+  const handleCallFromFollowUp = (phoneNumber, traderName) => {
+    console.log("📞 Initiating call from follow-up:", {
+      phoneNumber,
+      traderName,
+    });
+    if (phoneNumber && phoneNumber.trim() !== "") {
+      console.log(`📞 Calling ${phoneNumber} for ${traderName}`);
+
+      // Set the current number first, then initiate call
+      initiateCall(phoneNumber);
+
+      console.log("✅ Follow-up call initiated");
+    } else {
+      console.error("❌ No phone number provided for follow-up call");
+    }
+  };
+
   if (isLoading) {
-    return (
-      <div className="bg-gray-50 min-h-screen">
-        <div className="animate-pulse">
-          {/* Stats Cards Skeleton with Shimmer */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white p-4 rounded-lg shadow border border-gray-200 relative overflow-hidden"
-              >
-                <div className="flex items-center">
-                  <div className="p-2 bg-gray-200 rounded-lg w-10 h-10 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="ml-4 flex-1">
-                    <div className="h-3 bg-gray-200 rounded mb-2 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="h-6 bg-gray-200 rounded w-16 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Content Skeleton with Shimmer */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white rounded-lg shadow border border-gray-200 p-6">
-              <div className="h-6 bg-gray-200 rounded w-32 mb-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-              </div>
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-16 bg-gray-200 rounded relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-              <div className="h-6 bg-gray-200 rounded w-32 mb-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-              </div>
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-20 bg-gray-200 rounded relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Add custom shimmer animation */}
-        <style jsx>{`
-          @keyframes shimmer {
-            0% {
-              transform: translateX(-100%);
-            }
-            100% {
-              transform: translateX(100%);
-            }
-          }
-
-          .animate-shimmer {
-            animation: shimmer 1.5s infinite;
-          }
-        `}</style>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
-  // Error state
   if (error) {
-    return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center p-8">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ExclamationTriangleIcon className="w-8 h-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Failed to Load Dashboard
-          </h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadDashboardData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
-          {MOCK_MODE && (
-            <p className="text-sm text-blue-600 mt-4">
-              🧪 Running in demo mode
-            </p>
-          )}
-        </div>
-      </div>
-    );
+    return <ErrorDisplay error={error} onRetry={loadDashboardData} />;
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <PhoneIcon className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Calls</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.totalCalls || 0}
-              </p>
-            </div>
-          </div>
-        </div>
+      <DashboardHeader
+        userData={userData}
+        showFlagBackground={SHOW_FLAG_BACKGROUND}
+      />
 
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircleIcon className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Answered</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.answeredCalls || 0}
-              </p>
-            </div>
-          </div>
-        </div>
+      <StatsCards
+        userData={userData}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        showCustomDateRange={showCustomDateRange}
+        setShowCustomDateRange={setShowCustomDateRange}
+        customStartDate={customStartDate}
+        setCustomStartDate={setCustomStartDate}
+        customEndDate={customEndDate}
+        setCustomEndDate={setCustomEndDate}
+        getTodayDate={getTodayDate}
+        validateCustomDateRange={validateCustomDateRange}
+        callStats={callStats}
+        formatStatsDuration={formatStatsDuration}
+        navigate={navigate}
+        isExporting={isExporting}
+        handleExcelExport={handleExcelExport}
+      />
 
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Missed</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.missedCalls || 0}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Admin-specific components - Only show for EmployeeRole === 3 */}
+      {userData?.EmployeeRole === 3 && (
+        <>
+          <AdminCharts adminData={adminData} />
+          <EmployeePerformanceCards adminData={adminData} onCall={handleCall} />
+          <EmployeeKPIDashboard adminData={adminData} />
+        </>
+      )}
 
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <ClockIcon className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg Duration</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.avgCallDuration || "0:00"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <ChartBarIcon className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">
-                Total Talk Time
-              </p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.totalTalkTime || "0h 0m"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <UserGroupIcon className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Follow-ups</p>
-              <p className="text-xl font-bold text-gray-900">
-                {callStats?.pendingFollowUps || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Calls */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Recent Calls
-                </h2>
-                <div className="flex items-center space-x-3">
-                  <select
-                    value={selectedPeriod}
-                    onChange={(e) => setSelectedPeriod(e.target.value)}
-                    className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                  >
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                  </select>
-                  <button className="p-2 text-gray-400 hover:text-gray-600">
-                    <FunnelIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+        <RecentCalls
+          userData={userData}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          recentCalls={recentCalls}
+          getCallTypeIcon={getCallTypeIcon}
+          getStatusColor={getStatusColor}
+          formatRelativeTime={formatRelativeTime}
+          handleViewDetail={handleViewDetail}
+          handleCall={handleCall}
+          expandedRemarks={expandedRemarks}
+          setExpandedRemarks={setExpandedRemarks}
+        />
 
-              {/* Search Bar */}
-              <div className="mt-4 relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search calls by name or number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
-                />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Duration
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Time
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {recentCalls.length > 0 ? (
-                    recentCalls.map((call) => {
-                      const CallIcon = getCallTypeIcon(call.type);
-                      return (
-                        <tr key={call.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div
-                                className={`p-2 rounded-full ${
-                                  call.type === "incoming"
-                                    ? "bg-blue-100"
-                                    : "bg-green-100"
-                                }`}
-                              >
-                                <CallIcon
-                                  className={`w-4 h-4 ${
-                                    call.type === "incoming"
-                                      ? "text-blue-600"
-                                      : "text-green-600"
-                                  }`}
-                                />
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {call.customerName || "Unknown Caller"}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {call.number}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                                call.status
-                              )}`}
-                            >
-                              {call.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {call.duration}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {call.category}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatRelativeTime(call.callDateTime)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="5"
-                        className="px-6 py-8 text-center text-gray-500"
-                      >
-                        No calls found for the selected period
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar - Pending Follow-ups */}
-        <div className="space-y-8">
-          <div className="bg-white rounded-lg shadow border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Pending Follow-ups
-                </h3>
-                <CalendarIcon className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-            <div className="p-6">
-              {followUps.length > 0 ? (
-                <div className="space-y-4">
-                  {followUps.map((followUp) => (
-                    <div
-                      key={followUp.id}
-                      className="border border-gray-200 rounded-lg p-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium text-gray-900">
-                            {followUp.customerName}
-                          </h4>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {followUp.phoneNumber}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-2">
-                            {followUp.issue}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Due:{" "}
-                            {new Date(
-                              followUp.followUpDate
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(
-                            followUp.priority
-                          )}`}
-                        >
-                          {followUp.priority}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">No pending follow-ups</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <FollowUps
+          userData={userData}
+          followUps={followUps}
+          formatFollowUpDate={formatFollowUpDate}
+          getPriorityColor={getPriorityColor}
+          handleViewFollowUpDetails={handleViewFollowUpDetails}
+          handleCallFromFollowUp={handleCallFromFollowUp}
+          navigate={navigate}
+        />
       </div>
+
+      <CallDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={closeDetailModal}
+        callDetail={selectedCallDetail}
+      />
     </div>
   );
 };

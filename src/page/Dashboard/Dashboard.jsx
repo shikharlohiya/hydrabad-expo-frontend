@@ -6,8 +6,10 @@ import IncomingCallPage from "./IncomingCall/IncomingCallPage";
 import NotFound from "../NotFound";
 import OutgoingCallPage from "./OutgoingCall/OutgoingCallPage";
 import ContactsPage from "./Contacts/ContactsPage";
-import CallHistoryPage from "./CallHistory/CallHistoryPage";
+// import CallHistoryPage from "./CallHistory/CallHistoryPage";
 import ProfilePage from "./Profile/ProfilePage";
+import FollowUpPage from "./FollowUp/FollowUpPage";
+import UserSettings from "./UserSettings/UserSettings";
 
 const Dashboard = () => {
   return (
@@ -21,16 +23,12 @@ const Dashboard = () => {
         <Route path="incoming-call" element={<IncomingCallPage />} />
         <Route path="outgoing-call" element={<OutgoingCallPage />} />
         <Route path="contacts" element={<ContactsPage />} />
-        <Route path="call-history" element={<CallHistoryPage />} />
+        {/* <Route path="call-history" element={<CallHistoryPage />} /> */}
+        <Route path="follow-up" element={<FollowUpPage />} />
         <Route path="profile" element={<ProfilePage />} />
 
-        {/* Add more dashboard routes here as needed */}
-        {/* Example additional routes:
-                <Route path="trades" element={<TradesPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="profile" element={<ProfilePage />} />
-                <Route path="reports" element={<ReportsPage />} />
-                */}
+        {/* admin routes */}
+        <Route path="user-settings" element={<UserSettings />} />
 
         {/* Redirect /dashboard/dashboard to /dashboard */}
         <Route

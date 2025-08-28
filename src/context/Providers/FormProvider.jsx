@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "../../library/axios";
+import useSocket from "../../hooks/useSocket";
 import FormContext from "../FormContext";
 
 // Form status constants
@@ -11,29 +12,84 @@ export const FORM_STATUS = {
   ERROR: "error",
 };
 
+const getLocalDateTimeString = (date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+// Helper function to get persisted form state
+const getPersistedFormState = () => {
+  try {
+    const persistedState = localStorage.getItem("formState");
+    return persistedState ? JSON.parse(persistedState) : null;
+  } catch (error) {
+    console.error("Error loading persisted form state:", error);
+    return null;
+  }
+};
+
 const FormProvider = ({ children }) => {
-  // Form state management
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formStatus, setFormStatus] = useState(FORM_STATUS.IDLE);
-  const [currentCallDetails, setCurrentCallDetails] = useState(null);
+  // Load persisted state on mount
+  const persistedFormState = getPersistedFormState();
 
-  // Form data state
-  const [formData, setFormData] = useState({
-    CallId: "",
-    EmployeeId: "",
-    callDateTime: "",
-    callType: "",
-    supportTypeId: "",
-    inquiryNumber: "",
-    processTypeId: "",
-    queryTypeId: "",
-    remarks: "",
-    attachments: [],
-    status: "closed",
-    followUpDate: "",
-  });
+  // ================================================================================
+  // CALL STATE MANAGEMENT (New)
+  // ================================================================================
+  const [activeCallState, setActiveCallState] = useState(
+    persistedFormState?.activeCallState || {
+      callId: null,
+      customerNumber: null,
+      agentNumber: null,
+      callDirection: null,
+      startTime: null,
+      endTime: null,
+      isActive: false,
+      recordingUrl: null,
+      duration: null,
+      hangupCause: null,
+    }
+  );
 
-  // Dropdown options state
+  // ================================================================================
+  // FORM STATE MANAGEMENT (Existing)
+  // ================================================================================
+  const [isFormOpen, setIsFormOpen] = useState(
+    persistedFormState?.isFormOpen || false
+  );
+  const [formStatus, setFormStatus] = useState(
+    persistedFormState?.formStatus || FORM_STATUS.IDLE
+  );
+  const [currentCallDetails, setCurrentCallDetails] = useState(
+    persistedFormState?.currentCallDetails || null
+  );
+
+  const [savedContactData, setSavedContactData] = useState(
+    persistedFormState?.savedContactData || null
+  );
+
+  const [formData, setFormData] = useState(
+    persistedFormState?.formData || {
+      CallId: "",
+      EmployeeId: "",
+      callDateTime: "",
+      callType: "",
+      supportTypeId: "",
+      inquiryNumber: "",
+      processTypeId: "",
+      queryTypeId: "",
+      problemId: "",
+      subProblemId: "",
+      remarks: "",
+      attachments: [],
+      status: "closed",
+      followUpDate: "",
+    }
+  );
+
   const [dropdownOptions, setDropdownOptions] = useState({
     supportTypes: [],
     processTypes: [],
@@ -46,21 +102,18 @@ const FormProvider = ({ children }) => {
     queryTypes: false,
   });
 
-  // Customer data state
-  const [customerData, setCustomerData] = useState(null);
-  const [orderData, setOrderData] = useState(null);
-  const [callHistory, setCallHistory] = useState([]);
+  const [traderNotFoundData, setTraderNotFoundData] = useState(
+    persistedFormState?.traderNotFoundData || {
+      name: "",
+      region: "",
+      type: "Trader",
+    }
+  );
 
-  // Customer search state
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState(null);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [orderData, setOrderData] = useState(
+    persistedFormState?.orderData || null
+  );
 
-  // UI state
-  const [showCustomerPanel, setShowCustomerPanel] = useState(false);
-  const [activeTab, setActiveTab] = useState("info");
-
-  // Error handling
   const [errors, setErrors] = useState({});
   const [submissionError, setSubmissionError] = useState(null);
   const [lastError, setLastError] = useState(null);
@@ -74,111 +127,259 @@ const FormProvider = ({ children }) => {
     }
   });
 
-  // Mock customer database - replace with actual API
-  const mockCustomerDatabase = {
-    9301196473: {
-      name: "John Doe",
-      email: "john.doe@example.com",
-      accountId: "ACC123456",
-      phoneNumber: "9301196473",
-      joinDate: "2023-01-15",
-      lastActivity: "2024-12-20",
-      accountType: "Premium",
-      totalCalls: 12,
-      status: "Active",
-    },
-    "+1234567890": {
-      name: "John Doe",
-      email: "john.doe@example.com",
-      accountId: "ACC123456",
-      phoneNumber: "+1234567890",
-      joinDate: "2023-01-15",
-      lastActivity: "2024-12-20",
-      accountType: "Premium",
-      totalCalls: 12,
-      status: "Active",
-    },
-  };
+  // Socket integration
+  const { registerCallEventHandlers, isConnected } = useSocket();
 
-  const mockCallHistoryDatabase = {
-    ACC123456: [
-      {
-        id: 1,
-        date: "2024-12-18",
-        time: "14:30",
-        duration: "12:45",
-        type: "support",
-        category: "technical",
-        priority: "high",
-        resolution: "Issue resolved - password reset",
-        satisfaction: "satisfied",
-        agent: "Agent Smith",
-      },
-    ],
-  };
-
-  // Fetch dropdown options from APIs
-  const fetchDropdownOptions = async () => {
-    try {
-      // Fetch support types
-      setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
-      const supportTypesResponse = await axiosInstance.get("/support-types");
-      if (supportTypesResponse.data.success) {
-        setDropdownOptions((prev) => ({
-          ...prev,
-          supportTypes: supportTypesResponse.data.data,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching support types:", error);
-      setLastError("Failed to load support types");
-    } finally {
-      setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
-    }
-
-    try {
-      // Fetch process types
-      setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
-      const processTypesResponse = await axiosInstance.get("/process-types");
-      if (processTypesResponse.data.success) {
-        setDropdownOptions((prev) => ({
-          ...prev,
-          processTypes: processTypesResponse.data.data,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching process types:", error);
-      setLastError("Failed to load process types");
-    } finally {
-      setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
-    }
-
-    try {
-      // Fetch query types
-      setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
-      const queryTypesResponse = await axiosInstance.get("/query-types");
-      if (queryTypesResponse.data.success) {
-        setDropdownOptions((prev) => ({
-          ...prev,
-          queryTypes: queryTypesResponse.data.data,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching query types:", error);
-      setLastError("Failed to load query types");
-    } finally {
-      setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
-    }
-  };
-
-  // Initialize dropdown options on mount
+  // ================================================================================
+  // SOCKET EVENT HANDLERS (New)
+  // ================================================================================
   useEffect(() => {
-    fetchDropdownOptions();
+    registerCallEventHandlers({
+      // Outgoing call connected
+      onCallConnected: (data) => {
+        console.log("FormProvider - Outgoing call connected:", data);
+
+        // Filter calls for current user
+        if (!isCallForCurrentUser(data)) {
+          console.log("FormProvider - Call not for current user, ignoring");
+          return;
+        }
+
+        // Update call state
+        setActiveCallState({
+          callId: data.callId,
+          customerNumber: data.customerNumber,
+          agentNumber: data.agentNumber,
+          callDirection: "outgoing",
+          startTime: new Date(data.startTime || Date.now()),
+          isActive: true,
+          endTime: null,
+          recordingUrl: null,
+          duration: null,
+          hangupCause: null,
+        });
+
+        // Auto-open form
+        const callDetails = {
+          CallId: data.callId,
+          number: data.customerNumber,
+          callDirection: "outgoing",
+          startTime: new Date(data.startTime || Date.now()),
+          EmployeeId: userData.EmployeeId,
+        };
+
+        console.log(
+          "FormProvider - Opening form for outgoing call:",
+          callDetails
+        );
+        openForm(callDetails);
+      },
+
+      // Incoming call connected
+      onIncomingCallConnected: (data) => {
+        console.log("FormProvider - Incoming call connected:", data);
+
+        // Filter calls for current user
+        if (!isCallForCurrentUser(data)) {
+          console.log("FormProvider - Call not for current user, ignoring");
+          return;
+        }
+
+        // Update call state
+        setActiveCallState({
+          callId: data.callId,
+          customerNumber: data.callerNumber,
+          agentNumber: data.agentNumber,
+          callDirection: "incoming",
+          startTime: new Date(data.startTime || Date.now()),
+          isActive: true,
+          endTime: null,
+          recordingUrl: null,
+          duration: null,
+          hangupCause: null,
+        });
+
+        // Auto-open form
+        const callDetails = {
+          CallId: data.callId,
+          number: data.callerNumber,
+          callDirection: "incoming",
+          startTime: new Date(data.startTime || Date.now()),
+          EmployeeId: userData.EmployeeId,
+        };
+
+        console.log(
+          "FormProvider - Opening form for incoming call:",
+          callDetails
+        );
+        openForm(callDetails);
+      },
+
+      // Call disconnected
+      onCallDisconnected: (data) => {
+        console.log("FormProvider - Call disconnected:", data);
+
+        // Check if it's for current active call
+        if (data.callId !== activeCallState.callId) {
+          console.log(
+            "FormProvider - Disconnect not for current call, ignoring"
+          );
+          return;
+        }
+
+        // Update call state
+        setActiveCallState((prev) => ({
+          ...prev,
+          isActive: false,
+          endTime: new Date(data.endTime || Date.now()),
+          recordingUrl: data.recordingUrl,
+          duration: data.duration,
+          hangupCause: data.hangupCause,
+        }));
+
+        console.log(
+          "FormProvider - Call ended, form remains open for completion"
+        );
+        // Note: We don't close the form here - let user complete it
+      },
+
+      // Legacy handlers (keep for backward compatibility)
+      onIncomingCallStatus: (data) => {
+        console.log("FormProvider - Legacy incoming call status:", data);
+
+        // Handle legacy incoming call format
+        const eventType = data.event || data.eventType;
+        if (eventType === "oncallconnect" || eventType === "incoming_call") {
+          const legacyData = {
+            callId: data.callid || data.call_id || data.callId || data.uuid,
+            callerNumber: data.caller_display_number || data.caller_id_number,
+            agentNumber: data.agent_display_number || data.answer_agent_number,
+            callDirection: "incoming",
+            startTime: data.timestamp || Date.now(),
+            callStatus: data.call_status || "answered",
+          };
+
+          // Reuse the new handler
+          this.onIncomingCallConnected(legacyData);
+        }
+      },
+    });
+  }, [activeCallState.callId, userData.EmployeeId]);
+
+  // Helper function to check if call is for current user
+  const isCallForCurrentUser = (data) => {
+    if (!userData.EmployeePhone) return false;
+
+    const normalizePhone = (phone) => {
+      if (!phone) return "";
+      return String(phone)
+        .replace(/[\s\-\+]/g, "")
+        .replace(/^91/, "");
+    };
+
+    const userPhone = normalizePhone(userData.EmployeePhone);
+    const eventPhone = normalizePhone(data.agentNumber || data.agent_number);
+
+    const isMatch = userPhone === eventPhone;
+    console.log(
+      `FormProvider - User filter check: ${userPhone} === ${eventPhone} = ${isMatch}`
+    );
+
+    return isMatch;
+  };
+
+  // ================================================================================
+  // FORM STATE PERSISTENCE (Updated to include call state)
+  // ================================================================================
+  const persistFormState = () => {
+    try {
+      const stateToSave = {
+        isFormOpen,
+        formStatus,
+        currentCallDetails,
+        activeCallState, // New: include call state
+        formData: {
+          ...formData,
+          attachments: [], // Don't persist file objects
+        },
+        traderNotFoundData,
+        savedContactData,
+        orderData,
+        timestamp: Date.now(),
+      };
+
+      localStorage.setItem("formState", JSON.stringify(stateToSave));
+      console.log("FormProvider - State persisted with call data");
+    } catch (error) {
+      console.error("FormProvider - Error persisting state:", error);
+    }
+  };
+
+  // Auto-persist form state whenever it changes
+  useEffect(() => {
+    if (
+      isFormOpen ||
+      formData.CallId ||
+      formData.remarks ||
+      activeCallState.isActive
+    ) {
+      persistFormState();
+    }
+  }, [
+    isFormOpen,
+    formStatus,
+    currentCallDetails,
+    activeCallState, // New dependency
+    formData,
+    orderData,
+  ]);
+
+  // Clear expired persisted form state on mount
+  useEffect(() => {
+    if (persistedFormState?.timestamp) {
+      const now = Date.now();
+      const stateAge = now - persistedFormState.timestamp;
+      const maxAge = 30 * 60 * 1000; // 30 minutes
+
+      if (stateAge > maxAge) {
+        console.log("FormProvider - Clearing expired form state");
+        localStorage.removeItem("formState");
+      } else {
+        console.log("FormProvider - Restored form state from localStorage");
+
+        // If form was open with active call, keep it open
+        if (
+          persistedFormState.isFormOpen &&
+          persistedFormState.activeCallState?.callId
+        ) {
+          console.log("FormProvider - Restored active call form after refresh");
+        }
+      }
+    }
   }, []);
 
-  // Open form with call details
+  // ================================================================================
+  // FORM MANAGEMENT FUNCTIONS (Existing, slightly updated)
+  // ================================================================================
+  const fetchSavedContactData = async (phoneNumber) => {
+    if (!phoneNumber) return;
+
+    try {
+      const res = await axiosInstance.get(`/trader/mobile/${phoneNumber}`);
+      if (res.data?.success && res.data?.data) {
+        setSavedContactData(res.data.data);
+      } else {
+        setSavedContactData(null);
+      }
+    } catch (err) {
+      console.error("FormProvider - Error fetching saved contact info:", err);
+      setSavedContactData(null);
+    }
+  };
+
+  // Open form with call details (Updated)
   const openForm = (callDetails) => {
-    console.log("📝 Opening form with call details:", callDetails);
+    console.log("FormProvider - Opening form with call details:", callDetails);
 
     setCurrentCallDetails(callDetails);
     setIsFormOpen(true);
@@ -189,47 +390,101 @@ const FormProvider = ({ children }) => {
     // Auto-populate form data
     populateFormData(callDetails);
 
-    // Auto-search customer if phone number is available
+    // Fetch saved contact data if phone number is available
     if (callDetails?.number) {
-      searchCustomer(callDetails.number);
+      fetchSavedContactData(callDetails.number);
     }
+
+    console.log("FormProvider - Form opened successfully");
   };
 
   // Close form and reset state
   const closeForm = () => {
-    console.log("📝 Closing form");
+    console.log("FormProvider - Closing form");
 
     setIsFormOpen(false);
     setFormStatus(FORM_STATUS.IDLE);
     setCurrentCallDetails(null);
+
+    // Reset call state only if call is not active
+    if (!activeCallState.isActive) {
+      setActiveCallState({
+        callId: null,
+        customerNumber: null,
+        agentNumber: null,
+        callDirection: null,
+        startTime: null,
+        endTime: null,
+        isActive: false,
+        recordingUrl: null,
+        duration: null,
+        hangupCause: null,
+      });
+    }
+
     resetFormData();
-    resetCustomerData();
     setErrors({});
     setSubmissionError(null);
     setLastError(null);
+
+    // Clear persisted form state
+    localStorage.removeItem("formState");
+    console.log("FormProvider - Cleared persisted form state");
   };
 
-  // Populate form with call details
+  // Populate form with call details (Updated to use activeCallState)
   const populateFormData = (callDetails) => {
-    const callDateTime = callDetails?.startTime
-      ? new Date(callDetails.startTime).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16);
+    // Use activeCallState if available, otherwise use passed callDetails
+    const sourceData = activeCallState.callId
+      ? {
+          ...callDetails,
+          CallId: activeCallState.callId,
+          number: activeCallState.customerNumber,
+          callDirection: activeCallState.callDirection,
+          startTime: activeCallState.startTime,
+        }
+      : callDetails;
 
-    const callType =
-      callDetails?.callType === "incoming" ? "InBound" : "OutBound";
-    const inquiryNumber = orderData?.orderId || customerData?.accountId || "";
+    const callDateTime = sourceData?.startTime
+      ? getLocalDateTimeString(new Date(sourceData.startTime))
+      : getLocalDateTimeString(new Date());
+
+    console.log(
+      "FormProvider - Populating form with call details:",
+      sourceData
+    );
+
+    // Determine call type
+    const rawCallType = sourceData?.callDirection || sourceData?.callType;
+    let callType = "OutBound"; // Default
+
+    if (rawCallType === "incoming" || rawCallType === "inbound") {
+      callType = "InBound";
+    } else if (rawCallType === "outgoing" || rawCallType === "outbound") {
+      callType = "OutBound";
+    }
+
+    const inquiryNumber = orderData?.orderId || "";
+    const callId = sourceData?.CallId || sourceData?.callId || "";
+
+    console.log(
+      "FormProvider - Setting callType:",
+      callType,
+      "callId:",
+      callId
+    );
 
     setFormData((prev) => ({
       ...prev,
-      CallId: callDetails?.CallId || "",
-      EmployeeId: userData?.EmployeeId || callDetails?.EmployeeId || "",
+      CallId: callId,
+      EmployeeId: userData?.EmployeeId || sourceData?.EmployeeId || "",
       callDateTime: callDateTime,
       callType: callType,
       inquiryNumber: inquiryNumber,
     }));
   };
 
-  // Reset form data to initial state
+  // Reset form data
   const resetFormData = () => {
     setFormData({
       CallId: "",
@@ -240,6 +495,8 @@ const FormProvider = ({ children }) => {
       inquiryNumber: "",
       processTypeId: "",
       queryTypeId: "",
+      problemId: "",
+      subProblemId: "",
       remarks: "",
       attachments: [],
       status: "closed",
@@ -247,27 +504,21 @@ const FormProvider = ({ children }) => {
     });
   };
 
-  // Reset customer data
-  const resetCustomerData = () => {
-    setCustomerData(null);
-    setOrderData(null);
-    setCallHistory([]);
-    setIsSearching(false);
-    setSearchError(null);
-    setHasSearched(false);
-    setShowCustomerPanel(false);
-    setActiveTab("info");
-  };
-
   // Handle form input changes
   const updateFormData = useCallback(
     (name, value) => {
+      if (name === "callType") {
+        console.log("FormProvider - callType being changed to:", value);
+      }
       setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
 
-      // Clear follow-up date if status is changed to closed
+      if (name === "problemId") {
+        setFormData((prev) => ({ ...prev, subProblemId: "" }));
+      }
+
       if (name === "status" && value === "closed") {
         setFormData((prev) => ({
           ...prev,
@@ -275,7 +526,6 @@ const FormProvider = ({ children }) => {
         }));
       }
 
-      // Clear error when user starts typing
       if (errors[name]) {
         setErrors((prev) => ({
           ...prev,
@@ -306,128 +556,51 @@ const FormProvider = ({ children }) => {
       newErrors.callDateTime = "Call date and time is required";
     }
 
-    if (!formData.supportTypeId) {
-      newErrors.supportTypeId = "Support type is required";
-    }
+    if (traderNotFoundData.type !== "Non-Trader") {
+      if (!formData.problemId) {
+        newErrors.problemId = "Problem Type is required";
+      }
 
-    if (!formData.processTypeId) {
-      newErrors.processTypeId = "Process type is required";
-    }
+      if (formData.problemId != 6 && !formData.subProblemId) {
+        newErrors.subProblemId = "Related Issue is required";
+      }
 
-    if (!formData.queryTypeId) {
-      newErrors.queryTypeId = "Query type is required";
+      if (formData.status === "open" && !formData.followUpDate) {
+        newErrors.followUpDate = "Follow-up date is required for open tickets";
+      }
     }
 
     if (!formData.remarks.trim()) {
       newErrors.remarks = "Remarks are required";
     }
 
-    if (formData.status === "open" && !formData.followUpDate) {
-      newErrors.followUpDate = "Follow-up date is required for open tickets";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submit form data
-  // const submitForm = async () => {
-  //   console.log("📝 Submitting form data");
+  // Add initiate call function
+  const initiateCall = async (phoneNumber) => {
+    if (!phoneNumber || !userData.EmployeePhone) {
+      throw new Error("Phone number and agent number are required");
+    }
 
-  //   if (!validateForm()) {
-  //     setFormStatus(FORM_STATUS.ERROR);
-  //     return Promise.reject(new Error("Form validation failed"));
-  //   }
+    try {
+      const response = await axiosInstance.post("/initiate-call", {
+        destination_number: phoneNumber,
+        agent_number: userData.EmployeePhone,
+      });
 
-  //   try {
-  //     setFormStatus(FORM_STATUS.SUBMITTING);
-  //     setSubmissionError(null);
+      console.log("Call initiated successfully:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Call initiation failed:", error);
+      throw error;
+    }
+  };
 
-  //     // Prepare form data for submission
-  //     const enhancedFormData = {
-  //       ...formData,
-  //       // Set inquiryNumber to customerPhoneNumber instead of account ID
-  //       inquiryNumber: currentCallDetails?.number || formData.inquiryNumber,
-  //       // Don't include callDuration and customerPhoneNumber in payload
-  //     };
-
-  //     console.log("📝 Enhanced form data:", enhancedFormData);
-
-  //     // Create FormData for multipart submission
-  //     const submissionData = new FormData();
-
-  //     // List of fields to exclude from the payload
-  //     const excludedFields = [
-  //       "callDuration",
-  //       "customerPhoneNumber",
-  //       "customerData",
-  //       "orderData",
-  //       "submittedAt",
-  //       "attachments", // Handle attachments separately
-  //     ];
-
-  //     Object.keys(enhancedFormData).forEach((key) => {
-  //       if (key === "attachments") {
-  //         if (
-  //           enhancedFormData.attachments &&
-  //           enhancedFormData.attachments.length > 0
-  //         ) {
-  //           enhancedFormData.attachments.forEach((file) => {
-  //             submissionData.append("attachments", file);
-  //           });
-  //         }
-  //       } else if (excludedFields.includes(key)) {
-  //         // Skip these fields - don't include them in the payload
-  //         return;
-  //       } else if (
-  //         enhancedFormData[key] !== "" &&
-  //         enhancedFormData[key] !== null &&
-  //         enhancedFormData[key] !== undefined
-  //       ) {
-  //         submissionData.append(key, enhancedFormData[key]);
-  //       }
-  //     });
-
-  //     const response = await axiosInstance.post(
-  //       "/form-details",
-  //       submissionData,
-  //       {
-  //         headers: {
-  //           "Content-Type": "multipart/form-data",
-  //         },
-  //       }
-  //     );
-
-  //     if (!response.data.success) {
-  //       throw new Error(response.data.message || "Submission failed");
-  //     }
-
-  //     console.log("✅ Form submitted successfully:", response.data);
-  //     setFormStatus(FORM_STATUS.SUBMITTED);
-
-  //     // Auto-close form after successful submission (with a small delay for user feedback)
-  //     setTimeout(() => {
-  //       closeForm();
-  //     }, 1500);
-
-  //     return Promise.resolve(response.data);
-  //   } catch (error) {
-  //     console.error("❌ Error submitting form:", error);
-  //     setFormStatus(FORM_STATUS.ERROR);
-
-  //     const errorMessage =
-  //       error.response?.data?.message ||
-  //       error.message ||
-  //       "An error occurred while submitting the form";
-
-  //     setSubmissionError(errorMessage);
-  //     setLastError(errorMessage);
-
-  //     return Promise.reject(new Error(errorMessage));
-  //   }
-  // };
-  const submitForm = async () => {
-    console.log("📝 Submitting form data");
+  // Submit form data (Updated to include call state data)
+  const submitForm = async (contactData = null) => {
+    console.log("FormProvider - Submitting form data");
 
     if (!validateForm()) {
       setFormStatus(FORM_STATUS.ERROR);
@@ -438,17 +611,38 @@ const FormProvider = ({ children }) => {
       setFormStatus(FORM_STATUS.SUBMITTING);
       setSubmissionError(null);
 
-      // Prepare form data for submission
+      // Include call state data in form submission
       const enhancedFormData = {
         ...formData,
-        inquiryNumber: currentCallDetails?.number || formData.inquiryNumber,
+        inquiryNumber:
+          activeCallState.customerNumber ||
+          currentCallDetails?.number ||
+          formData.inquiryNumber,
+        // Add call metadata
+        callDuration: activeCallState.duration,
+        recordingUrl: activeCallState.recordingUrl,
+        hangupCause: activeCallState.hangupCause,
+        callEndTime: activeCallState.endTime,
       };
 
-      console.log("📝 Enhanced form data:", enhancedFormData);
+      // Merge contact data
+      const finalTraderData = contactData?.name
+        ? {
+            Contact_Name: contactData.name,
+            Region: contactData.region || "",
+            Type: contactData.type || "Trader",
+          }
+        : {
+            Contact_Name: traderNotFoundData.name,
+            Region: traderNotFoundData.region || "",
+            Type: traderNotFoundData.type || "Trader",
+          };
 
-      // Create FormData for multipart submission
+      Object.assign(enhancedFormData, finalTraderData);
+
+      console.log("FormProvider - Enhanced form data:", enhancedFormData);
+
       const submissionData = new FormData();
-
       const excludedFields = [
         "callDuration",
         "customerPhoneNumber",
@@ -456,14 +650,14 @@ const FormProvider = ({ children }) => {
         "orderData",
         "submittedAt",
         "attachments",
+        "recordingUrl", // Don't send in main payload
+        "hangupCause",
+        "callEndTime",
       ];
 
       Object.keys(enhancedFormData).forEach((key) => {
         if (key === "attachments") {
-          if (
-            enhancedFormData.attachments &&
-            enhancedFormData.attachments.length > 0
-          ) {
+          if (enhancedFormData.attachments?.length > 0) {
             enhancedFormData.attachments.forEach((file) => {
               submissionData.append("attachments", file);
             });
@@ -493,10 +687,10 @@ const FormProvider = ({ children }) => {
         throw new Error(response.data.message || "Submission failed");
       }
 
-      console.log("✅ Form submitted successfully:", response.data);
+      console.log("FormProvider - Form submitted successfully:", response.data);
       setFormStatus(FORM_STATUS.SUBMITTED);
 
-      // **NEW: Emit event to notify DialerProvider that form was submitted**
+      // Emit event for any listeners
       if (window.dispatchEvent) {
         window.dispatchEvent(
           new CustomEvent("formSubmitted", {
@@ -515,7 +709,7 @@ const FormProvider = ({ children }) => {
 
       return Promise.resolve(response.data);
     } catch (error) {
-      console.error("❌ Error submitting form:", error);
+      console.error("FormProvider - Error submitting form:", error);
       setFormStatus(FORM_STATUS.ERROR);
 
       const errorMessage =
@@ -527,58 +721,6 @@ const FormProvider = ({ children }) => {
       setLastError(errorMessage);
 
       return Promise.reject(new Error(errorMessage));
-    }
-  };
-
-  // Customer search functionality
-  const searchCustomerAPI = async (searchTerm) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const customer = mockCustomerDatabase[searchTerm];
-        const history = customer
-          ? mockCallHistoryDatabase[customer.accountId] || []
-          : [];
-        resolve({ customer, history });
-      }, 1000);
-    });
-  };
-
-  const searchCustomer = async (searchTerm) => {
-    if (!searchTerm.trim()) {
-      setSearchError("Please enter a customer ID or phone number");
-      return;
-    }
-
-    setIsSearching(true);
-    setSearchError(null);
-    setHasSearched(true);
-
-    try {
-      const { customer, history } = await searchCustomerAPI(searchTerm.trim());
-
-      if (customer) {
-        setCustomerData(customer);
-        setCallHistory(history);
-        setShowCustomerPanel(true);
-        setSearchError(null);
-
-        console.log("✅ Customer found:", customer);
-      } else {
-        setCustomerData(null);
-        setCallHistory([]);
-        setSearchError(
-          "Customer not found. Please check the ID or phone number."
-        );
-
-        console.log("❌ Customer not found for:", searchTerm);
-      }
-    } catch (error) {
-      console.error("❌ Customer search error:", error);
-      setSearchError("Search failed. Please try again.");
-      setCustomerData(null);
-      setCallHistory([]);
-    } finally {
-      setIsSearching(false);
     }
   };
 
@@ -630,8 +772,11 @@ const FormProvider = ({ children }) => {
     }
   };
 
-  // Context value
+  // Context value (Updated to remove customer search data)
   const value = {
+    // Call state (New)
+    activeCallState,
+
     // Form state
     isFormOpen,
     formStatus,
@@ -645,20 +790,14 @@ const FormProvider = ({ children }) => {
     dropdownOptions,
     loadingOptions,
 
-    // Customer data
-    customerData,
+    // Form data only
     orderData,
-    callHistory,
-    isSearching,
-    searchError,
-    hasSearched,
-
-    // UI state
-    showCustomerPanel,
-    activeTab,
+    traderNotFoundData,
+    setTraderNotFoundData,
 
     // User data
     userData,
+    savedContactData,
 
     // Actions
     openForm,
@@ -666,10 +805,7 @@ const FormProvider = ({ children }) => {
     updateFormData,
     updateFormFiles,
     submitForm,
-    searchCustomer,
-    setShowCustomerPanel,
-    setActiveTab,
-    fetchDropdownOptions,
+    initiateCall,
 
     // Helpers
     hasFormData,

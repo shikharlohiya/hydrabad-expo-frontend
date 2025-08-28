@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 import { Outlet } from "react-router-dom";
 import CallRemarksPage from "../components/CallRemarks/CallRemarksPage";
 // import useDialer from "../hooks/useDialer";
 import useForm from "../hooks/useForm";
+import UserContext from "../context/UserContext";
 // import { CALL_STATUS } from "../context/Providers/DialerProvider";
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Get the employee role id from the context to pass into the Navbar
+  const { userData } = useContext(UserContext);
+  const EmployeeRoleId = userData?.EmployeeRole || 1;
 
   // Get form state from FormProvider
   const { isFormOpen } = useForm();
@@ -18,6 +23,12 @@ const DashboardLayout = () => {
   // 1. Form is explicitly open (from FormProvider)
   // This handles both connected calls and manual form opens
   const showCallRemarksForm = isFormOpen;
+
+  // Debug logging for form state
+  useEffect(() => {
+    console.log("🖼️ ACEFONE - DashboardLayout: isFormOpen changed to:", isFormOpen);
+    console.log("🖼️ ACEFONE - DashboardLayout: showCallRemarksForm =", showCallRemarksForm);
+  }, [isFormOpen, showCallRemarksForm]);
 
   // Handle mobile detection
   useEffect(() => {
@@ -63,7 +74,11 @@ const DashboardLayout = () => {
             transition-transform duration-300 ease-in-out z-40
           `}
           >
-            <Navbar collapsed={collapsed} setCollapsed={setCollapsed} />
+            <Navbar
+              collapsed={collapsed}
+              setCollapsed={setCollapsed}
+              EmployeeRoleId={EmployeeRoleId}
+            />
           </div>
         )}
 
@@ -85,7 +100,17 @@ const DashboardLayout = () => {
         `}
         >
           {/* Conditional Content */}
-          {showCallRemarksForm ? <CallRemarksPage /> : <Outlet />}
+          {showCallRemarksForm ? (
+            <>
+              {console.log("🖼️ ACEFONE - Rendering CallRemarksPage")}
+              <CallRemarksPage />
+            </>
+          ) : (
+            <>
+              {console.log("🖼️ ACEFONE - Rendering Outlet")}
+              <Outlet />
+            </>
+          )}
         </main>
       </div>
     </div>

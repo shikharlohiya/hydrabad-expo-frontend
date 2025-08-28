@@ -1,11 +1,9 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 const PublicRoute = ({ children, isAuthenticated }) => {
-    const location = useLocation();
-
     if (isAuthenticated) {
-        const from = location.state?.from?.pathname || '/dashboard';
-        return <Navigate to={from} replace />;
+        // Always redirect to dashboard after login, regardless of previous location
+        return <Navigate to="/dashboard" replace />;
     }
 
     return children;
