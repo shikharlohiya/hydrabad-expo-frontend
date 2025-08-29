@@ -67,6 +67,7 @@ const ContactsPage = () => {
   const [traderCounts, setTraderCounts] = useState(null);
   const [countsLoading, setCountsLoading] = useState(false);
   const [employeeInfo, setEmployeeInfo] = useState(null);
+  const [regions, setRegions] = useState([]);
 
   const { userData } = useContext(UserContext);
 
@@ -290,6 +291,27 @@ const ContactsPage = () => {
     fetchCampaigns();
   }, []);
 
+  useEffect(() => {
+    const fetchRegions = async () => {
+      if (userData?.EmployeeRole === 3) {
+        try {
+          const response = await axiosInstance.get("/admin/unique-regions");
+          if (response.data.success) {
+            setRegions(response.data.data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch regions for admin", error);
+        }
+      } else if (userData?.EmployeeRegion) {
+        setRegions(userData.EmployeeRegion.split(",").map((r) => r.trim()));
+      }
+    };
+
+    if (userData) {
+      fetchRegions();
+    }
+  }, [userData]);
+
   // Combined data fetch to prevent duplicate API calls
   useEffect(() => {
     if (!userData) {
@@ -440,9 +462,6 @@ const ContactsPage = () => {
   };
 
   // Get unique regions and statuses for filters
-  const uniqueRegions = userData?.EmployeeRegion
-    ? userData.EmployeeRegion.split(",").map((r) => r.trim())
-    : [];
   const uniqueStatuses = traderCounts?.statusCounts?.map((s) => s.status) || [];
 
   if (error) {
@@ -517,7 +536,7 @@ const ContactsPage = () => {
               </div>
               <div className="text-center">
                 <div className="text-base font-semibold text-blue-600">
-                  {uniqueRegions.length || 0}
+                  {regions.length || 0}
                 </div>
                 <div className="text-xs text-gray-500">Regions</div>
               </div>
@@ -548,7 +567,7 @@ const ContactsPage = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
           >
             <option value="">All Regions</option>
-            {uniqueRegions.map((region) => (
+            {regions.map((region) => (
               <option key={region} value={region}>
                 {region}
               </option>

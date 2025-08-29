@@ -1122,11 +1122,7 @@ const IncomingCallPage = () => {
                           </div>
                           <div className="mt-1">
                             <span
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                call.ogCallStatus === "Connected"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                             >
                               {call.ogCallStatus || call.status}
                             </span>
@@ -1420,11 +1416,7 @@ const IncomingCallPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedCall.status === "answered"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                       >
                         {selectedCall.rawData?.ogCallStatus || "N/A"}
                       </span>
@@ -1480,12 +1472,7 @@ const IncomingCallPage = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedCall.rawData.trader_master.status ===
-                            "active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                         >
                           {selectedCall.rawData.trader_master.status}
                         </span>

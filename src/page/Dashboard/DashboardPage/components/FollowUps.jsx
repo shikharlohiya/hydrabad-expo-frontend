@@ -34,12 +34,12 @@ const FollowUps = ({
         <div className="flex-1 overflow-auto p-6">
           {followUps.length > 0 ? (
             <div className="space-y-4">
-              {followUps.slice(0, 5).map((followUp) => {
+              {followUps.slice(0, 5).map((followUp, index) => {
                 const followUpInfo = formatFollowUpDate(followUp.followUpDate);
 
                 return (
                   <div
-                    key={followUp.id}
+                    key={`${followUp.id}-${index}`}
                     className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start justify-between">

@@ -1515,12 +1515,7 @@ const OutgoingCallPage = () => {
                           </div>
                           <div className="mt-1">
                             <span
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                (call.callStatus || call.bDialStatus) ===
-                                "Connected"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                             >
                               {(call.bDialStatus === ""
                                 ? "No Status"
@@ -1838,12 +1833,7 @@ const OutgoingCallPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          (selectedCall.rawData?.status ||
-                            selectedCall.rawData?.bDialStatus) === "Connected"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                       >
                         {selectedCall.rawData?.status ||
                           (selectedCall.rawData?.bDialStatus === ""
@@ -1955,12 +1945,7 @@ const OutgoingCallPage = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedCall.rawData.trader_master.status ===
-                            "active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                         >
                           {selectedCall.rawData.trader_master.status}
                         </span>

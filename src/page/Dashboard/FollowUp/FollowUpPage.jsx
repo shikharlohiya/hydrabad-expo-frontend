@@ -174,15 +174,18 @@ const FollowUpPage = () => {
           records,
         } = response.data.data;
 
-        // Transform the data to match component needs
-        const transformedFollowUps = (records || []).map((record) => {
+        // Transform the data to match component needs with unique identifiers
+        const transformedFollowUps = (records || []).map((record, index) => {
           // Safely destructure with fallbacks
           const formDetail = record?.formDetail || {};
           const agent = record?.agent || {};
           const trader_master = record?.trader_master || {};
 
           return {
-            id: formDetail.id,
+            // Create a unique ID that combines multiple identifiers
+            id: `${formDetail.id || index}-${
+              formDetail.CallId || "no-call"
+            }-${Date.now()}-${index}`,
             callId: formDetail.CallId,
             traderName:
               trader_master?.Trader_Name ||
@@ -389,7 +392,7 @@ const FollowUpPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
               {[...Array(4)].map((_, i) => (
                 <div
-                  key={i}
+                  key={`loading-stat-${i}`}
                   className="bg-white rounded-lg p-4 border border-gray-200"
                 >
                   <div className="flex items-center">
@@ -573,7 +576,7 @@ const FollowUpPage = () => {
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
                   <div
-                    key={i}
+                    key={`loading-row-${i}`}
                     className="flex items-center p-4 border border-gray-200 rounded-lg"
                   >
                     <div className="w-10 h-10 bg-gray-200 rounded-full relative overflow-hidden">
@@ -629,7 +632,7 @@ const FollowUpPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredFollowUps.map((followUp) => {
+                  {filteredFollowUps.map((followUp, index) => {
                     const { date, time } = formatDateTime(
                       followUp.callDateTime
                     );
@@ -690,15 +693,6 @@ const FollowUpPage = () => {
 
                         {/* Support Details */}
                         <td className="px-6 py-4">
-                          {/* <div className="text-sm text-gray-900">
-                            {followUp.supportType}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {followUp.processType}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            {followUp.queryType}
-                          </div> */}
                           <div className="text-sm text-gray-900">
                             {followUp.problemCategory}
                           </div>
@@ -872,7 +866,7 @@ const FollowUpPage = () => {
 
                         return (
                           <button
-                            key={pageNum}
+                            key={`page-${pageNum}`}
                             onClick={() => setCurrentPage(pageNum)}
                             className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                               currentPage === pageNum
@@ -1008,24 +1002,6 @@ const FollowUpPage = () => {
                     Support Details
                   </h3>
                   <div className="space-y-3">
-                    {/* <div className="flex justify-between">
-                      <span className="text-gray-600">Support Type:</span>
-                      <span className="font-medium">
-                        {selectedFollowUp.supportType}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Process Type:</span>
-                      <span className="font-medium">
-                        {selectedFollowUp.processType}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Query Type:</span>
-                      <span className="font-medium">
-                        {selectedFollowUp.queryType}
-                      </span>
-                    </div> */}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Inquiry Type:</span>
                       <span className="font-medium">

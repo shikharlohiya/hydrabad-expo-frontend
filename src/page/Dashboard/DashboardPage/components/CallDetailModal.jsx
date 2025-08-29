@@ -87,11 +87,7 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                      callDetail.status === "Connected"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-medium capitalize bg-gray-100 text-gray-800`}
                   >
                     {callDetail.status || "N/A"}
                   </span>
