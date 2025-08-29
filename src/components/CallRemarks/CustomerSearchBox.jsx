@@ -10,13 +10,19 @@ const CustomerSearchBox = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [lastCurrentNumber, setLastCurrentNumber] = useState("");
 
-  // Auto-fill with current number when available
+  // Auto-fill with current number when it changes
   useEffect(() => {
-    if (currentNumber && !searchTerm) {
+    if (currentNumber && currentNumber !== lastCurrentNumber) {
       setSearchTerm(currentNumber);
+      setLastCurrentNumber(currentNumber);
+    } else if (!currentNumber && lastCurrentNumber) {
+      // Clear search term when currentNumber becomes empty
+      setSearchTerm("");
+      setLastCurrentNumber("");
     }
-  }, [currentNumber]);
+  }, [currentNumber, lastCurrentNumber]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
