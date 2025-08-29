@@ -1003,11 +1003,7 @@ const ContactsPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Trader Status:</span>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedTrader.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                       >
                         {selectedTrader.status?.charAt(0).toUpperCase() +
                           selectedTrader.status?.slice(1)}
@@ -1079,15 +1075,7 @@ const ContactsPage = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Agent Status:</span>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedTrader.latestCall.aDialStatus ||
-                            (selectedTrader.latestCall.ogCallStatus === ""
-                              ? "none"
-                              : selectedTrader.latestCall.ogCallStatus) ===
-                              "Connected"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                         >
                           {selectedTrader.latestCall.aDialStatus ||
                             (selectedTrader.latestCall.ogCallStatus === ""
@@ -1098,15 +1086,7 @@ const ContactsPage = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Customer Status:</span>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedTrader.latestCall.bDialStatus ===
-                              "Connected" ||
-                            (selectedTrader.latestCall.bDialStatus === "" &&
-                              selectedTrader.latestCall.ogCallStatus ===
-                                "Connected")
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                         >
                           {(selectedTrader.latestCall.bDialStatus === ""
                             ? "Not-connected"

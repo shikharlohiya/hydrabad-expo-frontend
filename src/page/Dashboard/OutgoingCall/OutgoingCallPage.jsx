@@ -1517,18 +1517,7 @@ const OutgoingCallPage = () => {
                             <span
                               className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                             >
-                              {(call.bDialStatus === ""
-                                ? "No Status"
-                                : call.bDialStatus === "A party Disconnected"
-                                ? "Agent Disconnected"
-                                : call.bDialStatus) ||
-                              call.callStatus === "A party Disconnected"
-                                ? "Agent Disconnected"
-                                : call.callStatus
-                                ? call.callStatus === "not connected"
-                                  ? "Call failed"
-                                  : call.callStatus
-                                : "No Status"}
+                              {call.bDialStatus}
                             </span>
                           </div>
                         </td>
@@ -1827,7 +1816,8 @@ const OutgoingCallPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Duration:</span>
                       <span className="font-medium">
-                        {selectedCall.totalCallDuration}
+                        {selectedCall.totalCallDuration ||
+                          selectedCall.duration}
                       </span>
                     </div>
                     <div className="flex justify-between">
