@@ -1072,7 +1072,7 @@ const ContactsPage = () => {
                           }
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Agent Status:</span>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
@@ -1095,7 +1095,7 @@ const ContactsPage = () => {
                               ? "none"
                               : selectedTrader.latestCall.ogCallStatus)}
                         </span>
-                      </div>
+                      </div> */}
                       <div className="flex justify-between">
                         <span className="text-gray-600">Call Type:</span>
                         <span className="font-medium">
