@@ -1497,12 +1497,9 @@ const OutgoingCallPage = () => {
 
                         {/* Region Info */}
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {call.region}
-                          </div>
-                          <div className="text-sm text-gray-500 flex items-center mt-1">
+                          <div className="text-sm text-gray-900 flex items-center">
                             <MapPinIcon className="h-3 w-3 mr-1" />
-                            {call.zone || "N/A"}
+                            {call.region}
                           </div>
                         </td>
 
@@ -1835,7 +1832,7 @@ const OutgoingCallPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Duration:</span>
                       <span className="font-medium">
-                        {selectedCall.duration}
+                        {selectedCall.totalCallDuration}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1858,7 +1855,7 @@ const OutgoingCallPage = () => {
                 </div>
 
                 {/* Call Status Details */}
-                <div className="bg-gray-50 rounded-lg p-4">
+                {/* <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Call Status
                   </h3>
@@ -1908,7 +1905,7 @@ const OutgoingCallPage = () => {
                       </div>
                     )}
                   </div>
-                </div>
+                </div> */}
 
                 {/* Trader Master Details */}
                 {selectedCall.rawData?.trader_master && (

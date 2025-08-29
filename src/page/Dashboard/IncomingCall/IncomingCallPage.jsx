@@ -1079,12 +1079,9 @@ const IncomingCallPage = () => {
 
                         {/* Region Info */}
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {call.region}
-                          </div>
-                          <div className="text-sm text-gray-500 flex items-center mt-1">
+                          <div className="text-sm text-gray-900 flex items-center">
                             <MapPinIcon className="h-3 w-3 mr-1" />
-                            {call.zone || "N/A"}
+                            {call.region}
                           </div>
                         </td>
 

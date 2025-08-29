@@ -3,15 +3,6 @@ import axiosInstance from "../../library/axios";
 import { User, Phone, MapPin } from "lucide-react";
 import useForm from "../../hooks/useForm";
 
-const getLocalDateTimeString = (date) => {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-  const hours = date.getHours().toString().padStart(2, "0");
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
 const CallRemarksForm = ({
   currentNumber,
   currentCallDetails,
@@ -89,10 +80,7 @@ const CallRemarksForm = ({
   // Auto-populate form data with actual call information
   useEffect(() => {
     const populateCallData = () => {
-      const callDateTime = callStartTime
-        ? getLocalDateTimeString(new Date(callStartTime))
-        : getLocalDateTimeString(new Date());
-
+      const callDateTime = callStartTime;
       const callType = callDirection === "incoming" ? "InBound" : "OutBound";
       const inquiryNumber = currentNumber || "";
 
@@ -137,7 +125,10 @@ const CallRemarksForm = ({
       }
 
       // If the number is the same, but we got savedContactData (e.g. on refresh), populate from it.
-      if (savedContactData && savedContactData.Contact_no === prev.phoneNumber) {
+      if (
+        savedContactData &&
+        savedContactData.Contact_no === prev.phoneNumber
+      ) {
         return {
           ...prev,
           name: savedContactData.Trader_Name || prev.name,
@@ -297,9 +288,9 @@ const CallRemarksForm = ({
     if (name === "status" && value === "closed") {
       updateFormData("followUpDate", "");
     } else if (name === "status" && value === "open") {
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      updateFormData("followUpDate", getLocalDateTimeString(nextWeek));
+      const nextDay = new Date();
+      nextDay.setDate(nextDay.getDate() + 1);
+      updateFormData("followUpDate", nextDay);
     }
   };
 

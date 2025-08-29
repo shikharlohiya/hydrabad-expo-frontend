@@ -145,6 +145,20 @@ const FormProvider = ({ children }) => {
           return;
         }
 
+        // If form is open, reset it for the new call
+        if (isFormOpen) {
+          console.log(
+            "FormProvider - Form is already open, resetting for new call."
+          );
+          resetFormData();
+          setTraderNotFoundData({
+            name: "",
+            region: "",
+            type: "Trader",
+          });
+          setSavedContactData(null);
+        }
+
         // Update call state
         setActiveCallState({
           callId: data.callId,
@@ -183,6 +197,20 @@ const FormProvider = ({ children }) => {
         if (!isCallForCurrentUser(data)) {
           console.log("FormProvider - Call not for current user, ignoring");
           return;
+        }
+
+        // If form is open, reset it for the new call
+        if (isFormOpen) {
+          console.log(
+            "FormProvider - Form is already open, resetting for new call."
+          );
+          resetFormData();
+          setTraderNotFoundData({
+            name: "",
+            region: "",
+            type: "Trader",
+          });
+          setSavedContactData(null);
         }
 
         // Update call state

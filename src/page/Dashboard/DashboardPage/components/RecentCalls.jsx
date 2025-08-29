@@ -154,7 +154,7 @@ const RecentCalls = ({
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {call.duration}
+                        {call.totalCallDuration || call.duration}
                       </td>
                       {userData?.EmployeeRole === 2 && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
