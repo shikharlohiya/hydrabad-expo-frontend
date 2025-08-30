@@ -668,7 +668,7 @@ const Header = ({ collapsed, setCollapsed }) => {
                         {userData?.EmployeeRegion}
                       </p>
                       <p className="text-xs text-gray-600 whitespace-normal break-words">
-                        <span className="font-medium">version:</span> 9.0.0
+                        <span className="font-medium">version:</span> 20.0.0
                       </p>
                     </div>
                   </div>
