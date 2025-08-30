@@ -896,7 +896,7 @@ const OutgoingCallPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
               {[...Array(4)].map((_, i) => (
                 <div
-                  key={i}
+                  key={`stats-loading-${i}`}
                   className="bg-white rounded-lg p-4 border border-gray-200"
                 >
                   <div className="flex items-center">
@@ -1047,7 +1047,7 @@ const OutgoingCallPage = () => {
                         : `All Agents (${availableAgents.length})`}
                     </option>
                     {availableAgents.map((agent) => (
-                      <option key={agent.id} value={agent.id}>
+                      <option key={`agent-${agent.id}`} value={agent.id}>
                         {agent.name} ({agent.phone})
                       </option>
                     ))}
@@ -1240,7 +1240,7 @@ const OutgoingCallPage = () => {
                     </option>
                     {employees.map((employee) => (
                       <option
-                        key={employee.EmployeeId}
+                        key={`employee-${employee.EmployeeId}`}
                         value={employee.EmployeePhone}
                       >
                         {employee.EmployeeName} (
@@ -1377,7 +1377,7 @@ const OutgoingCallPage = () => {
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
                   <div
-                    key={i}
+                    key={`loading-skeleton-${i}`}
                     className="flex items-center p-4 border border-gray-200 rounded-lg"
                   >
                     <div className="w-10 h-10 bg-gray-200 rounded-full relative overflow-hidden">
@@ -1442,11 +1442,13 @@ const OutgoingCallPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredCalls.map((call) => {
+                  {filteredCalls.map((call, index) => {
                     const { date, time } = formatDateTime(call.callDateTime);
-
                     return (
-                      <tr key={call.id} className="hover:bg-gray-50">
+                      <tr
+                        key={`${call.id}-${call.callId}-${index}`}
+                        className="hover:bg-gray-50"
+                      >
                         {/* Recipient Details */}
                         <td className="px-6 py-4">
                           <div className="flex items-center">
@@ -1517,7 +1519,9 @@ const OutgoingCallPage = () => {
                             <span
                               className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}
                             >
-                              {call.bDialStatus}
+                              {call.status === "completed"
+                                ? "Connected"
+                                : "Not Connected"}
                             </span>
                           </div>
                         </td>
@@ -1703,7 +1707,7 @@ const OutgoingCallPage = () => {
 
                         return (
                           <button
-                            key={pageNum}
+                            key={`page-${pageNum}-${index}`}
                             onClick={() => setCurrentPage(pageNum)}
                             className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                               currentPage === pageNum
