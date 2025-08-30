@@ -736,6 +736,8 @@ const FormProvider = ({ children }) => {
       // Auto-close form after successful submission
       setTimeout(() => {
         closeForm();
+        // i want to refresh page after saving the form
+        window.location.reload();
       }, 1500);
 
       return Promise.resolve(response.data);

@@ -994,12 +994,12 @@ const ContactsPage = () => {
                         {selectedTrader.Region}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span className="text-gray-600">Zone:</span>
                       <span className="font-medium">
                         {selectedTrader.Zone || "N/A"}
                       </span>
-                    </div>
+                    </div> */}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Trader Status:</span>
                       <span
@@ -1019,7 +1019,7 @@ const ContactsPage = () => {
                         {getStatusDisplayText(getFormStatus(selectedTrader))}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span className="text-gray-600">Created:</span>
                       <span className="font-medium">
                         {formatDate(selectedTrader.createdAt)}
@@ -1030,7 +1030,7 @@ const ContactsPage = () => {
                       <span className="font-medium">
                         {formatDate(selectedTrader.updatedAt)}
                       </span>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
 
@@ -1102,12 +1102,12 @@ const ContactsPage = () => {
                           {selectedTrader.latestCall.callType}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Disconnected By:</span>
                         <span className="font-medium">
                           {selectedTrader.latestCall.disconnectedBy || "N/A"}
                         </span>
-                      </div>
+                      </div> */}
 
                       {/* Recording */}
                       {((selectedTrader.latestCall.recordVoice &&

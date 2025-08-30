@@ -1930,12 +1930,12 @@ const OutgoingCallPage = () => {
                           {selectedCall.rawData.trader_master.Region}
                         </span>
                       </div>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Zone:</span>
                         <span className="font-medium">
                           {selectedCall.rawData.trader_master.Zone || "N/A"}
                         </span>
-                      </div>
+                      </div> */}
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
                         <span

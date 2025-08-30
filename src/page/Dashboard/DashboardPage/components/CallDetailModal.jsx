@@ -126,12 +126,12 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                       {traderMaster.Region || "N/A"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  {/* <div className="flex justify-between">
                     <span className="text-gray-600">Zone:</span>
                     <span className="font-medium">
                       {traderMaster.Zone || "N/A"}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
