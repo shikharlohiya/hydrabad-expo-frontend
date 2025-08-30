@@ -193,21 +193,16 @@ const CallRemarksPage = () => {
     setCallHistory([]);
 
     try {
-      console.log("Searching for customer:", searchTerm);
-
       const result = await searchCustomerAPI(searchTerm);
 
       if (result.customer) {
         setCustomerData(result.customer);
-        console.log("Customer found:", result.customer);
       } else {
         setCustomerData(null);
-        console.log("No customer found for:", searchTerm);
       }
 
       if (result.history && result.history.length > 0) {
         setCallHistory(result.history);
-        console.log("Call history found:", result.history.length, "records");
       } else {
         setCallHistory([]);
       }
@@ -229,29 +224,13 @@ const CallRemarksPage = () => {
     }
   };
 
-  // Modified submit handler
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       setSubmissionError(null);
 
-      // Include contact data if available
-      let contactDataToSubmit = null;
-      if (newContactData) {
-        contactDataToSubmit = {
-          name: newContactData.Contact_Name,
-          region: newContactData.Region,
-          type: newContactData.Type,
-        };
-      } else if (customerData && customerData.name) {
-        contactDataToSubmit = {
-          name: customerData.name,
-          region: customerData.region || "",
-          type: customerData.accountType || "Trader",
-        };
-      }
-
-      await submitForm(contactDataToSubmit);
+      // Let FormProvider handle traderNotFoundData directly
+      await submitForm();
       setIsSubmitted(true);
     } catch (error) {
       console.error("Error submitting form:", error);

@@ -768,7 +768,7 @@ const IncomingCallPage = () => {
                     ))}
                   </select>
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Connection Status
                   </label>
@@ -781,7 +781,7 @@ const IncomingCallPage = () => {
                     <option value="true">Connected Only</option>
                     <option value="false">Missed Only</option>
                   </select>
-                </div>
+                </div> */}
               </div>
 
               {/* Manager Filter Row 2: Search and Actions */}

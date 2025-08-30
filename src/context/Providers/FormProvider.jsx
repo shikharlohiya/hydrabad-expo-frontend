@@ -141,7 +141,7 @@ const FormProvider = ({ children }) => {
 
         // Filter calls for current user
         if (!isCallForCurrentUser(data)) {
-          console.log("FormProvider - Call not for current user, ignoring");
+          // console.log("FormProvider - Call not for current user, ignoring");
           return;
         }
 
@@ -195,7 +195,7 @@ const FormProvider = ({ children }) => {
 
         // Filter calls for current user
         if (!isCallForCurrentUser(data)) {
-          console.log("FormProvider - Call not for current user, ignoring");
+          // console.log("FormProvider - Call not for current user, ignoring");
           return;
         }
 
@@ -249,9 +249,9 @@ const FormProvider = ({ children }) => {
 
         // Check if it's for current active call
         if (data.callId !== activeCallState.callId) {
-          console.log(
-            "FormProvider - Disconnect not for current call, ignoring"
-          );
+          // console.log(
+          //   "FormProvider - Disconnect not for current call, ignoring"
+          // );
           return;
         }
 
@@ -265,9 +265,9 @@ const FormProvider = ({ children }) => {
           hangupCause: data.hangupCause,
         }));
 
-        console.log(
-          "FormProvider - Call ended, form remains open for completion"
-        );
+        // console.log(
+        //   "FormProvider - Call ended, form remains open for completion"
+        // );
         // Note: We don't close the form here - let user complete it
       },
 
@@ -626,7 +626,7 @@ const FormProvider = ({ children }) => {
     }
   };
 
-  // Submit form data (Updated to include call state data)
+  // Submit form data (Updated to include call state data and fix contact data duplication)
   const submitForm = async (contactData = null) => {
     console.log("FormProvider - Submitting form data");
 
@@ -653,20 +653,19 @@ const FormProvider = ({ children }) => {
         callEndTime: activeCallState.endTime,
       };
 
-      // Merge contact data
-      const finalTraderData = contactData?.name
-        ? {
-            Contact_Name: contactData.name,
-            Region: contactData.region || "",
-            Type: contactData.type || "Trader",
-          }
-        : {
-            Contact_Name: traderNotFoundData.name,
-            Region: traderNotFoundData.region || "",
-            Type: traderNotFoundData.type || "Trader",
-          };
+      // Add contact data in backend format only - fix duplication issue
+      if (contactData?.name || traderNotFoundData.name.trim()) {
+        const sourceData = contactData?.name ? contactData : traderNotFoundData;
 
-      Object.assign(enhancedFormData, finalTraderData);
+        enhancedFormData.Contact_Name = sourceData.name;
+        enhancedFormData.Region = sourceData.region || "";
+        enhancedFormData.Type = sourceData.type || "Trader";
+      }
+
+      // Explicitly remove any frontend format fields to prevent duplication
+      delete enhancedFormData.name;
+      delete enhancedFormData.region;
+      delete enhancedFormData.type;
 
       console.log("FormProvider - Enhanced form data:", enhancedFormData);
 
@@ -681,6 +680,10 @@ const FormProvider = ({ children }) => {
         "recordingUrl", // Don't send in main payload
         "hangupCause",
         "callEndTime",
+        // Add these to excluded fields list for extra safety
+        "name",
+        "region",
+        "type",
       ];
 
       Object.keys(enhancedFormData).forEach((key) => {

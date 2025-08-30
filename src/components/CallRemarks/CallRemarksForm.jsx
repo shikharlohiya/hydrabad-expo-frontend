@@ -173,53 +173,6 @@ const CallRemarksForm = ({
   // Fetch dropdown options from APIs
   useEffect(() => {
     const fetchDropdownOptions = async () => {
-      // Fetch support types
-      // try {
-      //   setLoadingOptions((prev) => ({ ...prev, supportTypes: true }));
-      //   const supportTypesResponse = await axiosInstance.get("/support-types");
-      //   if (supportTypesResponse.data.success) {
-      //     setDropdownOptions((prev) => ({
-      //       ...prev,
-      //       supportTypes: supportTypesResponse.data.data,
-      //     }));
-      //   }
-      // } catch (error) {
-      //   console.error("Error fetching support types:", error);
-      // } finally {
-      //   setLoadingOptions((prev) => ({ ...prev, supportTypes: false }));
-      // }
-
-      // // Fetch process types
-      // try {
-      //   setLoadingOptions((prev) => ({ ...prev, processTypes: true }));
-      //   const processTypesResponse = await axiosInstance.get("/process-types");
-      //   if (processTypesResponse.data.success) {
-      //     setDropdownOptions((prev) => ({
-      //       ...prev,
-      //       processTypes: processTypesResponse.data.data,
-      //     }));
-      //   }
-      // } catch (error) {
-      //   console.error("Error fetching process types:", error);
-      // } finally {
-      //   setLoadingOptions((prev) => ({ ...prev, processTypes: false }));
-      // }
-
-      // // Fetch query types
-      // try {
-      //   setLoadingOptions((prev) => ({ ...prev, queryTypes: true }));
-      //   const queryTypesResponse = await axiosInstance.get("/query-types");
-      //   if (queryTypesResponse.data.success) {
-      //     setDropdownOptions((prev) => ({
-      //       ...prev,
-      //       queryTypes: queryTypesResponse.data.data,
-      //     }));
-      //   }
-      // } catch (error) {
-      //   console.error("Error fetching query types:", error);
-      // } finally {
-      //   setLoadingOptions((prev) => ({ ...prev, queryTypes: false }));
-      // }
       // Fetch problem types
       try {
         setLoadingOptions((prev) => ({ ...prev, problemTypes: true }));
@@ -306,12 +259,8 @@ const CallRemarksForm = ({
     e.preventDefault();
     if (isSubmitting) return;
 
-    console.log("📝 Starting form submission...");
-
     // Small delay to ensure state updates are applied
     await new Promise((resolve) => setTimeout(resolve, 200));
-
-    console.log("📝 Form data with customer info:", formData);
 
     // Call parent's onSubmit which will handle the actual API call
     await onSubmit();
@@ -560,120 +509,6 @@ const CallRemarksForm = ({
             </div>
           </div>
         )}
-
-        {/* Category Selection Section */}
-        {/* <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
-            Category Selection
-          </h3>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Support Type
-              </label>
-              <select
-                name="supportTypeId"
-                value={formData.supportTypeId || ""}
-                onChange={handleInputChange}
-                disabled={loadingOptions.supportTypes}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.supportTypeId ? "border-red-500" : "border-gray-300"
-                } ${
-                  loadingOptions.supportTypes
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                <option value="">
-                  {loadingOptions.supportTypes
-                    ? "Loading..."
-                    : "Select support type"}
-                </option>
-                {dropdownOptions.supportTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.supportName || type.name}
-                  </option>
-                ))}
-              </select>
-              {errors.supportTypeId && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.supportTypeId}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Process Type
-              </label>
-              <select
-                name="processTypeId"
-                value={formData.processTypeId || ""}
-                onChange={handleInputChange}
-                disabled={loadingOptions.processTypes}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.processTypeId ? "border-red-500" : "border-gray-300"
-                } ${
-                  loadingOptions.processTypes
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                <option value="">
-                  {loadingOptions.processTypes
-                    ? "Loading..."
-                    : "Select process type"}
-                </option>
-                {dropdownOptions.processTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.processName || type.name}
-                  </option>
-                ))}
-              </select>
-              {errors.processTypeId && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.processTypeId}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-2">
-                Query Type
-              </label>
-              <select
-                name="queryTypeId"
-                value={formData.queryTypeId || ""}
-                onChange={handleInputChange}
-                disabled={loadingOptions.queryTypes}
-                className={`px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F] transition-colors ${
-                  errors.queryTypeId ? "border-red-500" : "border-gray-300"
-                } ${
-                  loadingOptions.queryTypes
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                <option value="">
-                  {loadingOptions.queryTypes
-                    ? "Loading..."
-                    : "Select query type"}
-                </option>
-                {dropdownOptions.queryTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.queryName || type.name}
-                  </option>
-                ))}
-              </select>
-              {errors.queryTypeId && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.queryTypeId}
-                </p>
-              )}
-            </div>
-          </div>
-        </div> */}
 
         {/* Call Details Section */}
         <div className="space-y-4">

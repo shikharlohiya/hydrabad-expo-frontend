@@ -25,7 +25,6 @@ self.addEventListener("sync", (event) => {
 async function performBackgroundSync() {
   try {
     // This would trigger auto-sync when app comes back online
-    console.log("Background sync triggered");
   } catch (error) {
     console.error("Background sync failed:", error);
   }
