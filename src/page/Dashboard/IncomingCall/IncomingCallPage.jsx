@@ -37,14 +37,14 @@ const IncomingCallPage = () => {
   const managerId = userData?.EmployeeId;
 
   // localStorage keys
-  const STORAGE_KEY = 'incomingCallFilters';
-  
+  const STORAGE_KEY = "incomingCallFilters";
+
   // Helper functions for localStorage
   const saveFiltersToStorage = (filters) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
     } catch (error) {
-      console.warn('Failed to save filters to localStorage:', error);
+      console.warn("Failed to save filters to localStorage:", error);
     }
   };
 
@@ -53,19 +53,51 @@ const IncomingCallPage = () => {
       const stored = localStorage.getItem(STORAGE_KEY);
       return stored ? JSON.parse(stored) : {};
     } catch (error) {
-      console.warn('Failed to load filters from localStorage:', error);
+      console.warn("Failed to load filters from localStorage:", error);
       return {};
     }
   };
 
   // Load initial values from localStorage
   const savedFilters = loadFiltersFromStorage();
-  
-  const [searchTerm, setSearchTerm] = useState(savedFilters.searchTerm || "");
-  const [connectedFilterAgent, setConnectedFilterAgent] = useState(savedFilters.connectedFilterAgent || "");
-  const [dateFilter, setDateFilter] = useState(savedFilters.dateFilter || "today");
-  const [sortBy, setSortBy] = useState(savedFilters.sortBy || "recent");
-  const [sortOrder, setSortOrder] = useState(savedFilters.sortOrder || "desc");
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [connectedFilterAgent, setConnectedFilterAgent] = useState("");
+  const [dateFilter, setDateFilter] = useState("custom");
+  const [sortBy, setSortBy] = useState("recent");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  // Load saved filters after component mounts
+  useEffect(() => {
+    const saved = loadFiltersFromStorage();
+    if (saved.searchTerm) setSearchTerm(saved.searchTerm);
+    if (saved.connectedFilterAgent)
+      setConnectedFilterAgent(saved.connectedFilterAgent);
+    if (saved.sortBy) setSortBy(saved.sortBy);
+    if (saved.sortOrder) setSortOrder(saved.sortOrder);
+    if (saved.selectedEmployeePhone)
+      setSelectedEmployeePhone(saved.selectedEmployeePhone);
+    // Manager filters
+    if (saved.selectedAgent) setSelectedAgent(saved.selectedAgent);
+    if (saved.connectedFilter) setConnectedFilter(saved.connectedFilter);
+
+    // Load date filters - ensure dates are set before dateFilter to avoid timing issues
+    // If no saved dates and dateFilter will be custom, set to today's date
+    if (saved.startDate) {
+      setStartDate(saved.startDate);
+    } else if (saved.dateFilter === 'custom' || (!saved.dateFilter && userData?.EmployeeRole === 1)) {
+      setStartDate(getTodayDate());
+    }
+    
+    if (saved.endDate) {
+      setEndDate(saved.endDate);
+    } else if (saved.dateFilter === 'custom' || (!saved.dateFilter && userData?.EmployeeRole === 1)) {
+      setEndDate(getTodayDate());
+    }
+    
+    // Set dateFilter last to ensure custom dates are already loaded
+    if (saved.dateFilter) setDateFilter(saved.dateFilter);
+  }, [userData?.EmployeeRole]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [incomingCalls, setIncomingCalls] = useState([]);
@@ -79,7 +111,7 @@ const IncomingCallPage = () => {
 
   // ====== ROLE 3 SPECIFIC STATE ======
   const [employees, setEmployees] = useState([]); // Store employee data
-  const [selectedEmployeePhone, setSelectedEmployeePhone] = useState(savedFilters.selectedEmployeePhone || ""); // Selected employee's phone
+  const [selectedEmployeePhone, setSelectedEmployeePhone] = useState(""); // Selected employee's phone
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false); // Loading state for employees
 
   useEffect(() => {
@@ -111,10 +143,10 @@ const IncomingCallPage = () => {
   };
 
   // Manager-specific state
-  const [selectedAgent, setSelectedAgent] = useState(savedFilters.selectedAgent || "");
-  const [connectedFilter, setConnectedFilter] = useState(savedFilters.connectedFilter || "");
-  const [startDate, setStartDate] = useState(savedFilters.startDate || getTodayDate());
-  const [endDate, setEndDate] = useState(savedFilters.endDate || getTodayDate());
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [connectedFilter, setConnectedFilter] = useState("");
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
   const [availableAgents, setAvailableAgents] = useState([]);
 
   // Manager Excel Export state
@@ -546,14 +578,18 @@ const IncomingCallPage = () => {
     dateFilter,
     currentPage,
     userData,
+    // Manager-specific dependencies
     selectedAgent,
     connectedFilter,
     startDate,
     endDate,
+    // Agent-specific dependencies
     debouncedSearchTerm,
     connectedFilterAgent,
     // Role 3 specific dependency
     selectedEmployeePhone,
+    // Add isManager to ensure proper re-fetch when role changes
+    isManager,
   ]);
 
   // For agent view, use server-side pagination so no client-side filtering

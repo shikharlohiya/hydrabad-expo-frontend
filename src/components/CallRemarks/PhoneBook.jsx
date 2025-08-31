@@ -15,6 +15,28 @@ import {
 import axiosInstance from "../../library/axios";
 
 const PhoneBook = ({ isCompact = false }) => {
+  // localStorage keys
+  const STORAGE_KEY = 'phoneBookFilters';
+  
+  // Helper functions for localStorage
+  const saveFiltersToStorage = (filters) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+    } catch (error) {
+      console.warn('Failed to save filters to localStorage:', error);
+    }
+  };
+
+  const loadFiltersFromStorage = () => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.warn('Failed to load filters from localStorage:', error);
+      return {};
+    }
+  };
+
   // State for contacts and pagination
   const [contacts, setContacts] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -22,12 +44,24 @@ const PhoneBook = ({ isCompact = false }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(20); // Items per page
 
-  // Search and filter state
+  // Search and filter state - initialize with default values
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Load saved filters after component mounts
+  useEffect(() => {
+    const saved = loadFiltersFromStorage();
+    console.log('📞 Loading PhoneBook filters:', saved);
+    
+    if (saved.searchTerm) setSearchTerm(saved.searchTerm);
+    if (saved.selectedRegion) setSelectedRegion(saved.selectedRegion);
+    if (saved.selectedRole) setSelectedRole(saved.selectedRole);
+    if (saved.selectedBranch) setSelectedBranch(saved.selectedBranch);
+    if (typeof saved.showFilters === 'boolean') setShowFilters(saved.showFilters);
+  }, []);
 
   // Dropdown options state
   const [regions, setRegions] = useState([]);
@@ -173,6 +207,18 @@ const PhoneBook = ({ isCompact = false }) => {
       setSelectedBranch("");
     }
   }, [selectedRegion]);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    const filtersToSave = {
+      searchTerm,
+      selectedRegion,
+      selectedRole,
+      selectedBranch,
+      showFilters,
+    };
+    saveFiltersToStorage(filtersToSave);
+  }, [searchTerm, selectedRegion, selectedRole, selectedBranch, showFilters]);
 
   // Clear all filters
   const clearFilters = () => {
