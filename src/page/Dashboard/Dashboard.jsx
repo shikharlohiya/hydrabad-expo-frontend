@@ -12,6 +12,7 @@ import FollowUpPage from "./FollowUp/FollowUpPage";
 import UserSettings from "./UserSettings/UserSettings";
 import PhoneBook from "../../components/CallRemarks/PhoneBook";
 import TraderBusinessUpload from "../../components/TraderBusinessUpload";
+import MissedCallPage from "./MissedCall/MissedCallPage";
 
 const Dashboard = () => {
   return (
@@ -24,6 +25,7 @@ const Dashboard = () => {
         <Route path="home" element={<DashboardPage />} />
         <Route path="incoming-call" element={<IncomingCallPage />} />
         <Route path="outgoing-call" element={<OutgoingCallPage />} />
+        <Route path="missed-call" element={<MissedCallPage />} />
         <Route path="contacts" element={<ContactsPage />} />
         {/* <Route path="call-history" element={<CallHistoryPage />} /> */}
         <Route path="follow-up" element={<FollowUpPage />} />

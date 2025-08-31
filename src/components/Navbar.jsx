@@ -8,6 +8,7 @@ import { RiHistoryLine } from "react-icons/ri";
 import { GrUserSettings } from "react-icons/gr";
 import { MdOutlinePersonSearch } from "react-icons/md";
 import { FaUpload } from "react-icons/fa6";
+import { MdPhoneMissed } from "react-icons/md";
 
 // navItems with role restrictions
 const navItems = [
@@ -58,6 +59,12 @@ const navItems = [
     label: "Outgoing Calls",
     icon: <SlCallOut className="w-5 h-5" />,
     roles: [1, 2, 3],
+  },
+  {
+    to: "/dashboard/missed-call",
+    label: "Missed Calls",
+    icon: <MdPhoneMissed className="w-5 h-5" />,
+    roles: [2, 3],
   },
 ];
 
