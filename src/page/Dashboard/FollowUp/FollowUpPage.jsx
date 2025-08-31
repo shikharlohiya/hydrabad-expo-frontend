@@ -957,7 +957,7 @@ const FollowUpPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Region:</span>
                       <span className="font-medium">
-                        {selectedFollowUp.region}
+                        {selectedFollowUp.Region || "N/A"}
                       </span>
                     </div>
                   </div>
@@ -1044,7 +1044,7 @@ const FollowUpPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Region:</span>
                       <span className="font-medium">
-                        {selectedFollowUp.Region}
+                        {selectedFollowUp.region}
                       </span>
                     </div>
                   </div>
