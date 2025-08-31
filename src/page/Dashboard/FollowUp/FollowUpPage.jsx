@@ -201,8 +201,8 @@ const FollowUpPage = () => {
               formDetail.inquiryNumber ||
               "N/A",
             region:
-              agent?.EmployeeRegion ||
               trader_master?.Region ||
+              agent?.EmployeeRegion ||
               trader_master?.region ||
               "Unknown",
             agentName: agent?.EmployeeName || "Unknown Agent",
@@ -1044,7 +1044,7 @@ const FollowUpPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Region:</span>
                       <span className="font-medium">
-                        {selectedFollowUp.region}
+                        {selectedFollowUp.Region}
                       </span>
                     </div>
                   </div>
