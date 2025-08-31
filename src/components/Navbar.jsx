@@ -64,7 +64,7 @@ const navItems = [
     to: "/dashboard/missed-call",
     label: "Missed Calls",
     icon: <MdPhoneMissed className="w-5 h-5" />,
-    roles: [2, 3],
+    roles: [1, 2, 3],
   },
 ];
 
