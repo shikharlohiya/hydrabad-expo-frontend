@@ -85,16 +85,22 @@ const IncomingCallPage = () => {
     // If no saved dates and dateFilter will be custom, set to today's date
     if (saved.startDate) {
       setStartDate(saved.startDate);
-    } else if (saved.dateFilter === 'custom' || (!saved.dateFilter && userData?.EmployeeRole === 1)) {
+    } else if (
+      saved.dateFilter === "custom" ||
+      (!saved.dateFilter && userData?.EmployeeRole === 1)
+    ) {
       setStartDate(getTodayDate());
     }
-    
+
     if (saved.endDate) {
       setEndDate(saved.endDate);
-    } else if (saved.dateFilter === 'custom' || (!saved.dateFilter && userData?.EmployeeRole === 1)) {
+    } else if (
+      saved.dateFilter === "custom" ||
+      (!saved.dateFilter && userData?.EmployeeRole === 1)
+    ) {
       setEndDate(getTodayDate());
     }
-    
+
     // Set dateFilter last to ensure custom dates are already loaded
     if (saved.dateFilter) setDateFilter(saved.dateFilter);
   }, [userData?.EmployeeRole]);
@@ -292,7 +298,7 @@ const IncomingCallPage = () => {
       if (isManager) {
         console.log("📞 Fetching incoming calls for manager:", managerId);
 
-        const params = { page: currentPage, limit: 50 };
+        const params = { page: currentPage, limit: 10 };
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
         if (selectedAgent) params.agentId = selectedAgent;
@@ -1480,7 +1486,7 @@ const IncomingCallPage = () => {
                         {selectedCall.agentPhone || "N/A"}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span className="text-gray-600">Start Time:</span>
                       <span className="font-medium">
                         {new Date(
@@ -1495,7 +1501,7 @@ const IncomingCallPage = () => {
                           selectedCall.rawData?.callEndTime
                         ).toLocaleString()}
                       </span>
-                    </div>
+                    </div> */}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Duration:</span>
                       <span className="font-medium">
@@ -1543,7 +1549,7 @@ const IncomingCallPage = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Code:</span>
                         <span className="font-medium">
-                          {selectedCall.rawData.trader_master.Code}
+                          {selectedCall.rawData.trader_master.Code || "N/A"}
                         </span>
                       </div>
                       <div className="flex justify-between">

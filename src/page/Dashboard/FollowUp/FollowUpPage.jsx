@@ -388,7 +388,7 @@ const FollowUpPage = () => {
           </div>
 
           {/* Statistics Cards */}
-          {isLoading ? (
+          {/* {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
               {[...Array(4)].map((_, i) => (
                 <div
@@ -412,7 +412,7 @@ const FollowUpPage = () => {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -471,7 +471,7 @@ const FollowUpPage = () => {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Shimmer Animation CSS */}
           <style jsx>{`
@@ -510,7 +510,7 @@ const FollowUpPage = () => {
             </div>
 
             {/* Status Filter */}
-            <select
+            {/* <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
@@ -518,7 +518,7 @@ const FollowUpPage = () => {
               <option value="">All Status</option>
               <option value="open">Open</option>
               <option value="closed">Closed</option>
-            </select>
+            </select> */}
 
             {/* Date Filter */}
             <select
