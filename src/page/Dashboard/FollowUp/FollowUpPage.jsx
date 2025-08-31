@@ -207,6 +207,7 @@ const FollowUpPage = () => {
               "Unknown",
             agentName: agent?.EmployeeName || "Unknown Agent",
             agentPhone: agent?.EmployeePhone,
+            agentRegion: agent?.EmployeeRegion || "N/A",
             callDateTime: formDetail.callDateTime,
             callType: formDetail.callType,
             supportType: formDetail.supportType?.supportName || "N/A",
@@ -957,7 +958,7 @@ const FollowUpPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Region:</span>
                       <span className="font-medium">
-                        {selectedFollowUp.Region || "N/A"}
+                        {selectedFollowUp.region || "N/A"}
                       </span>
                     </div>
                   </div>
@@ -1044,7 +1045,7 @@ const FollowUpPage = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Region:</span>
                       <span className="font-medium">
-                        {selectedFollowUp.region}
+                        {selectedFollowUp.agentRegion}
                       </span>
                     </div>
                   </div>
