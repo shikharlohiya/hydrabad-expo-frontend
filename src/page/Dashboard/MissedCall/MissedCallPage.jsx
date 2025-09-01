@@ -15,6 +15,7 @@ import {
   XCircleIcon,
   ChartBarIcon,
   PhoneArrowUpRightIcon,
+  UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import axiosInstance from "../../../library/axios";
 import UserContext from "../../../context/UserContext";
@@ -34,11 +35,25 @@ const MissedCallsPage = () => {
   const [selectedCall, setSelectedCall] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+  // New state for bulk assignment
+  const [selectedCalls, setSelectedCalls] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
+  const [agentFilter, setAgentFilter] = useState("");
   const [hasOutgoingCall, setHasOutgoingCall] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  // User role check - Agent has EmployeeRole 1, Manager has 2, Admin has 3
+  const isAgent = userData?.EmployeeRole === 1;
+  const isManagerOrAdmin =
+    userData?.EmployeeRole === 2 || userData?.EmployeeRole === 3;
 
   // Helper function to get today's date
   const getTodayDate = () => {
@@ -53,29 +68,140 @@ const MissedCallsPage = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Build API params based on user role and filters
+  const buildApiParams = (additionalParams = {}) => {
+    const params = {
+      page: currentPage,
+      limit: 20,
+      ...additionalParams,
+    };
+
+    if (searchTerm.trim()) {
+      params.callerNumber = searchTerm.trim();
+    }
+
+    if (hasOutgoingCall !== "") {
+      params.hasOutgoingCall = hasOutgoingCall;
+    }
+
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo) params.dateTo = dateTo;
+
+    // Role-based agent filtering
+    if (isAgent && userData?.EmployeePhone) {
+      params.agentNumber = userData.EmployeePhone;
+    } else if (isManagerOrAdmin && agentFilter.trim()) {
+      params.agentNumber = agentFilter.trim();
+    }
+
+    return params;
+  };
+
+  // Fetch agents for dropdown
+  const fetchAgents = async () => {
+    if (!isManagerOrAdmin) return;
+
+    try {
+      setIsLoadingAgents(true);
+      const response = await axiosInstance.get(
+        "/admin/employees?EmployeeRoleID=1"
+      );
+
+      if (response.data.success) {
+        setAgents(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching agents:", error);
+      showToast("Error loading agents");
+    } finally {
+      setIsLoadingAgents(false);
+    }
+  };
+
+  // Show toast message
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage("");
+    }, 3000);
+  };
+
+  // Handle select all checkbox
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const selectableCallIds = missedCalls
+        .filter((call) => !call.hasBeenCalledBack)
+        .map((call) => call.incomingCall.callId);
+      setSelectedCalls(selectableCallIds);
+    } else {
+      setSelectedCalls([]);
+    }
+  };
+
+  // Handle individual call selection
+  const handleCallSelection = (callId, checked) => {
+    if (checked) {
+      setSelectedCalls((prev) => [...prev, callId]);
+    } else {
+      setSelectedCalls((prev) => prev.filter((id) => id !== callId));
+    }
+  };
+
+  // Handle bulk assignment
+  const handleBulkAssignment = async () => {
+    if (!selectedAgent || selectedCalls.length === 0) {
+      showToast("Please select an agent and at least one call");
+      return;
+    }
+
+    try {
+      setIsAssigning(true);
+
+      const response = await axiosInstance.put(
+        "/calls/missed/bulk/assign-agent",
+        {
+          callIds: selectedCalls,
+          agentNumber: selectedAgent,
+        }
+      );
+
+      if (response.data.success) {
+        showToast(
+          `Successfully assigned ${response.data.updatedCount} call(s) to agent`
+        );
+        setSelectedCalls([]);
+        setSelectedAgent("");
+        fetchMissedCalls(); // Refresh data
+      }
+    } catch (error) {
+      console.error("❌ Error assigning calls:", error);
+      showToast("Error assigning calls to agent");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedCalls([]);
+    setSelectedAgent("");
+  };
+
   // Fetch missed calls data
   const fetchMissedCalls = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const params = {
-        page: currentPage,
-        limit: 20,
-      };
-
-      if (searchTerm.trim()) {
-        params.callerNumber = searchTerm.trim();
-      }
-
-      if (hasOutgoingCall !== "") {
-        params.hasOutgoingCall = hasOutgoingCall;
-      }
-
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
+      const params = buildApiParams();
 
       console.log("📞 Fetching missed calls with params:", params);
+      console.log(
+        "👤 User role:",
+        userData?.EmployeeRole,
+        "Phone:",
+        userData?.EmployeePhone
+      );
 
       const response = await axiosInstance.get("/calls/missed", { params });
 
@@ -104,8 +230,18 @@ const MissedCallsPage = () => {
   const fetchStats = async () => {
     try {
       const params = {};
+
+      if (isAgent && userData?.EmployeePhone) {
+        params.agentNumber = userData.EmployeePhone;
+      } else if (isManagerOrAdmin && agentFilter.trim()) {
+        params.agentNumber = agentFilter.trim();
+      }
+
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
+      if (hasOutgoingCall !== "") params.hasOutgoingCall = hasOutgoingCall;
+
+      console.log("📊 Fetching stats with params:", params);
 
       const response = await axiosInstance.get("/calls/missed/stats/summary", {
         params,
@@ -122,11 +258,17 @@ const MissedCallsPage = () => {
   // Load data when component mounts or filters change
   useEffect(() => {
     fetchMissedCalls();
-  }, [currentPage, searchTerm, hasOutgoingCall, dateFrom, dateTo]);
+  }, [currentPage, searchTerm, hasOutgoingCall, dateFrom, dateTo, agentFilter]);
 
   useEffect(() => {
     fetchStats();
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, hasOutgoingCall, agentFilter]);
+
+  useEffect(() => {
+    if (isManagerOrAdmin) {
+      fetchAgents();
+    }
+  }, []);
 
   // Handle view details
   const handleViewDetails = async (call) => {
@@ -188,8 +330,30 @@ const MissedCallsPage = () => {
     }
   };
 
+  // Get role-specific title
+  const getRoleSpecificTitle = () => {
+    if (isAgent) {
+      return "My Missed Calls";
+    }
+    return "Missed Calls Management";
+  };
+
+  const getRoleSpecificDescription = () => {
+    if (isAgent) {
+      return "Track and manage your missed calls that require callbacks";
+    }
+    return "Track and manage missed calls that require callbacks";
+  };
+
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
+          {toastMessage}
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4">
@@ -197,11 +361,21 @@ const MissedCallsPage = () => {
             <div>
               <h1 className="text-xl font-semibold text-gray-900 flex items-center">
                 <ExclamationTriangleIcon className="w-5 h-5 text-red-600 mr-2" />
-                Missed Calls Management
+                {getRoleSpecificTitle()}
+                {isAgent && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    Agent View
+                  </span>
+                )}
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Track and manage missed calls that require callbacks
+                {getRoleSpecificDescription()}
               </p>
+              {isAgent && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Showing calls for agent: {userData?.EmployeePhone}
+                </p>
+              )}
             </div>
             <button
               onClick={handleRefresh}
@@ -229,7 +403,9 @@ const MissedCallsPage = () => {
                     <div className="text-base font-semibold text-red-900">
                       {stats.overview?.totalMissedCalls || 0}
                     </div>
-                    <div className="text-xs text-red-600">Total Missed</div>
+                    <div className="text-xs text-red-600">
+                      {isAgent ? "My Total Missed" : "Total Missed"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -300,6 +476,31 @@ const MissedCallsPage = () => {
               </div>
             </div>
 
+            {/* Manager/Admin Agent Filter */}
+            {isManagerOrAdmin && (
+              <div>
+                <div className="relative">
+                  <UserIcon className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
+                  <select
+                    value={agentFilter}
+                    onChange={(e) => setAgentFilter(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm appearance-none bg-white"
+                    disabled={isLoadingAgents}
+                  >
+                    <option value="">Filter by Agent...</option>
+                    {agents.map((agent) => (
+                      <option
+                        key={agent.EmployeeId}
+                        value={agent.EmployeePhone}
+                      >
+                        {agent.EmployeeName} ({agent.EmployeePhone})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             {/* Callback Status Filter */}
             <select
               value={hasOutgoingCall}
@@ -333,6 +534,7 @@ const MissedCallsPage = () => {
             <button
               onClick={() => {
                 setSearchTerm("");
+                setAgentFilter("");
                 setHasOutgoingCall("");
                 setDateFrom("");
                 setDateTo("");
@@ -343,6 +545,59 @@ const MissedCallsPage = () => {
               Clear Filters
             </button>
           </div>
+
+          {/* Bulk Assignment Controls - Only for Manager/Admin */}
+          {isManagerOrAdmin && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center">
+                  <UserPlusIcon className="h-5 w-5 text-blue-600 mr-2" />
+                  <span className="text-sm font-medium text-blue-900">
+                    Bulk Assignment:
+                  </span>
+                </div>
+
+                <select
+                  value={selectedAgent}
+                  onChange={(e) => setSelectedAgent(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  disabled={isLoadingAgents}
+                >
+                  <option value="">Select Agent...</option>
+                  {agents.map((agent) => (
+                    <option key={agent.EmployeeId} value={agent.EmployeePhone}>
+                      {agent.EmployeeName} ({agent.EmployeePhone})
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={handleBulkAssignment}
+                  disabled={
+                    !selectedAgent || selectedCalls.length === 0 || isAssigning
+                  }
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isAssigning
+                    ? "Assigning..."
+                    : `Assign ${selectedCalls.length} Call(s)`}
+                </button>
+
+                {selectedCalls.length > 0 && (
+                  <button
+                    onClick={clearSelection}
+                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+
+                <span className="text-sm text-blue-700">
+                  {selectedCalls.length} call(s) selected
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -398,9 +653,15 @@ const MissedCallsPage = () => {
                 No Missed Calls Found
               </h3>
               <p className="text-gray-600">
-                {searchTerm || hasOutgoingCall || dateFrom || dateTo
-                  ? "No missed calls match your search criteria"
-                  : "No missed calls found"}
+                {searchTerm ||
+                agentFilter ||
+                hasOutgoingCall ||
+                dateFrom ||
+                dateTo
+                  ? `No missed calls match the selected criteria.`
+                  : `No missed calls found${
+                      isAgent ? " for your agent number" : ""
+                    }.`}
               </p>
             </div>
           ) : (
@@ -408,15 +669,33 @@ const MissedCallsPage = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    {/* Select All Checkbox - Only for Manager/Admin */}
+                    {isManagerOrAdmin && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedCalls.length > 0 &&
+                            selectedCalls.length === 
+                              missedCalls.filter((call) => !call.hasBeenCalledBack).length &&
+                            missedCalls.filter((call) => !call.hasBeenCalledBack).length > 0
+                          }
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Caller Info
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Call Details
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Agent Info
-                    </th>
+                    {isManagerOrAdmin && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Agent Info
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Callback Status
                     </th>
@@ -439,6 +718,29 @@ const MissedCallsPage = () => {
                         key={call.incomingCall.id}
                         className="hover:bg-gray-50"
                       >
+                        {/* Individual Checkbox - Only for Manager/Admin and not already called back */}
+                        {isManagerOrAdmin && (
+                          <td className="px-6 py-4">
+                            {!call.hasBeenCalledBack ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedCalls.includes(
+                                  call.incomingCall.callId
+                                )}
+                                onChange={(e) =>
+                                  handleCallSelection(
+                                    call.incomingCall.callId,
+                                    e.target.checked
+                                  )
+                                }
+                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                            ) : (
+                              <div className="w-4 h-4"></div>
+                            )}
+                          </td>
+                        )}
+
                         {/* Caller Info */}
                         <td className="px-6 py-4">
                           <div className="flex items-center">
@@ -476,26 +778,35 @@ const MissedCallsPage = () => {
                           </div>
                         </td>
 
-                        {/* Agent Info */}
-                        <td className="px-6 py-4">
-                          {call.incomingCall.agentNumber ? (
-                            <div className="text-sm text-gray-900">
-                              <div className="font-medium">
-                                Agent: {call.incomingCall.agentNumber}
+                        {/* Agent Info (conditionally rendered) */}
+                        {isManagerOrAdmin && (
+                          <td className="px-6 py-4">
+                            {call.incomingCall.agentNumber ? (
+                              <div className="text-sm text-gray-900">
+                                <div className="font-medium">
+                                  Agent: {call.incomingCall.agentNumber}
+                                  {isAgent &&
+                                    call.incomingCall.agentNumber ===
+                                      userData?.EmployeePhone && (
+                                      <span className="ml-1 text-xs bg-blue-100 text-blue-700 px-1 py-0.5 rounded">
+                                        You
+                                      </span>
+                                    )}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Agent was available
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                Agent was available
+                            ) : (
+                              <div className="text-sm text-gray-500">
+                                <div>No agent assigned</div>
+                                <div className="text-xs text-red-500">
+                                  IVR only call
+                                </div>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="text-sm text-gray-500">
-                              <div>No agent assigned</div>
-                              <div className="text-xs text-red-500">
-                                IVR only call
-                              </div>
-                            </div>
-                          )}
-                        </td>
+                            )}
+                          </td>
+                        )}
 
                         {/* Callback Status */}
                         <td className="px-6 py-4">
