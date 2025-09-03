@@ -2672,7 +2672,7 @@ const MissedCallsPage = () => {
               )}
 
               {/* Raw Data (for debugging) */}
-              <div className="mt-6 bg-gray-50 rounded-lg p-4">
+              {/* <div className="mt-6 bg-gray-50 rounded-lg p-4">
                 <details>
                   <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
                     Show Raw Data (Debug)
@@ -2706,7 +2706,7 @@ const MissedCallsPage = () => {
                     )}
                   </div>
                 </details>
-              </div>
+              </div> */}
 
               {/* Modal Footer */}
               <div className="mt-6 flex justify-between">
