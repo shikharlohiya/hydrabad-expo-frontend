@@ -13,6 +13,7 @@ import UserSettings from "./UserSettings/UserSettings";
 import PhoneBook from "../../components/CallRemarks/PhoneBook";
 import TraderBusinessUpload from "../../components/TraderBusinessUpload";
 import MissedCallPage from "./MissedCall/MissedCallPage";
+import ReportPage from "./Report/ReportPage";
 
 const Dashboard = () => {
   return (
@@ -35,6 +36,7 @@ const Dashboard = () => {
         {/* admin routes */}
         <Route path="user-settings" element={<UserSettings />} />
         <Route path="bulk-upload" element={<TraderBusinessUpload />} />
+        <Route path="download-report" element={<ReportPage />} />
 
         {/* Redirect /dashboard/dashboard to /dashboard */}
         <Route

@@ -8,6 +8,7 @@ import { RiHistoryLine } from "react-icons/ri";
 import { GrUserSettings } from "react-icons/gr";
 import { MdOutlinePersonSearch } from "react-icons/md";
 import { FaUpload } from "react-icons/fa6";
+import { FaDownload } from "react-icons/fa6";
 import { MdPhoneMissed } from "react-icons/md";
 
 // navItems with role restrictions
@@ -22,12 +23,6 @@ const navItems = [
     to: "/dashboard/user-settings",
     label: "User Settings",
     icon: <GrUserSettings className="w-5 h-5" />,
-    roles: [3],
-  },
-  {
-    to: "/dashboard/bulk-upload",
-    label: "Bulk Upload",
-    icon: <FaUpload className="w-5 h-5" />,
     roles: [3],
   },
   {
@@ -64,6 +59,18 @@ const navItems = [
     to: "/dashboard/missed-call",
     label: "Missed Calls",
     icon: <MdPhoneMissed className="w-5 h-5" />,
+    roles: [1, 2, 3],
+  },
+  {
+    to: "/dashboard/bulk-upload",
+    label: "Bulk Upload",
+    icon: <FaUpload className="w-5 h-5" />,
+    roles: [3],
+  },
+  {
+    to: "/dashboard/download-report",
+    label: "Download Report",
+    icon: <FaDownload className="w-5 h-5" />,
     roles: [1, 2, 3],
   },
 ];
