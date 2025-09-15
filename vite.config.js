@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     host: true,
-    allowedHosts: ["crm-trader.abisibg.com", "crm-trader-dev.abisexport.com"],
-    port: 3009,
+    allowedHosts: ["crm.trader.abisibg.com", "crm-trader-dev.abisexport.com"],
+    port: 4009,
     strictPort: true,
   },
 });

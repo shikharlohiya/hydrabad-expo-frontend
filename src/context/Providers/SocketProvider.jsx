@@ -12,8 +12,8 @@ export const CONNECTION_STATUS = {
 };
 
 const SocketProvider = ({ children }) => {
-  // const baseURL = "https://crm-trader-api.abisibg.com/";
-  const baseURL = "https://crm-trader-api.abisexport.com/";
+  const baseURL = "https://crm.trader-api.abisibg.com/";
+  // const baseURL = "https://crm-trader-api.abisexport.com/";
 
   // Connection state
   const [socket, setSocket] = useState(null);
