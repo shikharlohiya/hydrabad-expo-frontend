@@ -150,7 +150,7 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
   return (
     <div className="p-4">
       <div className="mb-4">
-        <h4 className="text-sm font-medium text-gray-900">Call History</h4>
+        <h4 className="text-sm font-medium text-gray-900">Call History111</h4>
         <p className="text-xs text-gray-500 mt-1">
           Showing last {callHistory.length} call record
           {callHistory.length !== 1 ? "s" : ""}
@@ -216,17 +216,24 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
 
             {/* Call Details */}
             <div className="space-y-1">
-              {/* Agent Information - Uncomment if needed */}
-              {/* {call.agent && (
+              {/* Agent Information */}
+              {(call.agent?.EmployeeName || call.agent?.name || call.agentName || call.agent) && (
                 <div className="flex items-center space-x-2 text-xs text-gray-600">
                   <User className="w-3 h-3" />
                   <span className="font-medium">Agent:</span>
-                  <span>{call.agent}</span>
-                  {call.agentPhone && (
-                    <span className="text-gray-500">({call.agentPhone})</span>
+                  <span>
+                    {call.agent?.EmployeeName ||
+                     call.agent?.name ||
+                     call.agentName ||
+                     (typeof call.agent === 'string' ? call.agent : 'Unknown Agent')}
+                  </span>
+                  {(call.agent?.EmployeePhone || call.agent?.phone || call.agentPhone) && (
+                    <span className="text-gray-500">
+                      ({call.agent?.EmployeePhone || call.agent?.phone || call.agentPhone})
+                    </span>
                   )}
                 </div>
-              )} */}
+              )}
 
               {/* Phone Numbers - Uncomment if needed */}
               {/* <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">

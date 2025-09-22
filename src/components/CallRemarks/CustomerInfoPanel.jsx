@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Mail,
@@ -11,8 +11,57 @@ import {
   Database,
   UserCheck,
 } from "lucide-react";
+import SapCustomerDetails from "./SapCustomerDetails";
+import { fetchSapCustomerDetailsWithCache } from "../../services/sapCustomerService";
 
-const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
+const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) => {
+  // SAP customer data state
+  const [sapCustomerData, setSapCustomerData] = useState(null);
+  const [sapLoading, setSapLoading] = useState(false);
+  const [sapError, setSapError] = useState(null);
+
+  // Fetch SAP customer details when phone number changes
+  useEffect(() => {
+    const fetchSapData = async () => {
+      if (!phoneNumber) {
+        setSapCustomerData(null);
+        setSapError(null);
+        return;
+      }
+
+      setSapLoading(true);
+      setSapError(null);
+
+      try {
+        console.log("🔍 CustomerInfoPanel: Starting SAP fetch for:", phoneNumber);
+        const result = await fetchSapCustomerDetailsWithCache(phoneNumber);
+        console.log("✅ CustomerInfoPanel: SAP fetch result:", result);
+
+        if (result && result.success) {
+          setSapCustomerData(result.data);
+          setSapError(null);
+        } else {
+          setSapCustomerData(null);
+          setSapError(result?.message || "Failed to fetch SAP customer details");
+        }
+      } catch (error) {
+        console.error("❌ CustomerInfoPanel: Error fetching SAP customer details:", error);
+        setSapCustomerData(null);
+        setSapError("Network error while fetching SAP customer details");
+      } finally {
+        setSapLoading(false);
+      }
+    };
+
+    // Add error boundary around the async function
+    try {
+      fetchSapData();
+    } catch (error) {
+      console.error("❌ CustomerInfoPanel: Error in useEffect:", error);
+      setSapLoading(false);
+      setSapError("Failed to initialize SAP data fetch");
+    }
+  }, [phoneNumber]);
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "active":
@@ -54,65 +103,80 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
     }
   };
 
-  if (!customerData) {
-    return (
-      <div className="p-4 text-center">
-        <div className="text-gray-500 text-sm">No trader data available</div>
-      </div>
-    );
-  }
+  // Show appropriate message when no internal customer data but we might have SAP data
+  const showNoCustomerMessage = !customerData && hasSearched;
+  const showSearchPrompt = !customerData && !hasSearched;
 
-  const { traderMaster, contactInfo } = customerData;
+  const { traderMaster, contactInfo } = customerData || {};
 
   return (
     <div className="p-4 space-y-6">
-      {/* Customer Header */}
-      <div className="flex items-start space-x-3">
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <User className="w-6 h-6 text-blue-600" />
+      {/* Show search prompt */}
+      {showSearchPrompt && (
+        <div className="text-center py-8">
+          <User className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Search for customer information to view details</p>
         </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-gray-900 text-lg truncate">
-            {customerData.name || "Unknown Trader"}
-          </h4>
-          <p className="text-sm text-gray-500 mt-1">
-            Phone: {phoneNumber || customerData.phoneNumber || "N/A"}
-          </p>
+      )}
 
-          {/* Account ID */}
-          {customerData.accountId && (
+      {/* Show no customer message but still allow SAP data */}
+      {showNoCustomerMessage && (
+        <div className="text-center py-4">
+          <User className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-gray-500 text-sm">No customer information found in internal system</p>
+          <p className="text-xs text-gray-400 mt-1">Checking SAP system for customer details...</p>
+        </div>
+      )}
+
+      {/* Customer Header - only show if we have customerData */}
+      {customerData && (
+        <div className="flex items-start space-x-3">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <User className="w-6 h-6 text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-gray-900 text-lg truncate">
+              {customerData.name || "Unknown Trader"}
+            </h4>
             <p className="text-sm text-gray-500 mt-1">
-              Code: {customerData.accountId}
+              Phone: {phoneNumber || customerData.phoneNumber || "N/A"}
             </p>
-          )}
 
-          {/* Business Name */}
-          {customerData.businessName && (
-            <p className="text-sm text-blue-600 mt-1 font-medium">
-              {customerData.businessName}
-            </p>
-          )}
+            {/* Account ID */}
+            {customerData.accountId && (
+              <p className="text-sm text-gray-500 mt-1">
+                Code: {customerData.accountId}
+              </p>
+            )}
 
-          {/* Status Badges */}
-          <div className="flex flex-wrap gap-2 mt-2">
-            <span
-              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                customerData.status
-              )}`}
-            >
-              {customerData.status || "Unknown"}
-            </span>
-            <span
-              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(
-                customerData.accountType
-              )}`}
-            >
-              <Shield className="w-3 h-3 mr-1" />
-              {customerData.accountType || "Trader"}
-            </span>
+            {/* Business Name */}
+            {customerData.businessName && (
+              <p className="text-sm text-blue-600 mt-1 font-medium">
+                {customerData.businessName}
+              </p>
+            )}
+
+            {/* Status Badges */}
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span
+                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                  customerData.status
+                )}`}
+              >
+                {customerData.status || "Unknown"}
+              </span>
+              <span
+                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(
+                  customerData.accountType
+                )}`}
+              >
+                <Shield className="w-3 h-3 mr-1" />
+                {customerData.accountType || "Trader"}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Trader Master Data */}
       {traderMaster && (
@@ -236,33 +300,33 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
         </div>
       )}
 
-      {/* Contact Information */}
-      <div className="space-y-3">
-        <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
-          Contact Information
-        </h5>
-        <div className="space-y-2">
-          <div className="flex items-center space-x-3">
-            <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <span className="text-sm text-gray-900">
-              {phoneNumber || customerData.phoneNumber || "N/A"}
-            </span>
-          </div>
-          {customerData.email && (
+      {/* Contact Information - Always show if we have a phone number */}
+      {phoneNumber && (
+        <div className="space-y-3">
+          <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
+            Contact Information
+          </h5>
+          <div className="space-y-2">
             <div className="flex items-center space-x-3">
-              <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <span className="text-sm text-gray-900 truncate">
-                {customerData.email}
+              <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="text-sm text-gray-900">
+                {phoneNumber}
               </span>
             </div>
-          )}
+            {customerData?.email && (
+              <div className="flex items-center space-x-3">
+                <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="text-sm text-gray-900 truncate">
+                  {customerData.email}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Business Information */}
-      {(customerData.businessName ||
-        customerData.region ||
-        customerData.zone) && (
+      {/* Business Information - Only show if we have customer data */}
+      {customerData && (customerData.businessName || customerData.region || customerData.zone) && (
         <div className="space-y-3">
           <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
             Business Information
@@ -380,6 +444,15 @@ const CustomerInfoPanel = ({ customerData, phoneNumber }) => {
           )}
         </div>
       </div> */}
+
+      {/* SAP Customer Details Section */}
+      <div className={`${customerData ? "border-t border-gray-200 pt-4" : ""}`}>
+        <SapCustomerDetails
+          sapData={sapCustomerData}
+          isLoading={sapLoading}
+          error={sapError}
+        />
+      </div>
     </div>
   );
 };

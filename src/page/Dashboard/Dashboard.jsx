@@ -14,6 +14,7 @@ import PhoneBook from "../../components/CallRemarks/PhoneBook";
 import TraderBusinessUpload from "../../components/TraderBusinessUpload";
 import MissedCallPage from "./MissedCall/MissedCallPage";
 import ReportPage from "./Report/ReportPage";
+import WhatsAppPage from "./WhatsApp/WhatsAppPage";
 
 const Dashboard = () => {
   return (
@@ -32,6 +33,7 @@ const Dashboard = () => {
         <Route path="follow-up" element={<FollowUpPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="phone-book" element={<PhoneBook />} />
+        <Route path="whatsapp" element={<WhatsAppPage />} />
 
         {/* admin routes */}
         <Route path="user-settings" element={<UserSettings />} />

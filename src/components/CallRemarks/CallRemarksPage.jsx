@@ -5,6 +5,7 @@ import CustomerInfoPanel from "./CustomerInfoPanel";
 import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
 import PhoneBook from "./PhoneBook"; // Import PhoneBook
+import WhatsAppMessages from "./WhatsAppMessages"; // Import WhatsApp Messages
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import UserContext from "../../context/UserContext";
 import axiosInstance from "../../library/axios";
@@ -31,6 +32,7 @@ const CallRemarksPage = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [showCustomerPanel, setShowCustomerPanel] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
+  const [searchedPhoneNumber, setSearchedPhoneNumber] = useState(null);
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -187,10 +189,14 @@ const CallRemarksPage = () => {
       return;
     }
 
+    // Clean and validate phone number
+    const cleanPhoneNumber = searchTerm.replace(/\D/g, "");
+
     setIsSearching(true);
     setSearchError(null);
     setCustomerData(null);
     setCallHistory([]);
+    setSearchedPhoneNumber(cleanPhoneNumber); // Set the searched phone number
 
     try {
       const result = await searchCustomerAPI(searchTerm);
@@ -209,16 +215,16 @@ const CallRemarksPage = () => {
 
       setHasSearched(true);
 
-      // Show customer panel if we have any results
-      if (result.customer || result.history.length > 0) {
-        setShowCustomerPanel(true);
-      }
+      // Always show customer panel after search to display SAP data
+      setShowCustomerPanel(true);
     } catch (error) {
       console.error("Customer search error:", error);
       setSearchError(error.message);
       setCustomerData(null);
       setCallHistory([]);
       setHasSearched(true);
+      // Still show panel to display SAP data even if internal search failed
+      setShowCustomerPanel(true);
     } finally {
       setIsSearching(false);
     }
@@ -503,7 +509,7 @@ const CallRemarksPage = () => {
             <div className="flex mt-4 space-x-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setActiveTab("info")}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-colors ${
                   activeTab === "info"
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -516,7 +522,7 @@ const CallRemarksPage = () => {
               </button>
               <button
                 onClick={() => setActiveTab("history")}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-colors ${
                   activeTab === "history"
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -531,7 +537,7 @@ const CallRemarksPage = () => {
               </button>
               <button
                 onClick={() => setActiveTab("phonebook")}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-colors ${
                   activeTab === "phonebook"
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -539,39 +545,31 @@ const CallRemarksPage = () => {
               >
                 Phone Book
               </button>
+              <button
+                onClick={() => setActiveTab("whatsapp")}
+                className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-colors ${
+                  activeTab === "whatsapp"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                WhatsApp
+              </button>
             </div>
           </div>
 
           {/* Panel Content */}
           <div className="flex-1 overflow-y-auto">
             {activeTab === "info" && (
-              <>
-                {customerData ? (
-                  <CustomerInfoPanel
-                    customerData={customerData}
-                    phoneNumber={
-                      activeCallState?.customerNumber ||
-                      activeCallState?.callerNumber
-                    }
-                  />
-                ) : hasSearched ? (
-                  <div className="p-4 text-center">
-                    <div className="text-gray-500 text-sm">
-                      No customer information found for this number.
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      This might be a new customer or the number is not
-                      registered.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 text-center">
-                    <div className="text-gray-500 text-sm">
-                      Search for customer information to view details
-                    </div>
-                  </div>
-                )}
-              </>
+              <CustomerInfoPanel
+                customerData={customerData}
+                phoneNumber={
+                  searchedPhoneNumber ||
+                  activeCallState?.customerNumber ||
+                  activeCallState?.callerNumber
+                }
+                hasSearched={hasSearched}
+              />
             )}
             {activeTab === "history" && (
               <>
@@ -599,6 +597,15 @@ const CallRemarksPage = () => {
               </>
             )}
             {activeTab === "phonebook" && <PhoneBook isCompact={true} />}
+            {activeTab === "whatsapp" && (
+              <WhatsAppMessages
+                phoneNumber={
+                  searchedPhoneNumber ||
+                  activeCallState?.customerNumber ||
+                  activeCallState?.callerNumber
+                }
+              />
+            )}
           </div>
         </div>
       </div>

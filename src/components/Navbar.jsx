@@ -10,6 +10,7 @@ import { MdOutlinePersonSearch } from "react-icons/md";
 import { FaUpload } from "react-icons/fa6";
 import { FaDownload } from "react-icons/fa6";
 import { MdPhoneMissed } from "react-icons/md";
+import { FaWhatsapp } from "react-icons/fa";
 
 // navItems with role restrictions
 const navItems = [
@@ -29,6 +30,12 @@ const navItems = [
     to: "/dashboard/phone-book",
     label: "Phone Book",
     icon: <MdOutlinePersonSearch className="w-5 h-5" />,
+    roles: [1, 2, 3],
+  },
+  {
+    to: "/dashboard/whatsapp",
+    label: "WhatsApp",
+    icon: <FaWhatsapp className="w-5 h-5" />,
     roles: [1, 2, 3],
   },
   {
