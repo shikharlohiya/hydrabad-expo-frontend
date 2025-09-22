@@ -21,6 +21,9 @@ const SocketProvider = ({ children }) => {
 
   const baseURL = getBaseURL();
 
+
+  
+
   // Connection state
   const [socket, setSocket] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState(
