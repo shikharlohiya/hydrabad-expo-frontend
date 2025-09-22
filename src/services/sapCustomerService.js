@@ -21,19 +21,15 @@ export const fetchSapCustomerDetails = async (mobileNumber) => {
     console.log(`🔍 Fetching SAP customer details for: ${cleanMobileNumber}`);
     console.log(`📡 Making API call to: /sap/customer/${cleanMobileNumber}`);
 
-    // Get API key from environment variables
-    const apiKey = import.meta.env.VITE_SAP_API_KEY;
+    // // Get API key from environment variables
+    // const apiKey = import.meta.env.VITE_SAP_API_KEY;
 
-    if (!apiKey) {
-      throw new Error("SAP API key not configured in environment variables");
-    }
+    // if (!apiKey) {
+    //   throw new Error("SAP API key not configured in environment variables");
+    // }
 
     // Make the API call to our backend which will proxy to SAP
-    const response = await axiosInstance.get(`/sap/customer/${cleanMobileNumber}`, {
-      headers: {
-        'x-api-key': apiKey
-      }
-    });
+    const response = await axiosInstance.get(`/sap/customer/${cleanMobileNumber}`);
 
     // Backend returns standardized response format
     if (response.data) {
