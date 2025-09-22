@@ -12,6 +12,8 @@ const CustomerSearchBox = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [lastCurrentNumber, setLastCurrentNumber] = useState("");
 
+
+  
   // Auto-fill with current number when it changes
   useEffect(() => {
     if (currentNumber && currentNumber !== lastCurrentNumber) {
