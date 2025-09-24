@@ -604,6 +604,7 @@ const CallRemarksPage = () => {
                   activeCallState?.customerNumber ||
                   activeCallState?.callerNumber
                 }
+                showSendTemplate={true}
               />
             )}
           </div>

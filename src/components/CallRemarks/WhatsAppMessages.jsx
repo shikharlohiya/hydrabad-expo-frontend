@@ -14,15 +14,19 @@ import {
   Play,
   Pause,
   ExternalLink,
+  Send,
+  CheckCircle,
 } from "lucide-react";
 import axiosInstance from "../../library/axios";
 
-const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber }) => {
+const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = false }) => {
   const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber || "");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchInput, setSearchInput] = useState(initialPhoneNumber || "");
+  const [sendingTemplate, setSendingTemplate] = useState(false);
+  const [templateResult, setTemplateResult] = useState(null);
 
   // Update phone number when prop changes
   useEffect(() => {
@@ -83,6 +87,65 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber }) => {
   const handleRefresh = () => {
     if (phoneNumber) {
       fetchMessages(phoneNumber);
+    }
+  };
+
+  const sendTemplate = async () => {
+    if (!phoneNumber) {
+      setTemplateResult({
+        success: false,
+        message: "No phone number available"
+      });
+      return;
+    }
+
+    setSendingTemplate(true);
+    setTemplateResult(null);
+
+    try {
+      // Clean the mobile number (remove non-digits)
+      const cleanMobile = phoneNumber.replace(/\D/g, "");
+
+      // Remove country code if present (assuming +91 for India)
+      const mobileWithoutCountryCode = cleanMobile.startsWith("91") && cleanMobile.length > 10
+        ? cleanMobile.substring(2)
+        : cleanMobile;
+
+      console.log(`📤 Sending WhatsApp template to: ${mobileWithoutCountryCode}`);
+
+      const response = await axiosInstance.post(`/send-template/${mobileWithoutCountryCode}`);
+
+      if (response.data && response.data.success) {
+        setTemplateResult({
+          success: true,
+          message: "Template sent successfully!",
+          data: response.data.data
+        });
+        console.log("✅ Template sent successfully:", response.data);
+
+        // Refresh messages after successful send
+        setTimeout(() => {
+          handleRefresh();
+        }, 2000);
+      } else {
+        setTemplateResult({
+          success: false,
+          message: response.data?.message || "Failed to send template"
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error sending template:", error);
+      setTemplateResult({
+        success: false,
+        message: error.response?.data?.message || "Failed to send template"
+      });
+    } finally {
+      setSendingTemplate(false);
+
+      // Clear result after 5 seconds
+      setTimeout(() => {
+        setTemplateResult(null);
+      }, 5000);
     }
   };
 
@@ -487,6 +550,69 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber }) => {
           </div>
         )}
       </div>
+
+      {/* Send Template Interface - Only show if showSendTemplate prop is true */}
+      {showSendTemplate && (
+        <div className="border-t border-gray-200 p-3 bg-gray-50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <FileText className="w-4 h-4 text-green-600" />
+              <h5 className="text-sm font-medium text-gray-900">Send Template</h5>
+            </div>
+            <div className="text-xs text-gray-500">
+              {phoneNumber ? `To: ${phoneNumber}` : "No recipient"}
+            </div>
+          </div>
+
+          {/* Template Preview */}
+          <div className="bg-white border border-gray-200 rounded-lg p-2 mb-2">
+            <div className="flex items-start space-x-2">
+              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <MessageCircle className="w-3 h-3 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <div className="text-xs font-medium text-gray-900 mb-1">Chat Preview</div>
+                <div className="text-xs text-gray-600 bg-gray-50 rounded p-2 border border-gray-100">
+                  <p>Namaste, you’re connected with IB Group’s Whatsapp support agent</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Send Button and Status */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={sendTemplate}
+              disabled={sendingTemplate || !phoneNumber}
+              className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              <Send className={`w-3 h-3 ${sendingTemplate ? "animate-pulse" : ""}`} />
+              <span>{sendingTemplate ? "Sending..." : "Send Chat"}</span>
+            </button>
+
+            {/* Result Message */}
+            {templateResult && (
+              <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs ${
+                templateResult.success
+                  ? "bg-green-100 text-green-700 border border-green-200"
+                  : "bg-red-100 text-red-700 border border-red-200"
+              }`}>
+                {templateResult.success ? (
+                  <CheckCircle className="w-3 h-3" />
+                ) : (
+                  <AlertCircle className="w-3 h-3" />
+                )}
+                <span>{templateResult.message}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Instructions */}
+          <div className="mt-2 text-xs text-gray-500">
+            💡 Click "Send Template" to send a WhatsApp message to this customer.
+          </div>
+        </div>
+      )}
     </div>
   );
 };

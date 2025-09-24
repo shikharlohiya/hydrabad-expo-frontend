@@ -12,17 +12,8 @@ export const CONNECTION_STATUS = {
 };
 
 const SocketProvider = ({ children }) => {
-  // Get base URL from environment variable, removing /api suffix for socket connection
-  const getBaseURL = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-    // Remove /api suffix if present to get the base URL for socket connection
-    return apiUrl.replace(/\/api$/, '/');
-  };
-
-  const baseURL = getBaseURL();
-
-
-  
+  const baseURL = "https://crm-trader-api.abisibg.com/";
+  // const baseURL = "https://crm-trader-api.abisexport.com/";
 
   // Connection state
   const [socket, setSocket] = useState(null);

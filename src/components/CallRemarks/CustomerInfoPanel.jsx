@@ -10,6 +10,9 @@ import {
   MapPin,
   Database,
   UserCheck,
+  Search,
+  RefreshCw,
+  FileText,
 } from "lucide-react";
 import SapCustomerDetails from "./SapCustomerDetails";
 import { fetchSapCustomerDetailsWithCache } from "../../services/sapCustomerService";
@@ -20,10 +23,22 @@ const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) =
   const [sapLoading, setSapLoading] = useState(false);
   const [sapError, setSapError] = useState(null);
 
-  // Fetch SAP customer details when phone number changes
+  // SAP search state
+  const [sapSearchInput, setSapSearchInput] = useState(phoneNumber || "");
+  const [searchedNumber, setSearchedNumber] = useState(phoneNumber || "");
+
+  // Update search input when phoneNumber prop changes
+  useEffect(() => {
+    if (phoneNumber) {
+      setSapSearchInput(phoneNumber);
+      setSearchedNumber(phoneNumber);
+    }
+  }, [phoneNumber]);
+
+  // Fetch SAP customer details when searched number changes
   useEffect(() => {
     const fetchSapData = async () => {
-      if (!phoneNumber) {
+      if (!searchedNumber) {
         setSapCustomerData(null);
         setSapError(null);
         return;
@@ -33,8 +48,8 @@ const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) =
       setSapError(null);
 
       try {
-        console.log("🔍 CustomerInfoPanel: Starting SAP fetch for:", phoneNumber);
-        const result = await fetchSapCustomerDetailsWithCache(phoneNumber);
+        console.log("🔍 CustomerInfoPanel: Starting SAP fetch for:", searchedNumber);
+        const result = await fetchSapCustomerDetailsWithCache(searchedNumber);
         console.log("✅ CustomerInfoPanel: SAP fetch result:", result);
 
         if (result && result.success) {
@@ -61,7 +76,42 @@ const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) =
       setSapLoading(false);
       setSapError("Failed to initialize SAP data fetch");
     }
-  }, [phoneNumber]);
+  }, [searchedNumber]);
+
+  // Handle SAP search
+  const handleSapSearch = () => {
+    if (sapSearchInput.trim()) {
+      setSearchedNumber(sapSearchInput.trim());
+    }
+  };
+
+  const handleRefreshSap = () => {
+    if (searchedNumber) {
+      // Clear cache and refetch
+      setSapCustomerData(null);
+      setSapError(null);
+      const fetchSapData = async () => {
+        setSapLoading(true);
+        try {
+          const result = await fetchSapCustomerDetailsWithCache(searchedNumber, true); // Force refresh
+          if (result && result.success) {
+            setSapCustomerData(result.data);
+            setSapError(null);
+          } else {
+            setSapCustomerData(null);
+            setSapError(result?.message || "Failed to fetch SAP customer details");
+          }
+        } catch (error) {
+          console.error("❌ Error refreshing SAP data:", error);
+          setSapCustomerData(null);
+          setSapError("Network error while fetching SAP customer details");
+        } finally {
+          setSapLoading(false);
+        }
+      };
+      fetchSapData();
+    }
+  };
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "active":
@@ -111,6 +161,58 @@ const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) =
 
   return (
     <div className="p-4 space-y-6">
+      {/* SAP Search Interface */}
+      <div className="border-b border-gray-200 pb-4">
+        <div className="flex items-center space-x-2 mb-3">
+          <FileText className="w-4 h-4 text-blue-600" />
+          <h5 className="text-sm font-medium text-gray-900">SAP Customer Search</h5>
+        </div>
+
+        {/* Search Bar */}
+        <div className="flex items-center space-x-2">
+          <div className="flex-1 relative">
+            <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <input
+              type="text"
+              value={sapSearchInput}
+              onChange={(e) => setSapSearchInput(e.target.value)}
+              placeholder="Enter mobile number..."
+              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onKeyPress={(e) => e.key === "Enter" && handleSapSearch()}
+            />
+          </div>
+          <button
+            onClick={handleSapSearch}
+            disabled={sapLoading || !sapSearchInput.trim()}
+            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+          >
+            <Search className="w-4 h-4" />
+            <span>Search</span>
+          </button>
+          <button
+            onClick={handleRefreshSap}
+            disabled={sapLoading || !searchedNumber}
+            className="px-3 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${sapLoading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+
+        {/* Current Search Info */}
+        {searchedNumber && (
+          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-2 text-blue-700 text-sm">
+              <Database className="w-4 h-4" />
+              <span>
+                {sapLoading
+                  ? `Searching SAP for: ${searchedNumber}...`
+                  : `SAP search results for: ${searchedNumber}`}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Show search prompt */}
       {showSearchPrompt && (
         <div className="text-center py-8">
@@ -139,7 +241,7 @@ const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) =
               {customerData.name || "Unknown Trader"}
             </h4>
             <p className="text-sm text-gray-500 mt-1">
-              Phone: {phoneNumber || customerData.phoneNumber || "N/A"}
+              Phone: {searchedNumber || phoneNumber || customerData.phoneNumber || "N/A"}
             </p>
 
             {/* Account ID */}
@@ -301,7 +403,7 @@ const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) =
       )}
 
       {/* Contact Information - Always show if we have a phone number */}
-      {phoneNumber && (
+      {(searchedNumber || phoneNumber) && (
         <div className="space-y-3">
           <h5 className="font-medium text-gray-900 text-sm border-b border-gray-200 pb-1">
             Contact Information
@@ -310,7 +412,7 @@ const CustomerInfoPanel = ({ customerData, phoneNumber, hasSearched = false }) =
             <div className="flex items-center space-x-3">
               <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <span className="text-sm text-gray-900">
-                {phoneNumber}
+                {searchedNumber || phoneNumber}
               </span>
             </div>
             {customerData?.email && (

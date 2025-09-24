@@ -1,10 +1,13 @@
 import React, { useState } from "react";
-import { MessageCircle, Search, RefreshCw, Phone } from "lucide-react";
+import { MessageCircle, Search, RefreshCw, Phone, Send, FileText, CheckCircle, AlertCircle } from "lucide-react";
 import WhatsAppMessages from "../../../components/CallRemarks/WhatsAppMessages";
+import axiosInstance from "../../../library/axios";
 
 const WhatsAppPage = () => {
   const [currentPhoneNumber, setCurrentPhoneNumber] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [sendingTemplate, setSendingTemplate] = useState(false);
+  const [templateResult, setTemplateResult] = useState(null);
 
   const handleSearch = () => {
     if (searchInput.trim()) {
@@ -15,6 +18,60 @@ const WhatsAppPage = () => {
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handleSearch();
+    }
+  };
+
+  const sendTemplate = async () => {
+    if (!currentPhoneNumber) {
+      setTemplateResult({
+        success: false,
+        message: "Please search for a mobile number first"
+      });
+      return;
+    }
+
+    setSendingTemplate(true);
+    setTemplateResult(null);
+
+    try {
+      // Clean the mobile number (remove non-digits)
+      const cleanMobile = currentPhoneNumber.replace(/\D/g, "");
+
+      // Remove country code if present (assuming +91 for India)
+      const mobileWithoutCountryCode = cleanMobile.startsWith("91") && cleanMobile.length > 10
+        ? cleanMobile.substring(2)
+        : cleanMobile;
+
+      console.log(`📤 Sending WhatsApp template to: ${mobileWithoutCountryCode}`);
+
+      const response = await axiosInstance.post(`/send-template/${mobileWithoutCountryCode}`);
+
+      if (response.data && response.data.success) {
+        setTemplateResult({
+          success: true,
+          message: "Template sent successfully!",
+          data: response.data.data
+        });
+        console.log("✅ Template sent successfully:", response.data);
+      } else {
+        setTemplateResult({
+          success: false,
+          message: response.data?.message || "Failed to send template"
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error sending template:", error);
+      setTemplateResult({
+        success: false,
+        message: error.response?.data?.message || "Failed to send template"
+      });
+    } finally {
+      setSendingTemplate(false);
+
+      // Clear result after 5 seconds
+      setTimeout(() => {
+        setTemplateResult(null);
+      }, 5000);
     }
   };
 
@@ -78,8 +135,8 @@ const WhatsAppPage = () => {
         </div>
 
         {/* WhatsApp Messages Content */}
-        <div className="bg-white rounded-lg shadow border border-gray-200">
-          <div className="h-[calc(100vh-200px)]">
+        <div className="bg-white rounded-lg shadow border border-gray-200 flex flex-col">
+          <div className="flex-1 h-[calc(100vh-320px)]">
             {currentPhoneNumber ? (
               <WhatsAppMessages phoneNumber={currentPhoneNumber} />
             ) : (
@@ -98,11 +155,73 @@ const WhatsAppPage = () => {
                   <div className="space-y-2 text-sm text-gray-500">
                     <p>• Search by mobile number (e.g., 9876543210)</p>
                     <p>• View text, image, and video messages</p>
+                    <p>• Send WhatsApp templates to customers</p>
                     <p>• Refresh to get latest messages</p>
                   </div>
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Chat Interface */}
+          <div className="border-t border-gray-200 p-4 bg-gray-50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-green-600" />
+                <h4 className="font-medium text-gray-900">Send Chat</h4>
+              </div>
+              <div className="text-sm text-gray-500">
+                {currentPhoneNumber ? `To: ${currentPhoneNumber}` : "No recipient selected"}
+              </div>
+            </div>
+
+            {/* Template Preview */}
+            <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900 mb-1">Chat Preview</div>
+                  <div className="text-sm text-gray-600 bg-gray-50 rounded p-2 border border-gray-100">
+                    <p>Namaste, you’re connected with IB Group’s Whatsapp support agent</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Send Button and Status */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={sendTemplate}
+                disabled={sendingTemplate || !currentPhoneNumber}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Send className={`w-4 h-4 ${sendingTemplate ? "animate-pulse" : ""}`} />
+                <span>{sendingTemplate ? "Sending..." : "Send Chat"}</span>
+              </button>
+
+              {/* Result Message */}
+              {templateResult && (
+                <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${
+                  templateResult.success
+                    ? "bg-green-100 text-green-700 border border-green-200"
+                    : "bg-red-100 text-red-700 border border-red-200"
+                }`}>
+                  {templateResult.success ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4" />
+                  )}
+                  <span>{templateResult.message}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Instructions */}
+            <div className="mt-3 text-xs text-gray-500">
+              <p>💡 Search for a customer's mobile number above, then click "Send Template" to send a WhatsApp message.</p>
+            </div>
           </div>
         </div>
 
@@ -121,6 +240,7 @@ const WhatsAppPage = () => {
                   <li>• Click on images to view in full size</li>
                   <li>• Videos have built-in player controls</li>
                   <li>• Use the refresh button to get latest messages</li>
+                  <li>• Send WhatsApp templates using the chat interface below</li>
                 </ul>
               </div>
             </div>
