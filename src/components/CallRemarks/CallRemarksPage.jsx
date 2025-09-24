@@ -6,7 +6,8 @@ import CustomerCallHistory from "./CustomerCallHistory";
 import CustomerSearchBox from "./CustomerSearchBox";
 import PhoneBook from "./PhoneBook"; // Import PhoneBook
 import WhatsAppMessages from "./WhatsAppMessages"; // Import WhatsApp Messages
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { VideoCallManager } from "../VideoCall"; // Import Video Call Manager
+import { ChevronRight, ChevronLeft, Video } from "lucide-react";
 import UserContext from "../../context/UserContext";
 import axiosInstance from "../../library/axios";
 
@@ -555,6 +556,16 @@ const CallRemarksPage = () => {
               >
                 WhatsApp
               </button>
+              <button
+                onClick={() => setActiveTab("videocall")}
+                className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-colors ${
+                  activeTab === "videocall"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Video Call
+              </button>
             </div>
           </div>
 
@@ -605,6 +616,16 @@ const CallRemarksPage = () => {
                   activeCallState?.callerNumber
                 }
                 showSendTemplate={true}
+              />
+            )}
+            {activeTab === "videocall" && (
+              <VideoCallManager
+                customerData={customerData}
+                phoneNumber={
+                  searchedPhoneNumber ||
+                  activeCallState?.customerNumber ||
+                  activeCallState?.callerNumber
+                }
               />
             )}
           </div>
