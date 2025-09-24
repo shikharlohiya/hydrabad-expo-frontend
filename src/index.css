@@ -12,6 +12,8 @@
   scrollbar-width: none; /* Firefox */
 }
 
+
+
 /* Alternative: Hide all scrollbars globally */
 * {
   scrollbar-width: none; /* Firefox */
