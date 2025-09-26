@@ -43,35 +43,156 @@ const CallRemarksForm = ({
   });
 
   // Common regions
-  const regions = [
-    { value: "AP00", label: "AP00" },
-    { value: "AP01", label: "AP01" },
-    { value: "AS00", label: "AS00" },
-    { value: "BH00", label: "BH00" },
-    { value: "CG00", label: "CG00" },
-    { value: "HP00", label: "HP00" },
-    { value: "GJ00", label: "GJ00" },
-    { value: "HR00", label: "HR00" },
-    { value: "JK00", label: "JK00" },
-    { value: "JH00", label: "JH00" },
-    { value: "KA00", label: "KA00" },
-    { value: "MP00", label: "MP00" },
-    { value: "MH00", label: "MH00" },
-    { value: "OD00", label: "OD00" },
-    { value: "PB00", label: "PB00" },
-    { value: "PB01", label: "PB01" },
-    { value: "PB02", label: "PB02" },
-    { value: "RJ00", label: "RJ00" },
-    { value: "TL00", label: "TL00" },
-    { value: "UP01", label: "UP01" },
-    { value: "UP00", label: "UP00" },
-    { value: "UP03", label: "UP03" },
-    { value: "UP02", label: "UP02" },
-    { value: "UK00", label: "UK00" },
-    { value: "WB01", label: "WB01" },
-    { value: "WB00", label: "WB00" },
-  ];
+ const regions = [
 
+
+    { value: "AP00", label: "AP00" },
+
+
+    { value: "AP01", label: "AP01" },
+
+
+    { value: "AP02", label: "AP02" },
+
+
+    { value: "AS00", label: "AS00" },
+
+
+    { value: "AS01", label: "AS01" },
+
+
+    { value: "BR00", label: "BR00" },
+
+
+    { value: "BR01", label: "BR01" },
+
+
+    { value: "BH00", label: "BH00" },
+
+
+    { value: "CG00", label: "CG00" },
+
+
+    { value: "HP00", label: "HP00" },
+
+
+    { value: "GJ00", label: "GJ00" },
+
+
+    { value: "HR00", label: "HR00" },
+
+
+    { value: "HR01", label: "HR01" },
+
+
+    { value: "JK00", label: "JK00" },
+
+
+    { value: "JH00", label: "JH00" },
+
+
+    { value: "KA00", label: "KA00" },
+
+
+    { value: "KR00", label: "KR00" },
+
+
+    { value: "KR01", label: "KR01" },
+
+
+    { value: "MP00", label: "MP00" },
+
+
+    { value: "MP01", label: "MP01" },
+
+
+    { value: "MH00", label: "MH00" },
+
+
+    { value: "MH01", label: "MH01" },
+
+
+    { value: "MH02", label: "MH02" },
+
+
+    { value: "OD00", label: "OD00" },
+
+
+    { value: "OR00", label: "OR00" },
+
+
+    { value: "OR01", label: "OR01" },
+
+
+    { value: "OR02", label: "OR02" },
+
+
+    { value: "PB00", label: "PB00" },
+
+
+    { value: "PB01", label: "PB01" },
+
+
+    { value: "PN00", label: "PN00" },
+
+
+    { value: "PN01", label: "PN01" },
+
+
+    { value: "PB02", label: "PB02" },
+
+
+    { value: "RJ00", label: "RJ00" },
+
+
+    { value: "RJ01", label: "RJ01" },
+
+
+    { value: "TL00", label: "TL00" },
+
+
+    { value: "TL01", label: "TL01" },
+
+
+    { value: "TN00", label: "TN00" },
+
+
+    { value: "TN01", label: "TN01" },
+
+
+    { value: "TN02", label: "TN02" },
+
+
+    { value: "UP01", label: "UP01" },
+
+
+    { value: "UP00", label: "UP00" },
+
+
+    { value: "UP03", label: "UP03" },
+
+
+    { value: "UP02", label: "UP02" },
+
+
+    { value: "UP04", label: "UP04" },
+
+
+    { value: "UK00", label: "UK00" },
+
+
+    { value: "WB01", label: "WB01" },
+
+
+    { value: "WB00", label: "WB00" },
+
+
+    { value: "WB02", label: "WB02" },
+
+
+    { value: "WB03", label: "WB03" },
+
+  ];
   const typeOptions = [
     { value: "Trader", label: "Trader" },
     { value: "Non-Trader", label: "Non-Trader" },
