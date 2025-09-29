@@ -10,6 +10,7 @@ import AuthContext from "./context/AuthContext";
 import Login from "./page/Login";
 import NotFound from "./page/NotFound";
 import Dashboard from "./page/Dashboard/Dashboard";
+import ViewOnlyDashboard from "./page/Dashboard/ViewOnlyDashboard";
 // import DialerProvider from "./context/Providers/DialerProvider";
 import FormProvider from "./context/Providers/FormProvider";
 
@@ -40,11 +41,27 @@ function App() {
             }
           />
 
-          {/* Protected Dashboard Routes */}
+          {/* View Only Dashboard - Full Screen for Projector (Role 4 Only) */}
+          <Route
+            path="/view-only"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                requiredRole={4}
+              >
+                <ViewOnlyDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Dashboard Routes (Exclude Role 4) */}
           <Route
             path="/dashboard/*"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                allowedRoles={[1, 2, 3]} // All roles except 4 (View Only)
+              >
                 {/* DialerProvider wraps only the dashboard since it needs Socket and Form contexts */}
                 <FormProvider>
                   {/* <DialerProvider> */}

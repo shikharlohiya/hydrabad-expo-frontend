@@ -64,9 +64,16 @@ export default function Login() {
         login(response.data.token);
         setUser(response.data.employee);
 
-        // Show a welcome message and navigate to the dashboard
-        // Navigate immediately to dashboard after successful login
-        navigate("/dashboard", { replace: true });
+        // Role-based navigation: Check if user has View Only role (roleId 4)
+        const userRole = response.data.employee.EmployeeRole;
+
+        if (userRole === 4) {
+          // View Only role - redirect to full-screen view-only dashboard
+          navigate("/view-only", { replace: true });
+        } else {
+          // Regular users - redirect to normal dashboard
+          navigate("/dashboard", { replace: true });
+        }
 
         // Show success toast with custom styling
         toast.success(
