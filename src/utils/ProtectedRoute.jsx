@@ -13,6 +13,7 @@ const ProtectedRoute = ({
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
+
   // If no role restrictions, allow access
   if (!allowedRoles && !requiredRole) {
     return children;
