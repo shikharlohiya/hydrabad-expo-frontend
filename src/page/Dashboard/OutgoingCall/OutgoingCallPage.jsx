@@ -2102,6 +2102,13 @@ const OutgoingCallPage = () => {
                             "N/A"}
                         </span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">SAP Inquiry Number:</span>
+                        <span className="font-medium">
+                          {selectedCall.rawData.formDetails.sapInquiryNumber ||
+                            "N/A"}
+                        </span>
+                      </div>
                       {/* <div className="flex justify-between">
                         <span className="text-gray-600">Support Type:</span>
                         <span className="font-medium">
