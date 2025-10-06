@@ -215,6 +215,12 @@ const CallDetailModal = ({ isOpen, onClose, callDetail }) => {
                     </span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-gray-600">SAP Inquiry Number:</span>
+                    <span className="font-medium">
+                      {formDetails.sapInquiryNumber || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-600">Follow-up Date:</span>
                     <span className="font-medium">
                       {formDetails.followUpDate
