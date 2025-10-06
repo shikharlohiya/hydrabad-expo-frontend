@@ -235,6 +235,8 @@ const CustomerCallHistory = ({ callHistory, phoneNumber }) => {
                 </div>
               )}
 
+              
+
               {/* Phone Numbers - Uncomment if needed */}
               {/* <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                 {call.customerNumber && (
