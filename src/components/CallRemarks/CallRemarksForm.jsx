@@ -348,8 +348,8 @@ const CallRemarksForm = ({
   }, [formData.problemId]);
 
   const statusOptions = [
-    { value: "closed", label: "Closed" },
-    { value: "open", label: "Open" },
+    { value: "closed", label: "Resolved" },
+    { value: "open", label: "Unresolved" },
   ];
 
   const handleInputChange = (e) => {
@@ -494,6 +494,21 @@ const CallRemarksForm = ({
                 </div>
               </div>
 
+              {/* SAP Inquiry Number */}
+              <div>
+                <label className="block text-sm font-medium text-blue-800 mb-2">
+                  SAP Inquiry Number
+                </label>
+                <input
+                  type="text"
+                  name="sapInquiryNumber"
+                  value={formData.sapInquiryNumber || ""}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="Enter SAP inquiry number"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-blue-800 mb-2">
                   Region
@@ -546,8 +561,7 @@ const CallRemarksForm = ({
         }
 
         {/* Problem Description Section */}
-        {traderNotFoundData.type !== "Non-Trader" && (
-          <div className="space-y-4">
+        <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
               Traders Inquiry
             </h3>
@@ -629,7 +643,6 @@ const CallRemarksForm = ({
               )}
             </div>
           </div>
-        )}
 
         {/* Call Details Section */}
         <div className="space-y-4">
@@ -658,8 +671,7 @@ const CallRemarksForm = ({
         </div>
 
         {/* Status Section */}
-        {traderNotFoundData.type !== "Non-Trader" && (
-          <div className="space-y-4">
+        <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
               Status & Follow-up
             </h3>
@@ -709,7 +721,6 @@ const CallRemarksForm = ({
               )}
             </div>
           </div>
-        )}
 
         {/* Form Actions */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">

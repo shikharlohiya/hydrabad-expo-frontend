@@ -137,9 +137,9 @@ const ContactsPage = () => {
   const getStatusDisplayText = (status) => {
     switch (status) {
       case "closed":
-        return "Closed";
+        return "Resolved";
       case "open":
-        return "Open";
+        return "Unresolved";
       case "no-call":
         return "none"; // Changed from "No Call" to "-"
       default:
