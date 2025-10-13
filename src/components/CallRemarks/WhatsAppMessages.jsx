@@ -38,6 +38,22 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
   const [sharingMedia, setSharingMedia] = useState(false);
   const [shareResult, setShareResult] = useState(null);
 
+  // Phonebook search state
+  const [phonebookSearch, setPhonebookSearch] = useState("");
+  const [phonebookContacts, setPhonebookContacts] = useState([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [showPhonebookDropdown, setShowPhonebookDropdown] = useState(false);
+
+  // Phonebook filter state
+  const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedRole, setSelectedRole] = useState("");
+  const [regions, setRegions] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [loadingFilters, setLoadingFilters] = useState(false);
+  const [showNumberWarning, setShowNumberWarning] = useState(false);
+
   // Update phone number when prop changes
   useEffect(() => {
     if (initialPhoneNumber) {
@@ -46,6 +62,50 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
       fetchMessages(initialPhoneNumber);
     }
   }, [initialPhoneNumber]);
+
+  // Load filter options when modal opens
+  useEffect(() => {
+    if (showShareModal) {
+      loadFilterOptions();
+    }
+  }, [showShareModal]);
+
+  // Update branches when region changes
+  useEffect(() => {
+    if (selectedRegion) {
+      loadBranches(selectedRegion);
+    } else {
+      setBranches([]);
+      setSelectedBranch("");
+    }
+  }, [selectedRegion]);
+
+  // Search phonebook when filters change
+  useEffect(() => {
+    if (selectedRegion || selectedBranch || selectedRole || phonebookSearch) {
+      searchPhonebook(phonebookSearch);
+    }
+  }, [selectedRegion, selectedBranch, selectedRole]);
+
+  // Phonebook search with debounce
+  useEffect(() => {
+    if (!phonebookSearch || phonebookSearch.length < 2) {
+      // If there are filters selected, still search
+      if (selectedRegion || selectedBranch || selectedRole) {
+        searchPhonebook("");
+      } else {
+        setPhonebookContacts([]);
+        setShowPhonebookDropdown(false);
+      }
+      return;
+    }
+
+    const debounceTimer = setTimeout(() => {
+      searchPhonebook(phonebookSearch);
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [phonebookSearch]);
 
   const fetchMessages = async (mobile) => {
     if (!mobile || mobile.length < 10) {
@@ -241,6 +301,100 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
     } finally {
       setSharingMedia(false);
     }
+  };
+
+  // Search phonebook contacts
+  const searchPhonebook = async (searchTerm) => {
+    setLoadingContacts(true);
+    try {
+      const params = {
+        limit: 10,
+        page: 1
+      };
+
+      // Add search term if provided
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      // Add filters if selected
+      if (selectedRegion) params.region = selectedRegion;
+      if (selectedBranch) params.branch = selectedBranch;
+      if (selectedRole) params.role = selectedRole;
+
+      const response = await axiosInstance.get('/phonebook/record', { params });
+
+      if (response.data && response.data.success) {
+        setPhonebookContacts(response.data.data || []);
+        setShowPhonebookDropdown(true);
+        console.log(`📚 Found ${response.data.data?.length || 0} contacts`);
+      } else {
+        setPhonebookContacts([]);
+        setShowPhonebookDropdown(false);
+      }
+    } catch (error) {
+      console.error("❌ Error searching phonebook:", error);
+      setPhonebookContacts([]);
+      setShowPhonebookDropdown(false);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  // Handle contact selection from phonebook
+  const handleSelectContact = (contact) => {
+    const mobileNumber = contact.Contact1 || contact.Contact2 || "";
+    setShareMobileNumber(mobileNumber);
+    setPhonebookSearch("");
+    setPhonebookContacts([]);
+    setShowPhonebookDropdown(false);
+  };
+
+  // Load filter options (regions and roles)
+  const loadFilterOptions = async () => {
+    setLoadingFilters(true);
+    try {
+      // Load regions
+      const regionsResponse = await axiosInstance.get('/phonebook/region');
+      if (regionsResponse.data && regionsResponse.data.success) {
+        setRegions(regionsResponse.data.data || []);
+      }
+
+      // Load roles
+      const rolesResponse = await axiosInstance.get('/phonebook/roles');
+      if (rolesResponse.data && rolesResponse.data.success) {
+        setRoles(rolesResponse.data.data || []);
+      }
+    } catch (error) {
+      console.error("❌ Error loading filter options:", error);
+    } finally {
+      setLoadingFilters(false);
+    }
+  };
+
+  // Load branches based on selected region
+  const loadBranches = async (region) => {
+    try {
+      const response = await axiosInstance.get('/phonebook/branches', {
+        params: { region }
+      });
+      if (response.data && response.data.success) {
+        setBranches(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("❌ Error loading branches:", error);
+      setBranches([]);
+    }
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSelectedRegion("");
+    setSelectedBranch("");
+    setSelectedRole("");
+    setPhonebookSearch("");
+    setPhonebookContacts([]);
+    setShowPhonebookDropdown(false);
   };
 
   const formatTimestamp = (timestamp) => {
@@ -822,16 +976,201 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
                 <p className="text-xs text-gray-700 break-all">{shareMediaUrl}</p>
               </div>
 
-              {/* Mobile Number Input */}
+              {/* Filter Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-900">Filters</h4>
+                  {(selectedRegion || selectedBranch || selectedRole) && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Region Filter */}
+                  <div>
+                    <select
+                      value={selectedRegion}
+                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={sharingMedia || loadingFilters}
+                    >
+                      <option value="">All Regions</option>
+                      {regions.map((region, index) => (
+                        <option key={index} value={region}>
+                          {region}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Branch Filter */}
+                  <div>
+                    <select
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={!selectedRegion || sharingMedia || loadingFilters}
+                    >
+                      <option value="">All Branches</option>
+                      {branches.map((branch, index) => (
+                        <option key={index} value={branch}>
+                          {branch}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Role Filter */}
+                  <div>
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={sharingMedia || loadingFilters}
+                    >
+                      <option value="">All Roles</option>
+                      {roles.map((role, index) => (
+                        <option key={index} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phonebook Search */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Enter Mobile Number
+                  Search Contact from Phonebook
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={phonebookSearch}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Block if input contains only numbers
+                      if (/^\d+$/.test(value)) {
+                        // Show warning
+                        setShowNumberWarning(true);
+                        setTimeout(() => setShowNumberWarning(false), 3000);
+                        return;
+                      }
+                      // Hide warning and allow input if it contains letters
+                      setShowNumberWarning(false);
+                      setPhonebookSearch(value);
+                    }}
+                    onKeyDown={(e) => {
+                      // Block number keys (0-9) when field is empty or contains only numbers
+                      if (/^[0-9]$/.test(e.key) && (!phonebookSearch || /^\d*$/.test(phonebookSearch))) {
+                        e.preventDefault();
+                        setShowNumberWarning(true);
+                        setTimeout(() => setShowNumberWarning(false), 3000);
+                      }
+                    }}
+                    placeholder="Search by name, role, branch.."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={sharingMedia}
+                  />
+                  {loadingContacts && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
+                    </div>
+                  )}
+
+                  {/* Phonebook Dropdown */}
+                  {showPhonebookDropdown && phonebookContacts.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      {phonebookContacts.map((contact, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSelectContact(contact)}
+                          className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {contact.EmployeeName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {contact.Role} • {contact.BranchName}
+                              </p>
+                            </div>
+                            <div className="text-right ml-2">
+                              <p className="text-sm text-blue-600 font-medium">
+                                {contact.Contact1}
+                              </p>
+                              {contact.Contact2 && (
+                                <p className="text-xs text-gray-500">
+                                  {contact.Contact2}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Warning Message */}
+                {showNumberWarning && (
+                  <div className="mt-2 flex items-center space-x-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Please search by name, role, or branch only. Use filters to narrow results.</span>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-500 mt-1">
+                  {(selectedRegion || selectedBranch || selectedRole)
+                    ? "Search with filters applied or type to refine results"
+                    : "Type at least 2 characters to search contacts"}
+                </p>
+              </div>
+
+              {/* Selected Contact Display */}
+              {shareMobileNumber && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500">Selected Number:</p>
+                      <p className="text-sm font-medium text-green-700">{shareMobileNumber}</p>
+                    </div>
+                    <button
+                      onClick={() => setShareMobileNumber("")}
+                      className="text-xs text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* COMMENTED OUT: Manual Number Entry */}
+              {/*
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-2 bg-white text-gray-500">OR</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Mobile Number Manually
                 </label>
                 <input
                   type="text"
                   value={shareMobileNumber}
                   onChange={(e) => setShareMobileNumber(e.target.value)}
-                  placeholder="Enter mobile number (e.g., 88396XXXXX)"
+                  placeholder="Enter mobile number (e.g., 8839699199)"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   disabled={sharingMedia}
                 />
@@ -839,6 +1178,7 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
                   Enter 10-digit mobile number (with or without country code)
                 </p>
               </div>
+              */}
 
               {/* Share Result */}
               {shareResult && (
