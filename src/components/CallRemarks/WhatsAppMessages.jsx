@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Send,
   CheckCircle,
+  Share2,
+  X,
 } from "lucide-react";
 import axiosInstance from "../../library/axios";
 
@@ -27,6 +29,14 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
   const [searchInput, setSearchInput] = useState(initialPhoneNumber || "");
   const [sendingTemplate, setSendingTemplate] = useState(false);
   const [templateResult, setTemplateResult] = useState(null);
+
+  // Share functionality state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMediaUrl, setShareMediaUrl] = useState("");
+  const [shareMediaType, setShareMediaType] = useState("");
+  const [shareMobileNumber, setShareMobileNumber] = useState("");
+  const [sharingMedia, setSharingMedia] = useState(false);
+  const [shareResult, setShareResult] = useState(null);
 
   // Update phone number when prop changes
   useEffect(() => {
@@ -149,6 +159,90 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
     }
   };
 
+  // Open share modal
+  const handleOpenShareModal = (mediaUrl, mediaType) => {
+    setShareMediaUrl(mediaUrl);
+    setShareMediaType(mediaType);
+    setShowShareModal(true);
+    setShareMobileNumber("");
+    setShareResult(null);
+  };
+
+  // Close share modal
+  const handleCloseShareModal = () => {
+    setShowShareModal(false);
+    setShareMediaUrl("");
+    setShareMediaType("");
+    setShareMobileNumber("");
+    setShareResult(null);
+  };
+
+  // Share media via WhatsApp
+  const handleShareMedia = async () => {
+    if (!shareMobileNumber || shareMobileNumber.trim().length < 10) {
+      setShareResult({
+        success: false,
+        message: "Please enter a valid mobile number"
+      });
+      return;
+    }
+
+    setSharingMedia(true);
+    setShareResult(null);
+
+    try {
+      console.log(`📤 Sharing ${shareMediaType} to: ${shareMobileNumber}`);
+      console.log(`📷 Original Media URL: ${shareMediaUrl}`);
+
+      // Clean the media URL - remove duplicate base URL if present
+      let cleanMediaUrl = shareMediaUrl;
+      const s3BaseUrl = 'https://aiwebi.s3.ap-southeast-2.amazonaws.com/';
+
+      // Check if URL is duplicated (contains base URL twice)
+      if (cleanMediaUrl.includes(s3BaseUrl)) {
+        // Find the last occurrence of the base URL
+        const lastIndex = cleanMediaUrl.lastIndexOf(s3BaseUrl);
+        // Extract everything after the last base URL occurrence
+        cleanMediaUrl = cleanMediaUrl.substring(lastIndex + s3BaseUrl.length);
+        console.log(`🔧 Cleaned Media URL: ${cleanMediaUrl}`);
+      }
+
+      const response = await axiosInstance.post('/send-photo-video-url', {
+        mobile_number: shareMobileNumber.trim(),
+        media_url: cleanMediaUrl
+      });
+
+      if (response.data && response.data.success) {
+        const mediaTypeLabel = shareMediaType === 'image' ? 'Image' :
+                                shareMediaType === 'video' ? 'Video' :
+                                shareMediaType === 'document' ? 'Document' : 'File';
+        setShareResult({
+          success: true,
+          message: `${mediaTypeLabel} shared successfully!`
+        });
+        console.log("✅ Media shared successfully:", response.data);
+
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          handleCloseShareModal();
+        }, 2000);
+      } else {
+        setShareResult({
+          success: false,
+          message: response.data?.message || "Failed to share media"
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error sharing media:", error);
+      setShareResult({
+        success: false,
+        message: error.response?.data?.error || error.response?.data?.message || "Failed to share media"
+      });
+    } finally {
+      setSharingMedia(false);
+    }
+  };
+
   const formatTimestamp = (timestamp) => {
     try {
       return new Date(timestamp).toLocaleString("en-US", {
@@ -232,7 +326,7 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
   };
 
   const renderMediaContent = (message) => {
-    const { message_type, media_url, media_filename, text_body, caption } = message;
+    const { message_type, media_url, media_filename, text_body, caption, media_mime_type } = message;
 
     switch (message_type?.toLowerCase()) {
       case "image":
@@ -307,7 +401,7 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
               <p className="mt-2 text-sm text-gray-700 italic">"{caption}"</p>
             )}
 
-            {/* Download button below image */}
+            {/* Download and Share buttons below image */}
             {media_url && (
               <div className="mt-2 flex items-center space-x-2">
                 <button
@@ -315,7 +409,14 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
                   className="flex items-center space-x-1 px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 text-xs rounded-full transition-colors"
                 >
                   <Download className="w-3 h-3" />
-                  <span>Download Image</span>
+                  <span>Download</span>
+                </button>
+                <button
+                  onClick={() => handleOpenShareModal(media_url, 'image')}
+                  className="flex items-center space-x-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded-full transition-colors"
+                >
+                  <Share2 className="w-3 h-3" />
+                  <span>Share</span>
                 </button>
                 {media_filename && (
                   <span className="text-xs text-gray-500 truncate max-w-48">
@@ -374,7 +475,7 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
               <p className="mt-2 text-sm text-gray-700 italic">"{caption}"</p>
             )}
 
-            {/* Download button below video */}
+            {/* Download and Share buttons below video */}
             {media_url && (
               <div className="mt-2 flex items-center space-x-2">
                 <button
@@ -382,7 +483,14 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
                   className="flex items-center space-x-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded-full transition-colors"
                 >
                   <Download className="w-3 h-3" />
-                  <span>Download Video</span>
+                  <span>Download</span>
+                </button>
+                <button
+                  onClick={() => handleOpenShareModal(media_url, 'video')}
+                  className="flex items-center space-x-1 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded-full transition-colors"
+                >
+                  <Share2 className="w-3 h-3" />
+                  <span>Share</span>
                 </button>
                 {media_filename && (
                   <span className="text-xs text-gray-500 truncate max-w-48">
@@ -401,25 +509,97 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
           </div>
         );
 
+      case "document":
+        return (
+          <div className="mt-2">
+            {media_url && (
+              <div>
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {media_filename || "Document"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {media_mime_type || "Document file"}
+                      </p>
+                    </div>
+                    <a
+                      href={media_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-purple-100 hover:bg-purple-200 rounded-full transition-colors"
+                      title="Open Document"
+                    >
+                      <ExternalLink className="w-4 h-4 text-purple-700" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Download and Share buttons below document */}
+                <div className="mt-2 flex items-center space-x-2">
+                  <button
+                    onClick={() => downloadImage(media_url, media_filename)}
+                    className="flex items-center space-x-1 px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded-full transition-colors"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Download</span>
+                  </button>
+                  <button
+                    onClick={() => handleOpenShareModal(media_url, 'document')}
+                    className="flex items-center space-x-1 px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs rounded-full transition-colors"
+                  >
+                    <Share2 className="w-3 h-3" />
+                    <span>Share</span>
+                  </button>
+                  {media_filename && (
+                    <span className="text-xs text-gray-500 truncate max-w-48">
+                      {media_filename}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {caption && (
+              <p className="mt-2 text-sm text-gray-700 italic">"{caption}"</p>
+            )}
+          </div>
+        );
+
       default:
         return (
           <div className="mt-2">
             {text_body && <p className="text-gray-800 leading-relaxed">{text_body}</p>}
             {media_url && (
               <div className="mt-2 p-3 bg-gray-50 rounded border border-gray-200">
-                <div className="flex items-center space-x-2">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">
-                    {media_filename || "Attachment"}
-                  </span>
-                  <a
-                    href={media_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">
+                      {media_filename || "Attachment"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <a
+                      href={media_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 text-blue-500 hover:text-blue-700"
+                      title="Download"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                    <button
+                      onClick={() => handleOpenShareModal(media_url, 'file')}
+                      className="p-1 text-purple-500 hover:text-purple-700"
+                      title="Share"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -610,6 +790,100 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
           {/* Instructions */}
           <div className="mt-2 text-xs text-gray-500">
             💡 Click "Send Template" to send a WhatsApp message to this customer.
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <Share2 className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Share {shareMediaType === 'image' ? 'Image' : shareMediaType === 'video' ? 'Video' : shareMediaType === 'document' ? 'Document' : 'File'}
+                </h3>
+              </div>
+              <button
+                onClick={handleCloseShareModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4">
+              {/* Media Preview */}
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="text-xs text-gray-500 mb-2">Media URL:</p>
+                <p className="text-xs text-gray-700 break-all">{shareMediaUrl}</p>
+              </div>
+
+              {/* Mobile Number Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Mobile Number
+                </label>
+                <input
+                  type="text"
+                  value={shareMobileNumber}
+                  onChange={(e) => setShareMobileNumber(e.target.value)}
+                  placeholder="Enter mobile number (e.g., 88396XXXXX)"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={sharingMedia}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter 10-digit mobile number (with or without country code)
+                </p>
+              </div>
+
+              {/* Share Result */}
+              {shareResult && (
+                <div className={`flex items-center space-x-2 p-3 rounded-lg text-sm ${
+                  shareResult.success
+                    ? "bg-green-100 text-green-700 border border-green-200"
+                    : "bg-red-100 text-red-700 border border-red-200"
+                }`}>
+                  {shareResult.success ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4" />
+                  )}
+                  <span>{shareResult.message}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end space-x-3 p-4 border-t border-gray-200">
+              <button
+                onClick={handleCloseShareModal}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={sharingMedia}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleShareMedia}
+                disabled={sharingMedia || !shareMobileNumber.trim()}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {sharingMedia ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Sharing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4" />
+                    <span>Share via WhatsApp</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
