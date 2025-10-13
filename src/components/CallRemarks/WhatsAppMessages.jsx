@@ -256,18 +256,32 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
       console.log(`📤 Sharing ${shareMediaType} to: ${shareMobileNumber}`);
       console.log(`📷 Original Media URL: ${shareMediaUrl}`);
 
-      // Clean the media URL - remove duplicate base URL if present
+      // Clean the media URL - WhatsApp API adds base URL automatically, so send only relative path
       let cleanMediaUrl = shareMediaUrl;
       const s3BaseUrl = 'https://aiwebi.s3.ap-southeast-2.amazonaws.com/';
 
-      // Check if URL is duplicated (contains base URL twice)
-      if (cleanMediaUrl.includes(s3BaseUrl)) {
-        // Find the last occurrence of the base URL
-        const lastIndex = cleanMediaUrl.lastIndexOf(s3BaseUrl);
-        // Extract everything after the last base URL occurrence
-        cleanMediaUrl = cleanMediaUrl.substring(lastIndex + s3BaseUrl.length);
-        console.log(`🔧 Cleaned Media URL: ${cleanMediaUrl}`);
+      // Remove all occurrences of the base URL
+      while (cleanMediaUrl.includes(s3BaseUrl)) {
+        cleanMediaUrl = cleanMediaUrl.replace(s3BaseUrl, '');
       }
+
+      // If after cleaning, the URL still starts with http/https, extract just the path
+      if (cleanMediaUrl.startsWith('http://') || cleanMediaUrl.startsWith('https://')) {
+        try {
+          const urlObj = new URL(cleanMediaUrl);
+          cleanMediaUrl = urlObj.pathname.substring(1); // Remove leading slash
+        } catch (e) {
+          console.warn('⚠️ Could not parse URL, using as-is:', e);
+        }
+      }
+
+      // Final check: ensure it's just the relative path (images/FILE...)
+      if (cleanMediaUrl.startsWith('/')) {
+        cleanMediaUrl = cleanMediaUrl.substring(1); // Remove leading slash if any
+      }
+
+      console.log(`🔧 Cleaned Media URL (relative path only): ${cleanMediaUrl}`);
+      console.log(`✅ Sending to WhatsApp API (will add base URL automatically): ${cleanMediaUrl}`);
 
       const response = await axiosInstance.post('/send-photo-video-url', {
         mobile_number: shareMobileNumber.trim(),
