@@ -90,7 +90,7 @@ const Navbar = ({ collapsed, setCollapsed, EmployeeRoleId }) => {
 
   return (
     <nav
-      className={`bg-[#538FC2] flex flex-col shadow-2xl transition-all duration-300 ease-in-out relative border-r border-[#538FC2]/30
+      className={`bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 flex flex-col shadow-2xl transition-all duration-300 ease-in-out relative
                 ${collapsed ? "w-16" : "w-64"}
                 h-full
                 lg:h-[calc(100vh-4rem)]
@@ -98,45 +98,45 @@ const Navbar = ({ collapsed, setCollapsed, EmployeeRoleId }) => {
     >
       {/* Navigation Section Header with Collapse Button */}
       <div
-        className={`px-4 pt-4 pb-2 transition-all duration-300 flex-shrink-0 ${
+        className={`px-4 pt-4 pb-3 transition-all duration-300 flex-shrink-0 border-b border-gray-700/50 ${
           collapsed ? "px-3" : ""
         }`}
       >
         <div className="flex items-center justify-between">
           <div
-            className={`text-md font-semibold text-white uppercase tracking-wider transition-all duration-300 ${
+            className={`text-xs font-bold text-gray-400 uppercase tracking-wider transition-all duration-300 ${
               collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
             }`}
           >
-            Menu
+            Navigation
           </div>
 
           {/* Collapse/Expand Button */}
           <button
-            className={`flex items-center justify-center p-1 rounded-xl text-white/95 hover:text-white hover:bg-white/20 transition-all duration-200 group ${
-              collapsed ? "w-full" : "ml-2"
+            className={`flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-200 group ${
+              collapsed ? "w-full" : ""
             }`}
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <GiHamburgerMenu className="w-5 h-5" />
+            <GiHamburgerMenu className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Navigation Items */}
-      <div className="flex-1 px-2 pb-4 overflow-y-auto scrollbar-hide min-h-0">
+      <div className="flex-1 px-2 py-4 overflow-y-auto scrollbar-hide min-h-0">
         <div className="space-y-1">
           {filteredNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `group flex items-center transition-all duration-200 rounded-xl mx-1 relative overflow-hidden ${
+                `group flex items-center transition-all duration-200 rounded-lg mx-1 relative overflow-hidden ${
                   isActive
-                    ? "bg-white/30 text-white shadow-sm shadow-[#538FC2]/25"
-                    : "text-white/80 hover:bg-[#538FC2]/40 hover:text-white"
-                } ${collapsed ? "px-3 py-2 justify-center" : "px-4 py-3"}`
+                    ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/50"
+                    : "text-gray-300 hover:bg-white/10 hover:text-white backdrop-blur-sm"
+                } ${collapsed ? "px-3 py-2.5 justify-center" : "px-3 py-3"}`
               }
               end={item.to === "/dashboard"}
             >
@@ -151,13 +151,10 @@ const Navbar = ({ collapsed, setCollapsed, EmployeeRoleId }) => {
                   collapsed ? "w-0 opacity-0 ml-0" : "w-auto opacity-100 ml-3"
                 }`}
               >
-                <span className="font-medium text-sm whitespace-nowrap">
+                <span className="font-semibold text-sm whitespace-nowrap">
                   {item.label}
                 </span>
               </div>
-
-              {/* Hover effect overlay */}
-              <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
             </NavLink>
           ))}
         </div>

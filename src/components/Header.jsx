@@ -552,7 +552,9 @@ const Header = ({ collapsed, setCollapsed }) => {
   // Function to get role name
   const getRoleName = (roleId) => {
     const roles = {
-      1: "ABIS Trader",
+      1: "Placement Agent",
+      2: "Team Manager",
+      3: "System Admin",
     };
     return roles[roleId] || "User";
   };
@@ -574,13 +576,13 @@ const Header = ({ collapsed, setCollapsed }) => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm border-b border-gray-200 z-50">
+    <header className="fixed top-0 left-0 right-0 h-16 bg-white shadow-md border-b border-gray-200 z-50">
       <div className="h-full flex items-center justify-between px-6">
         {/* Left side - Logo/Brand */}
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors lg:hidden"
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-all lg:hidden"
             aria-label="Toggle sidebar"
           >
             <svg
@@ -598,13 +600,18 @@ const Header = ({ collapsed, setCollapsed }) => {
             </svg>
           </button>
 
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-[#F68A1F] rounded-lg flex items-center justify-center text-white font-bold">
-              IB
+          <div className="flex items-center space-x-3">
+            <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+              </svg>
             </div>
-            <h1 className="text-xl font-semibold text-gray-800">
-              Trader Help Desk
-            </h1>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">
+                Chicks Placement CRM
+              </h1>
+              <p className="text-xs text-gray-600 font-medium">Vehicle Management System</p>
+            </div>
           </div>
         </div>
 
@@ -613,24 +620,24 @@ const Header = ({ collapsed, setCollapsed }) => {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition-all"
             >
-              <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-sm font-semibold text-white">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
+                <span className="text-sm font-bold text-white">
                   {getInitials(userData?.EmployeeName)}
                 </span>
               </div>
               <div className="hidden sm:block text-left">
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-semibold text-gray-800">
                   {userData?.EmployeeName}
                 </span>
-                <span className="text-xs text-gray-500 mt-0.5 block">
+                <span className="text-xs text-gray-600 mt-0.5 block font-medium">
                   {getRoleName(userData?.EmployeeRole)}
                 </span>
               </div>
 
               <IoIosArrowDown
-                className={`w-4 h-4 text-gray-500 ml-1 transition-transform duration-200 ${
+                className={`w-4 h-4 text-gray-600 ml-1 transition-transform duration-200 ${
                   isMenuOpen ? "rotate-180" : ""
                 }`}
               />

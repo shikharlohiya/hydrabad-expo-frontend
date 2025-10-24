@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, User, Lock } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Truck, MapPin } from "lucide-react";
 import { toast } from "react-toastify";
 import axiosInstance from "../library/axios";
 import { useNavigate } from "react-router-dom";
@@ -130,45 +130,45 @@ export default function Login() {
 
   // --- JSX RENDER ---
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       {/* =============================================================================== */}
       {/* MOBILE LAYOUT (Visible on small screens)                                        */}
       {/* A simple, centered card layout for a focused mobile experience.                 */}
       {/* =============================================================================== */}
-      <div className="lg:hidden min-h-screen flex items-center justify-center p-4 bg-gray-100">
-        <div className="relative bg-white p-8 rounded-xl shadow-xl w-full max-w-sm border border-gray-200">
+      <div className="lg:hidden min-h-screen flex items-center justify-center p-4">
+        <div className="relative bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm border border-orange-100">
+          {/* Decorative top accent */}
+          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-t-2xl"></div>
+
           {/* Header */}
-          <div className="text-center mb-6">
-            <img
-              src="/icon.png"
-              alt="ib-logo"
-              className="w-auto h-auto mx-auto mb-2"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src =
-                  "https://placehold.co/80x80/cccccc/ffffff?text=Logo";
-              }}
-            />
-            <h1 className="text-2xl font-bold text-gray-800">
-              Traders Help Desk
+          <div className="text-center mb-8 mt-2">
+            <div className="bg-gradient-to-br from-amber-100 to-orange-100 w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
+              <Truck className="w-10 h-10 text-orange-600" strokeWidth={2.5} />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-1">
+              Chicks Placement
             </h1>
-            <p className="text-sm text-gray-500">Sign in to continue</p>
+            <p className="text-3xl font-extrabold text-gray-800 mb-1">CRM System</p>
+            <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+              <MapPin className="w-3 h-3" />
+              Vehicle Management & Tracking
+            </p>
           </div>
 
-          <form onSubmit={handleFormSubmit} className="space-y-6">
+          <form onSubmit={handleFormSubmit} className="space-y-5">
             {/* Username Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Employee ID
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 w-5 h-5" />
                 <input
                   ref={inputRef}
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   placeholder="Enter your Employee ID"
                   disabled={loading}
                 />
@@ -177,23 +177,23 @@ export default function Login() {
 
             {/* Password Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 w-5 h-5" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   placeholder="Enter your password"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors"
                   disabled={loading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -205,7 +205,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#F68A1F] text-white py-3 rounded-lg hover:bg-opacity-80 disabled:opacity-80 disabled:cursor-not-allowed font-medium transition-all shadow-sm hover:shadow-md"
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3.5 rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -226,59 +226,78 @@ export default function Login() {
       {/* =============================================================================== */}
       <div className="hidden lg:flex min-h-screen">
         {/* Left Section - Branding */}
-        <div className="flex-1 bg-[#538FC2] flex items-center justify-center relative overflow-hidden">
+        <div className="flex-1 bg-gradient-to-br from-amber-600 via-orange-600 to-orange-700 flex items-center justify-center relative overflow-hidden">
           {/* Decorative Background Elements */}
           <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full"></div>
-            <div className="absolute bottom-20 right-20 w-48 h-48 bg-white rounded-full"></div>
-            <div className="absolute top-1/2 left-1/4 w-20 h-20 bg-white rounded-full"></div>
+            <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
+            <div className="absolute bottom-32 right-32 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+            <div className="absolute top-1/3 left-1/3 w-40 h-40 bg-yellow-200 rounded-full blur-2xl"></div>
+            <div className="absolute bottom-1/4 left-1/4 w-32 h-32 bg-white rounded-full blur-xl"></div>
           </div>
 
-          <div className="relative text-center text-white z-10 px-12">
-            <img
-              src="/icon.png"
-              alt="ib-logo"
-              className="w-96 h-auto mx-auto mb-6 drop-shadow-2xl"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src =
-                  "https://placehold.co/192x192/ffffff/000000?text=Logo";
-              }}
-            />
-            <h1 className="text-5xl font-bold mb-4 tracking-tight">
-              Traders Help Desk
+          {/* Animated decorative shapes */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/4 right-1/4 w-4 h-4 bg-white rounded-full opacity-40 animate-pulse"></div>
+            <div className="absolute top-3/4 right-1/3 w-3 h-3 bg-yellow-200 rounded-full opacity-50 animate-pulse" style={{animationDelay: '0.5s'}}></div>
+            <div className="absolute top-1/2 right-1/2 w-2 h-2 bg-white rounded-full opacity-30 animate-pulse" style={{animationDelay: '1s'}}></div>
+          </div>
+
+          <div className="relative text-center text-white z-10 px-12 max-w-2xl">
+            {/* Icon/Logo Section */}
+            <div className="mb-8 flex justify-center">
+              <div className="bg-white/20 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/30">
+                <Truck className="w-32 h-32 text-white drop-shadow-2xl" strokeWidth={1.5} />
+              </div>
+            </div>
+
+            <h1 className="text-6xl font-extrabold mb-3 tracking-tight drop-shadow-lg">
+              Chicks Placement
             </h1>
-            <p className="text-xl opacity-90 leading-relaxed max-w-md mx-auto">
-              Your centralized hub for support, insights, and trading tools.
+            <h2 className="text-4xl font-bold mb-6 text-yellow-100">
+              CRM System
+            </h2>
+            <div className="h-1 w-32 bg-white/50 mx-auto mb-6 rounded-full"></div>
+            <p className="text-xl opacity-95 leading-relaxed max-w-lg mx-auto mb-4">
+              Complete vehicle management solution for chicks placement operations
             </p>
+            <div className="flex items-center justify-center gap-2 text-lg text-yellow-100">
+              <MapPin className="w-5 h-5" />
+              <span>Track • Manage • Deliver</span>
+            </div>
           </div>
         </div>
 
         {/* Right Section - Login Form */}
-        <div className="flex-1 bg-gray-50 flex items-center justify-center p-8">
-          <div className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+        <div className="flex-1 bg-gradient-to-br from-gray-50 to-orange-50 flex items-center justify-center p-8">
+          <div className="bg-white p-12 rounded-3xl shadow-2xl w-full max-w-md border-2 border-orange-100 relative overflow-hidden">
+            {/* Decorative top gradient bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500"></div>
+
             {/* Form Header */}
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">
+            <div className="text-center mb-10">
+              <div className="bg-gradient-to-br from-amber-100 to-orange-100 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                <User className="w-8 h-8 text-orange-600" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-3xl font-extrabold text-gray-800 mb-2">
                 Welcome Back
               </h2>
-              <p className="text-gray-600">Please sign in to your account</p>
+              <p className="text-gray-600">Sign in to access your dashboard</p>
             </div>
 
             <form onSubmit={handleFormSubmit} className="space-y-6">
               {/* Username Input */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-bold text-gray-700 mb-3">
                   Employee ID
                 </label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-amber-500 w-5 h-5 group-focus-within:text-orange-600 transition-colors" />
                   <input
                     ref={inputRef}
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200"
+                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 focus:bg-white transition-all duration-200"
                     placeholder="Enter your Employee ID"
                     disabled={loading}
                   />
@@ -287,23 +306,23 @@ export default function Login() {
 
               {/* Password Input */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-bold text-gray-700 mb-3">
                   Password
                 </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-amber-500 w-5 h-5 group-focus-within:text-orange-600 transition-colors" />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-14 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200"
+                    className="w-full pl-12 pr-14 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 focus:bg-white transition-all duration-200"
                     placeholder="Enter your password"
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors duration-200"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors duration-200"
                     disabled={loading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -315,7 +334,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#F68A1F] text-white py-4 rounded-xl hover:bg-opacity-80 disabled:opacity-80 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white py-4 rounded-xl hover:from-amber-600 hover:via-orange-600 hover:to-orange-700 disabled:opacity-70 disabled:cursor-not-allowed font-bold transition-all duration-200 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 active:translate-y-0"
               >
                 {loading ? (
                   <div className="flex items-center justify-center space-x-3">

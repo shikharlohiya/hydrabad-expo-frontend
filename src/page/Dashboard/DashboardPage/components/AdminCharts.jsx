@@ -103,11 +103,13 @@ const AdminCharts = ({ adminData }) => {
 
   if (!adminData.callsPerRegion) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <div className="flex items-center mb-4">
-            <ChartBarIcon className="w-5 h-5 text-blue-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">
+            <div className="bg-blue-100 p-2 rounded-lg mr-3">
+              <ChartBarIcon className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">
               Calls by Region
             </h3>
           </div>
@@ -115,10 +117,12 @@ const AdminCharts = ({ adminData }) => {
             No region data available
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <div className="flex items-center mb-4">
-            <BuildingOfficeIcon className="w-5 h-5 text-green-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">
+            <div className="bg-green-100 p-2 rounded-lg mr-3">
+              <BuildingOfficeIcon className="w-5 h-5 text-green-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">
               Region Distribution
             </h3>
           </div>
@@ -131,18 +135,20 @@ const AdminCharts = ({ adminData }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       {/* Bar Chart - Calls by Region */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <ChartBarIcon className="w-5 h-5 text-blue-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">
+            <div className="bg-blue-100 p-2 rounded-lg mr-3">
+              <ChartBarIcon className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">
               Calls by Region
             </h3>
           </div>
-          <div className="text-sm text-gray-600">
-            Total: {adminData.callsPerRegion.summary.grandTotalCalls} calls
+          <div className="text-sm font-semibold text-gray-600">
+            Total: {adminData.callsPerRegion.summary.grandTotalCalls}
           </div>
         </div>
 
@@ -185,15 +191,17 @@ const AdminCharts = ({ adminData }) => {
       </div>
 
       {/* Pie Chart - Region Distribution */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <BuildingOfficeIcon className="w-5 h-5 text-green-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">
+            <div className="bg-green-100 p-2 rounded-lg mr-3">
+              <BuildingOfficeIcon className="w-5 h-5 text-green-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">
               Region Distribution
             </h3>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm font-semibold text-gray-600">
             {adminData.callsPerRegion.summary.totalRegions} regions
           </div>
         </div>

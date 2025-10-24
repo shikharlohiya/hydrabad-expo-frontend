@@ -280,6 +280,13 @@ const WhatsAppMessages = ({ phoneNumber: initialPhoneNumber, showSendTemplate = 
         cleanMediaUrl = cleanMediaUrl.substring(1); // Remove leading slash if any
       }
 
+      // IMPORTANT: Remove 'storage/' prefix if present
+      // Some URLs have 'storage/images/' but WhatsApp expects just 'images/'
+      if (cleanMediaUrl.startsWith('storage/')) {
+        cleanMediaUrl = cleanMediaUrl.replace('storage/', '');
+        console.log('⚠️ Removed "storage/" prefix from path');
+      }
+
       console.log(`🔧 Cleaned Media URL (relative path only): ${cleanMediaUrl}`);
       console.log(`✅ Sending to WhatsApp API (will add base URL automatically): ${cleanMediaUrl}`);
 

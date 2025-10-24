@@ -1,4 +1,3 @@
-import React from "react";
 import {
   ChartBarIcon,
   PhoneArrowDownLeftIcon,
@@ -26,16 +25,16 @@ const StatsCards = ({
 }) => {
   return (
     <div className="mb-6">
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
-        <div className="mb-3">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div className="mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-bold text-gray-900">
                 {userData?.EmployeeRole === 2
                   ? "Team Call Statistics"
                   : "Your Call Statistics"}
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 mt-0.5">
                 {userData?.EmployeeRole === 2
                   ? "Combined statistics for all agents under your supervision"
                   : "Your individual call performance metrics"}
@@ -55,7 +54,7 @@ const StatsCards = ({
                     setShowCustomDateRange(false);
                   }
                 }}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
+                className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
               >
                 <option value="today">Today</option>
                 <option value="yesterday">Yesterday</option>
@@ -79,7 +78,7 @@ const StatsCards = ({
                       }
                       validateCustomDateRange(newStartDate, customEndDate);
                     }}
-                    className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
+                    className="text-sm border border-gray-300 rounded-lg px-2 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
                   />
                   <span className="text-sm text-gray-500">to</span>
                   <input
@@ -92,7 +91,7 @@ const StatsCards = ({
                       setCustomEndDate(newEndDate);
                       validateCustomDateRange(customStartDate, newEndDate);
                     }}
-                    className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-[#F68A1F] focus:border-[#F68A1F]"
+                    className="text-sm border border-gray-300 rounded-lg px-2 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
                   />
                   <span className="text-xs text-gray-400 ml-2">
                     (Max 30 days)
@@ -102,7 +101,7 @@ const StatsCards = ({
                <button
                 onClick={handleExcelExport}
                 disabled={isExporting}
-                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 shadow-sm transition-all duration-200"
               >
                 <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
                 {isExporting ? "Exporting..." : "Export Excel"}
@@ -112,43 +111,48 @@ const StatsCards = ({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Overall Stats */}
-          <div className="border-r border-gray-200 pr-4 last:border-r-0 last:pr-0">
-            <div className="flex items-center mb-2">
-              <ChartBarIcon className="w-4 h-4 text-blue-600 mr-1" />
-              <h4 className="text-sm font-semibold text-gray-700">Overall</h4>
+          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-5 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 relative overflow-hidden group">
+            {/* Decorative element */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+
+            <div className="flex items-center mb-3 relative z-10">
+              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                <ChartBarIcon className="w-5 h-5 text-white" />
+              </div>
+              <h4 className="text-sm font-bold text-white ml-2">Overall</h4>
             </div>
-            <div className="grid grid-cols-5 gap-2 text-center">
+            <div className="grid grid-cols-5 gap-2 text-center relative z-10">
               <div>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.overall?.totalCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Total</p>
+                <p className="text-xs text-blue-100 font-medium">Total</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-green-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.overall?.answeredCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Answered</p>
+                <p className="text-xs text-blue-100 font-medium">Answered</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-red-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.overall?.missedCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Missed</p>
+                <p className="text-xs text-blue-100 font-medium">Missed</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-purple-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {formatStatsDuration(callStats?.overall?.avgCallDuration) ||
                     "0:00"}
                 </p>
-                <p className="text-xs text-gray-500">Avg</p>
+                <p className="text-xs text-blue-100 font-medium">Avg</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-orange-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {formatStatsDuration(callStats?.overall?.totalTalkTime) ||
                     "0m"}
                 </p>
-                <p className="text-xs text-gray-500">Talk Time</p>
+                <p className="text-xs text-blue-100 font-medium">Talk Time</p>
               </div>
             </div>
           </div>
@@ -156,46 +160,51 @@ const StatsCards = ({
           {/* Inbound Stats */}
           <button
             onClick={() => navigate("/dashboard/incoming-call")}
-            className="group border-r border-gray-200 pr-4 last:border-r-0 last:pr-0 hover:bg-green-50 transition-colors duration-200 rounded-lg p-2 w-full text-left cursor-pointer"
+            className="group bg-gradient-to-br from-green-500 to-emerald-600 p-5 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 w-full text-left cursor-pointer relative overflow-hidden"
           >
-            <div className="flex items-center mb-2">
-              <PhoneArrowDownLeftIcon className="w-4 h-4 text-green-600 mr-1" />
-              <h4 className="text-sm font-semibold text-gray-700 group-hover:text-green-600 transition-colors">
+            {/* Decorative element */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+
+            <div className="flex items-center mb-3 relative z-10">
+              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                <PhoneArrowDownLeftIcon className="w-5 h-5 text-white" />
+              </div>
+              <h4 className="text-sm font-bold text-white ml-2">
                 Inbound
               </h4>
             </div>
-            <div className="grid grid-cols-5 gap-2 text-center">
+            <div className="grid grid-cols-5 gap-2 text-center relative z-10">
               <div>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.inbound?.totalCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Total</p>
+                <p className="text-xs text-green-100 font-medium">Total</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-green-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.inbound?.answeredCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Answered</p>
+                <p className="text-xs text-green-100 font-medium">Answered</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-red-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.inbound?.missedCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Missed</p>
+                <p className="text-xs text-green-100 font-medium">Missed</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-purple-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {formatStatsDuration(callStats?.inbound?.avgCallDuration) ||
                     "0:00"}
                 </p>
-                <p className="text-xs text-gray-500">Avg</p>
+                <p className="text-xs text-green-100 font-medium">Avg</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-green-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {formatStatsDuration(callStats?.inbound?.totalTalkTime) ||
                     "0m"}
                 </p>
-                <p className="text-xs text-gray-500">Talk Time</p>
+                <p className="text-xs text-green-100 font-medium">Talk Time</p>
               </div>
             </div>
           </button>
@@ -203,46 +212,51 @@ const StatsCards = ({
           {/* Outbound Stats */}
           <button
             onClick={() => navigate("/dashboard/outgoing-call")}
-            className="hover:bg-blue-50 transition-colors duration-200 rounded-lg p-2 w-full text-left cursor-pointer"
+            className="group bg-gradient-to-br from-purple-500 to-pink-600 p-5 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 w-full text-left cursor-pointer relative overflow-hidden"
           >
-            <div className="flex items-center mb-2">
-              <PhoneArrowUpRightIcon className="w-4 h-4 text-blue-600 mr-1" />
-              <h4 className="text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
+            {/* Decorative element */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+
+            <div className="flex items-center mb-3 relative z-10">
+              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                <PhoneArrowUpRightIcon className="w-5 h-5 text-white" />
+              </div>
+              <h4 className="text-sm font-bold text-white ml-2">
                 Outbound
               </h4>
             </div>
-            <div className="grid grid-cols-5 gap-2 text-center">
+            <div className="grid grid-cols-5 gap-2 text-center relative z-10">
               <div>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.outbound?.totalCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Total</p>
+                <p className="text-xs text-purple-100 font-medium">Total</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-green-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.outbound?.answeredCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Answered</p>
+                <p className="text-xs text-purple-100 font-medium">Answered</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-red-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {callStats?.outbound?.missedCalls || 0}
                 </p>
-                <p className="text-xs text-gray-500">Missed</p>
+                <p className="text-xs text-purple-100 font-medium">Missed</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-purple-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {formatStatsDuration(callStats?.outbound?.avgCallDuration) ||
                     "0:00"}
                 </p>
-                <p className="text-xs text-gray-500">Avg</p>
+                <p className="text-xs text-purple-100 font-medium">Avg</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-blue-600">
+                <p className="text-xl font-extrabold text-white drop-shadow-md">
                   {formatStatsDuration(callStats?.outbound?.totalTalkTime) ||
                     "0m"}
                 </p>
-                <p className="text-xs text-gray-500">Talk Time</p>
+                <p className="text-xs text-purple-100 font-medium">Talk Time</p>
               </div>
             </div>
           </button>

@@ -979,7 +979,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       <DashboardHeader
         userData={userData}
         showFlagBackground={SHOW_FLAG_BACKGROUND}
