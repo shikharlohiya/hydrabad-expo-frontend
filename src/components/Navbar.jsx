@@ -11,6 +11,7 @@ import { FaUpload } from "react-icons/fa6";
 import { FaDownload } from "react-icons/fa6";
 import { MdPhoneMissed } from "react-icons/md";
 import { FaWhatsapp } from "react-icons/fa";
+import { MdOutlineAccessTime } from "react-icons/md";
 
 // navItems with role restrictions
 const navItems = [
@@ -18,6 +19,12 @@ const navItems = [
     to: "/dashboard",
     label: "Dashboard",
     icon: <IoHomeOutline className="w-5 h-5" />,
+    roles: [1, 2, 3],
+  },
+  {
+    to: "/dashboard/long-halt",
+    label: "Long Halt Vehicles",
+    icon: <MdOutlineAccessTime className="w-5 h-5" />,
     roles: [1, 2, 3],
   },
   {

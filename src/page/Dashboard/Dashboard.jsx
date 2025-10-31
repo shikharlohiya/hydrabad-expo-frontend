@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import DashboardPage from "./DashboardPage/DashboardPage";
+import LongHaltPage from "./LongHaltPage/LongHaltPage";
 import IncomingCallPage from "./IncomingCall/IncomingCallPage";
 import NotFound from "../NotFound";
 import OutgoingCallPage from "./OutgoingCall/OutgoingCallPage";
@@ -25,6 +26,7 @@ const Dashboard = () => {
 
         {/* Dashboard sub-routes */}
         <Route path="home" element={<DashboardPage />} />
+        <Route path="long-halt" element={<LongHaltPage />} />
         <Route path="incoming-call" element={<IncomingCallPage />} />
         <Route path="outgoing-call" element={<OutgoingCallPage />} />
         <Route path="missed-call" element={<MissedCallPage />} />
