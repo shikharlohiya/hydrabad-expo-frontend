@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaPhoneAlt, FaTimes, FaSpinner } from 'react-icons/fa';
 import { useCall } from '../hooks/useCall';
-import axios from 'axios';
+import axiosInstance from '../library/axios';
 
 const VehicleContactsModal = ({ isOpen, onClose, vehicleNumber, buttonRef }) => {
   const [vehicleDetails, setVehicleDetails] = useState(null);
@@ -66,7 +66,7 @@ const VehicleContactsModal = ({ isOpen, onClose, vehicleNumber, buttonRef }) => 
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`http://localhost:5800/api/hatchery/vehicle/${vehicleNumber}`);
+      const response = await axiosInstance.get(`/hatchery/vehicle/${vehicleNumber}`);
       if (response.data.success) {
         setVehicleDetails(response.data.data);
       } else {
