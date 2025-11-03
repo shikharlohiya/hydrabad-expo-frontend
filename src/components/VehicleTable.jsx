@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { FaTruck, FaMapMarkerAlt, FaTachometerAlt, FaClock, FaCompass, FaPhoneAlt, FaFilter, FaSearch, FaCommentAlt, FaRoute, FaEye } from 'react-icons/fa';
 import { MdLocationOn, MdSpeed } from 'react-icons/md';
 import VehicleRemarkModal from './VehicleRemarkModal';
 import VehicleRemarksViewModal from './VehicleRemarksViewModal';
 import TripMapModal from './TripMapModal';
+import VehicleContactsModal from './VehicleContactsModal';
 
 const VehicleTable = ({ vehicles, onVehicleClick, onCall }) => {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -24,6 +25,11 @@ const VehicleTable = ({ vehicles, onVehicleClick, onCall }) => {
   // Remarks view modal state
   const [isRemarksViewModalOpen, setIsRemarksViewModalOpen] = useState(false);
   const [selectedVehicleForRemarksView, setSelectedVehicleForRemarksView] = useState(null);
+
+  // Contacts modal state
+  const [isContactsModalOpen, setIsContactsModalOpen] = useState(false);
+  const [selectedVehicleForContacts, setSelectedVehicleForContacts] = useState(null);
+  const callButtonRefs = useRef({});
 
   const getStatusBadge = (speed) => {
     if (speed > 0) {
@@ -56,11 +62,10 @@ const VehicleTable = ({ vehicles, onVehicleClick, onCall }) => {
     }
   };
 
-  const handleCall = (e, phoneNumber, vehicleName) => {
+  const handleCall = (e, vehicleNumber) => {
     e.stopPropagation(); // Prevent row click
-    if (onCall) {
-      onCall(phoneNumber, vehicleName);
-    }
+    setSelectedVehicleForContacts(vehicleNumber);
+    setIsContactsModalOpen(true);
   };
 
   const handleAddRemark = (e, vehicle) => {
@@ -351,9 +356,10 @@ const VehicleTable = ({ vehicles, onVehicleClick, onCall }) => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2 justify-center flex-wrap">
                     <button
-                      onClick={(e) => handleCall(e, vehicle.phoneNumber || '1234567890', vehicle.virtualName)}
+                      ref={(el) => (callButtonRefs.current[vehicle.regNo] = el)}
+                      onClick={(e) => handleCall(e, vehicle.regNo)}
                       className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-3 py-2 rounded-lg font-semibold hover:from-purple-700 hover:to-violet-700 transition-all duration-200 shadow-md flex items-center gap-2"
-                      title="Call Driver"
+                      title="View Contacts & Call"
                     >
                       <FaPhoneAlt className="text-sm" />
                       Call
@@ -443,6 +449,14 @@ const VehicleTable = ({ vehicles, onVehicleClick, onCall }) => {
         isOpen={isRemarksViewModalOpen}
         onClose={() => setIsRemarksViewModalOpen(false)}
         vehicleNumber={selectedVehicleForRemarksView}
+      />
+
+      {/* Vehicle Contacts Modal */}
+      <VehicleContactsModal
+        isOpen={isContactsModalOpen}
+        onClose={() => setIsContactsModalOpen(false)}
+        vehicleNumber={selectedVehicleForContacts}
+        buttonRef={{ current: callButtonRefs.current[selectedVehicleForContacts] }}
       />
     </div>
   );
