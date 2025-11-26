@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: ["crm.trader.abisibg.com","crm-trader.abisibg.com", "crm-trader-dev.abisexport.com"],
-    port: 3009,
+    port: 4001,
     strictPort: true,
   },
 });

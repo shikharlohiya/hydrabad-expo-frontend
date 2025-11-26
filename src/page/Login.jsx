@@ -1,353 +1,1113 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, User, Lock, Truck, MapPin } from "lucide-react";
-import { toast } from "react-toastify";
-import axiosInstance from "../library/axios";
-import { useNavigate } from "react-router-dom";
-import { useContext } from "react";
-import AuthContext from "../context/AuthContext";
-import UserContext from "../context/UserContext";
+//  import React, { useState } from "react";
+// import { User, Phone, MapPin, Home, Ruler } from "lucide-react";
 
-export default function Login() {
-  // --- STATE MANAGEMENT ---
-  // State for user inputs, password visibility, and loading status
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const inputRef = useRef(null);
+// export default function PoultryForm() {
+//   const [isNewToPoultry, setIsNewToPoultry] = useState(null);
+//   const [shedType, setShedType] = useState(null);
+//   const [convertFarm, setConvertFarm] = useState(null);
 
-  // --- ROUTING & CONTEXT ---
-  // Hooks for navigation and accessing global state
-  const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
-  const { setUser } = useContext(UserContext);
+//   const showConvertQuestion =
+//     isNewToPoultry === false || (isNewToPoultry === true && shedType === "ec");
 
-  // --- LIFECYCLE HOOKS ---
-  // Focus the username input field when the component mounts
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+//   const showSubmitButton = convertFarm !== null;
+//   const showEstimationButton = convertFarm === true;
 
-  // --- EVENT HANDLERS ---
-  /**
-   * Handles the entire login process, from validation to API call and feedback.
-   */
-  const handleLogin = async () => {
-    // 1. Validate inputs: Ensure fields are not empty
-    if (!username || !password) {
-      toast.error("Please fill in all fields", { position: "top-right" });
+//   const showShedSizeInput =
+//     (isNewToPoultry === true && shedType !== null) ||
+//     (isNewToPoultry === false && convertFarm === true);
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center p-6">
+//       <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-2xl border border-orange-100 relative">
+//         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-t-3xl" />
+
+//         <h2 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
+//           Poultry Farm Details
+//         </h2>
+
+//         <form className="space-y-6">
+
+//           {/* Name */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Name
+//             </label>
+//             <div className="relative">
+//               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="Enter your full name"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Mobile */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Mobile
+//             </label>
+//             <div className="relative">
+//               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 maxLength={10}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="10-digit mobile number"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Location */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Location
+//             </label>
+//             <div className="relative">
+//               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="Enter village/city"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Pincode */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Pincode
+//             </label>
+//             <div className="relative">
+//               <Home className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 maxLength={6}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="Pincode"
+//               />
+//             </div>
+//           </div>
+
+//           {/* New to Poultry */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Are you new to poultry?
+//             </label>
+//             <div className="flex gap-4">
+//               <button
+//                 type="button"
+//                 className={`px-4 py-2 rounded-xl border ${
+//                   isNewToPoultry === true ? "bg-orange-500 text-white" : "border-orange-400"
+//                 }`}
+//                 onClick={() => {
+//                   setIsNewToPoultry(true);
+//                   setShedType(null);
+//                   setConvertFarm(null);
+//                 }}
+//               >
+//                 Yes
+//               </button>
+
+//               <button
+//                 type="button"
+//                 className={`px-4 py-2 rounded-xl border ${
+//                   isNewToPoultry === false ? "bg-orange-500 text-white" : "border-orange-400"
+//                 }`}
+//                 onClick={() => {
+//                   setIsNewToPoultry(false);
+//                   setShedType(null);
+//                   setConvertFarm(null);
+//                 }}
+//               >
+//                 No
+//               </button>
+//             </div>
+//           </div>
+
+//           {/* Shed Type only if YES new */}
+//           {isNewToPoultry === true && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Which shed type do you have?
+//               </label>
+
+//               <div className="flex gap-4">
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     shedType === "open" ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => {
+//                     setShedType("open");
+//                     setConvertFarm(null);
+//                   }}
+//                 >
+//                   Open
+//                 </button>
+
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     shedType === "ec" ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => setShedType("ec")}
+//                 >
+//                   EC
+//                 </button>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Convert Existing Farm */}
+//           {showConvertQuestion && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Do you want to convert your existing farm?
+//               </label>
+
+//               <div className="flex gap-4">
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     convertFarm === true ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => setConvertFarm(true)}
+//                 >
+//                   Yes
+//                 </button>
+
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     convertFarm === false ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => setConvertFarm(false)}
+//                 >
+//                   No
+//                 </button>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Shed Size for both cases */}
+//           {showShedSizeInput && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Specify Shed Size (L * B)
+//               </label>
+//               <div className="relative">
+//                 <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//                 <input
+//                   type="text"
+//                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                   placeholder="e.g. 200 * 40 Ft"
+//                 />
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Submit Button */}
+//           {showSubmitButton && (
+//             <button
+//               type="button"
+//               className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all"
+//             >
+//               {showEstimationButton ? "Submit & Get Estimation" : "Submit"}
+//             </button>
+//           )}
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+// import React, { useState } from "react";
+// import axios from "axios";
+// import { User, Phone, MapPin, Home, Ruler } from "lucide-react";
+
+// export default function PoultryForm() {
+//   const [name, setName] = useState("");
+//   const [phone, setPhone] = useState("");
+//   const [location, setLocation] = useState("");
+//   const [pincode, setPincode] = useState("");
+//   const [shedSize, setShedSize] = useState("");
+
+//   const [isNewToPoultry, setIsNewToPoultry] = useState(null);
+//   const [shedType, setShedType] = useState(null);
+//   const [convertFarm, setConvertFarm] = useState(null);
+
+//   const showConvertQuestion =
+//     isNewToPoultry === false || (isNewToPoultry === true && shedType === "ec");
+
+//   const showShedSizeInput =
+//     (isNewToPoultry === true && shedType !== null) ||
+//     (isNewToPoultry === false && convertFarm === true);
+
+//   const showSubmitButton = convertFarm !== null;
+//   const showEstimationButton = convertFarm === true;
+
+//   const handleSubmit = async () => {
+//     if (!name || !phone || !location || !pincode) {
+//       alert("Please fill required fields!");
+//       return;
+//     }
+
+//     const payload = {
+//       name,
+//       phone,
+//       location,
+//       pincode,
+//       isNewToPoultry,
+//       shedType,
+//       shedSize,
+//       convertFarm,
+//     };
+
+//     try {
+//       const response = await axios.post(
+//         "http://localhost:3005/api/create-hydrabad-estimation",
+//         payload
+//       );
+
+//       alert("Estimation Submitted Successfully!");
+//       console.log("✔ Response:", response.data);
+
+//       // Reset form after success
+//       setName("");
+//       setPhone("");
+//       setLocation("");
+//       setPincode("");
+//       setShedType(null);
+//       setIsNewToPoultry(null);
+//       setConvertFarm(null);
+//       setShedSize("");
+
+//     } catch (error) {
+//       console.error("Error:", error);
+//       alert("Something went wrong while submitting!");
+//     }
+//   };
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center p-6">
+//       <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-2xl border border-orange-100 relative">
+//         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-t-3xl" />
+
+//         <h2 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
+//           Poultry Farm Details
+//         </h2>
+
+//         <form className="space-y-6">
+
+//           {/* Name */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Name
+//             </label>
+//             <div className="relative">
+//               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 value={name}
+//                 onChange={(e) => setName(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="Enter your full name"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Mobile */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Mobile
+//             </label>
+//             <div className="relative">
+//               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 maxLength={10}
+//                 value={phone}
+//                 onChange={(e) => setPhone(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="10-digit mobile number"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Location */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Location
+//             </label>
+//             <div className="relative">
+//               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 value={location}
+//                 onChange={(e) => setLocation(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="Village/City"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Pincode */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Pincode
+//             </label>
+//             <div className="relative">
+//               <Home className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 maxLength={6}
+//                 value={pincode}
+//                 onChange={(e) => setPincode(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                 placeholder="Pincode"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Are you new to Poultry */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Are you new to poultry?
+//             </label>
+//             <div className="flex gap-4">
+//               <button
+//                 type="button"
+//                 className={`px-4 py-2 rounded-xl border ${
+//                   isNewToPoultry === true
+//                     ? "bg-orange-500 text-white"
+//                     : "border-orange-400"
+//                 }`}
+//                 onClick={() => {
+//                   setIsNewToPoultry(true);
+//                   setConvertFarm(null);
+//                   setShedType(null);
+//                 }}
+//               >
+//                 Yes
+//               </button>
+
+//               <button
+//                 type="button"
+//                 className={`px-4 py-2 rounded-xl border ${
+//                   isNewToPoultry === false
+//                     ? "bg-orange-500 text-white"
+//                     : "border-orange-400"
+//                 }`}
+//                 onClick={() => {
+//                   setIsNewToPoultry(false);
+//                   setConvertFarm(null);
+//                   setShedType(null);
+//                 }}
+//               >
+//                 No
+//               </button>
+//             </div>
+//           </div>
+
+//           {/* Shed Type only if YES new */}
+//           {isNewToPoultry === true && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Which shed type do you have?
+//               </label>
+
+//               <div className="flex gap-4">
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     shedType === "open"
+//                       ? "bg-orange-500 text-white"
+//                       : "border-orange-400"
+//                   }`}
+//                   onClick={() => {
+//                     setShedType("open");
+//                     setConvertFarm(null);
+//                   }}
+//                 >
+//                   Open
+//                 </button>
+
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     shedType === "ec"
+//                       ? "bg-orange-500 text-white"
+//                       : "border-orange-400"
+//                   }`}
+//                   onClick={() => setShedType("ec")}
+//                 >
+//                   EC
+//                 </button>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Convert Existing Farm */}
+//           {showConvertQuestion && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Do you want to convert your existing farm?
+//               </label>
+
+//               <div className="flex gap-4">
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     convertFarm === true
+//                       ? "bg-orange-500 text-white"
+//                       : "border-orange-400"
+//                   }`}
+//                   onClick={() => setConvertFarm(true)}
+//                 >
+//                   Yes
+//                 </button>
+
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     convertFarm === false
+//                       ? "bg-orange-500 text-white"
+//                       : "border-orange-400"
+//                   }`}
+//                   onClick={() => setConvertFarm(false)}
+//                 >
+//                   No
+//                 </button>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Shed Size */}
+//           {showShedSizeInput && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Specify Shed Size (L * B)
+//               </label>
+//               <div className="relative">
+//                 <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//                 <input
+//                   type="text"
+//                   value={shedSize}
+//                   onChange={(e) => setShedSize(e.target.value)}
+//                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+//                   placeholder="e.g. 200 * 40 Ft"
+//                 />
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Submit Button */}
+//           {showSubmitButton && (
+//             <button
+//               type="button"
+//               onClick={handleSubmit}
+//               className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white py-4 rounded-xl font-bold shadow-lg hover:-translate-y-1 transition-all"
+//             >
+//               {showEstimationButton ? "Submit & Get Estimation" : "Submit"}
+//             </button>
+//           )}
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+// import React, { useState } from "react";
+// import axios from "axios";
+// import { User, Phone, MapPin, Home, Ruler } from "lucide-react";
+
+// export default function PoultryForm() {
+//   const [name, setName] = useState("");
+//   const [phone, setPhone] = useState("");
+//   const [location, setLocation] = useState("");
+//   const [pincode, setPincode] = useState("");
+//   const [shedSize, setShedSize] = useState("");
+
+//   const [isNewToPoultry, setIsNewToPoultry] = useState(null);
+//   const [shedType, setShedType] = useState(null);
+//   const [convertFarm, setConvertFarm] = useState(null);
+
+//   const showConvertQuestion =
+//     isNewToPoultry === false || (isNewToPoultry === true && shedType === "ec");
+
+//   const showShedSizeInput =
+//     (isNewToPoultry === true && shedType !== null) ||
+//     (isNewToPoultry === false && convertFarm === true);
+
+//   const showSubmitButton = convertFarm !== null;
+//   const showEstimationButton = convertFarm === true;
+
+//   // 🧠 Extract numbers from shed size input
+//   const extractDimensions = () => {
+//     if (!shedSize) return { length: null, width: null };
+
+//     const cleaned = shedSize.replace(/[^0-9 *xX]/g, "");
+//     const parts = cleaned.split(/[*xX]/).map((p) => parseInt(p.trim()));
+
+//     return { length: parts[0] || null, width: parts[1] || null };
+//   };
+
+//   const handleSubmit = async () => {
+//     if (!name || !phone || !location || !pincode) {
+//       alert("⚠️ Please fill required fields!");
+//       return;
+//     }
+
+//     const payload = {
+//       name,
+//       phone,
+//       location,
+//       pincode,
+//       isNewToPoultry,
+//       shedType,
+//       shedSize,
+//       convertFarm,
+//     };
+
+//     try {
+//       // 1️⃣ Save Form Data
+//       await axios.post("http://localhost:3005/api/create-hydrabad-estimation", payload);
+//       console.log("✔ Data saved to DB");
+
+//       // 2️⃣ If Get Estimation required
+//       if (showEstimationButton) {
+//         const { length, width } = extractDimensions();
+//         if (!length || !width) {
+//           alert("❌ Please enter valid Shed Size like 200 * 40");
+//           return;
+//         }
+
+//         const estimationURL =
+//           `http://localhost:3005/api/equipment-estimation/generate-quotation` +
+//           `?length=${length}&width=${width}` +
+//           `&customer_name=${encodeURIComponent(name)}` +
+//           `&customer_number=${phone}`;
+
+//         const res = await axios.get(estimationURL);
+//         console.log("📄 Estimation:", res.data);
+
+//         alert("🎉 Estimation Generated Successfully!");
+
+//       } else {
+//         alert("✔ Submitted Successfully!");
+//       }
+
+//       // Form reset
+//       setName("");
+//       setPhone("");
+//       setLocation("");
+//       setPincode("");
+//       setIsNewToPoultry(null);
+//       setShedType(null);
+//       setConvertFarm(null);
+//       setShedSize("");
+
+//     } catch (err) {
+//       console.error("❌ API Error:", err);
+//       alert("Something went wrong while submitting!");
+//     }
+//   };
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center p-6">
+//       <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-2xl border border-orange-100 relative">
+//         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-t-3xl" />
+
+//         <h2 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
+//           Poultry Farm Details
+//         </h2>
+
+//         <form className="space-y-6">
+
+//           {/* Name */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+//             <div className="relative">
+//               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 value={name}
+//                 onChange={(e) => setName(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+//                 placeholder="Enter your full name"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Phone */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">Mobile</label>
+//             <div className="relative">
+//               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 maxLength={10}
+//                 value={phone}
+//                 onChange={(e) => setPhone(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+//                 placeholder="10-digit mobile number"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Location */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+//             <div className="relative">
+//               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 value={location}
+//                 onChange={(e) => setLocation(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+//                 placeholder="Village/City"
+//               />
+//             </div>
+//           </div>
+
+//           {/* Pincode */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">Pincode</label>
+//             <div className="relative">
+//               <Home className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//               <input
+//                 type="text"
+//                 maxLength={6}
+//                 value={pincode}
+//                 onChange={(e) => setPincode(e.target.value)}
+//                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+//                 placeholder="Pincode"
+//               />
+//             </div>
+//           </div>
+
+//           {/* New to Poultry */}
+//           <div>
+//             <label className="block text-sm font-semibold text-gray-700 mb-2">
+//               Are you new to poultry?
+//             </label>
+
+//             <div className="flex gap-4">
+//               <button
+//                 type="button"
+//                 className={`px-4 py-2 rounded-xl border ${
+//                   isNewToPoultry === true ? "bg-orange-500 text-white" : "border-orange-400"
+//                 }`}
+//                 onClick={() => {
+//                   setIsNewToPoultry(true);
+//                   setConvertFarm(null);
+//                   setShedType(null);
+//                 }}
+//               >Yes</button>
+
+//               <button
+//                 type="button"
+//                 className={`px-4 py-2 rounded-xl border ${
+//                   isNewToPoultry === false ? "bg-orange-500 text-white" : "border-orange-400"
+//                 }`}
+//                 onClick={() => {
+//                   setIsNewToPoultry(false);
+//                   setConvertFarm(null);
+//                   setShedType(null);
+//                 }}
+//               >No</button>
+//             </div>
+//           </div>
+
+//           {/* Shed Type */}
+//           {isNewToPoultry === true && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Which shed type do you have?
+//               </label>
+//               <div className="flex gap-4">
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     shedType === "open" ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => {
+//                     setShedType("open");
+//                     setConvertFarm(null);
+//                   }}
+//                 >Open</button>
+
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     shedType === "ec" ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => setShedType("ec")}
+//                 >EC</button>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Convert Farm */}
+//           {showConvertQuestion && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Do you want to convert your existing farm?
+//               </label>
+//               <div className="flex gap-4">
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     convertFarm === true ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => setConvertFarm(true)}
+//                 >Yes</button>
+
+//                 <button
+//                   type="button"
+//                   className={`px-4 py-2 rounded-xl border ${
+//                     convertFarm === false ? "bg-orange-500 text-white" : "border-orange-400"
+//                   }`}
+//                   onClick={() => setConvertFarm(false)}
+//                 >No</button>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Shed Size */}
+//           {showShedSizeInput && (
+//             <div>
+//               <label className="block text-sm font-semibold text-gray-700 mb-2">
+//                 Specify Shed Size (L * B)
+//               </label>
+//               <div className="relative">
+//                 <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+//                 <input
+//                   type="text"
+//                   value={shedSize}
+//                   onChange={(e) => setShedSize(e.target.value)}
+//                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+//                   placeholder="e.g. 200 * 40 Ft"
+//                 />
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Submit */}
+//           {showSubmitButton && (
+//             <button
+//               type="button"
+//               onClick={handleSubmit}
+//               className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white py-4 rounded-xl font-bold shadow-lg hover:-translate-y-1 transition-all"
+//             >
+//               {showEstimationButton ? "Submit & Get Estimation" : "Submit"}
+//             </button>
+//           )}
+
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+import React, { useState } from "react";
+import axios from "axios";
+import { User, Phone, MapPin, Home, Ruler } from "lucide-react";
+
+export default function PoultryForm() {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [location, setLocation] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [shedSize, setShedSize] = useState("");
+
+  const [isNewToPoultry, setIsNewToPoultry] = useState(null);
+  const [shedType, setShedType] = useState(null);
+  const [convertFarm, setConvertFarm] = useState(null);
+
+  const showConvertQuestion =
+    isNewToPoultry === false ||
+    (isNewToPoultry === true && shedType === "ec");
+
+  const showShedSizeInput =
+    (isNewToPoultry === true && shedType !== null) ||
+    (isNewToPoultry === false && convertFarm === true);
+
+  const showSubmitButton = convertFarm !== null;
+  const showEstimationButton = convertFarm === true;
+
+  // Extract L * B from input
+  const extractDimensions = () => {
+    if (!shedSize) return { length: null, width: null };
+
+    const cleaned = shedSize.replace(/[^0-9 *xX]/g, "");
+    const parts = cleaned.split(/[*xX]/).map((p) => parseInt(p.trim()));
+
+    return { length: parts[0] || null, width: parts[1] || null };
+  };
+
+  const handleSubmit = async () => {
+    if (!name || !phone || !location || !pincode) {
+      alert("⚠️ Please fill required fields!");
       return;
     }
 
-    setLoading(true);
+    const payload = {
+      name,
+      phone,
+      location,
+      pincode,
+      isNewToPoultry,
+      shedType,
+      shedSize,
+      convertFarm,
+    };
 
-    // 2. API Call: Attempt to log the user in
     try {
-      const response = await axiosInstance.post("/login", {
-        EmployeeId: username,
-        EmployeePassword: password,
-      });
+      // 1️⃣ Save form data to DB
+      await axios.post("http://localhost:3005/api/create-hydrabad-estimation", payload);
+      console.log("✔ Data saved to DB!");
 
-      // 3. Handle Success: If login is successful, store data and navigate
-      if (
-        response.data.status === "200" &&
-        response.data.message === "Login successful"
-      ) {
-        // Store auth token and user data for session persistence
-        localStorage.setItem("authToken", response.data.token);
-        localStorage.setItem(
-          "userData",
-          JSON.stringify(response.data.employee)
-        );
+      // 2️⃣ Generate estimation PDF if needed
+      if (showEstimationButton) {
+        const { length, width } = extractDimensions();
 
-        // Update global context
-        login(response.data.token);
-        setUser(response.data.employee);
-
-        // Role-based navigation: Check if user has View Only role (roleId 4)
-        const userRole = response.data.employee.EmployeeRole;
-
-        if (userRole === 4) {
-          // View Only role - redirect to full-screen view-only dashboard
-          navigate("/view-only", { replace: true });
-        } else {
-          // Regular users - redirect to normal dashboard
-          navigate("/dashboard", { replace: true });
+        if (!length || !width) {
+          alert("❌ Enter Shed Size like 200 * 40");
+          return;
         }
 
-        // Show success toast with custom styling
-        toast.success(
-          `🎉 Welcome back, ${response.data.employee.EmployeeName}!`,
-          {
-            position: "top-right",
-            autoClose: 2000,
-          }
-        );
-      } else {
-        // Handle cases where the API returns a non-error but unsuccessful login
-        toast.error(response.data.message || "Login failed", {
-          position: "top-right",
+        const estimationURL =
+          `http://localhost:3005/api/equipment-estimation/generate-quotation` +
+          `?length=${length}&width=${width}` +
+          `&customer_name=${encodeURIComponent(name)}` +
+          `&customer_number=${phone}`;
+
+        const res = await axios.get(estimationURL, {
+          responseType: "blob",
         });
+
+        const blob = new Blob([res.data], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Quotation_${length}x${width}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        alert("🎉 Estimation downloaded successfully!");
+      } else {
+        alert("✔ Submitted successfully!");
       }
+
+      // Reset form
+      setName("");
+      setPhone("");
+      setLocation("");
+      setPincode("");
+      setShedSize("");
+      setIsNewToPoultry(null);
+      setShedType(null);
+      setConvertFarm(null);
+
     } catch (error) {
-      // 4. Handle Errors: Provide specific feedback for different error types
-      console.error("Login error:", error);
-      let errorMessage = "An error occurred during login";
-      let errorIcon = "❌";
-
-      if (error.response) {
-        // Server responded with an error status code
-        if (error.response.status === 401) {
-          errorMessage = "Invalid credentials";
-          errorIcon = "🔒";
-        } else if (error.response.status >= 500) {
-          errorMessage = "Server error. Please try again later";
-          errorIcon = "🔧";
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        }
-      } else if (error.request) {
-        // Network error (e.g., no internet)
-        errorMessage = "Network error. Please check your connection";
-        errorIcon = "🌐";
-      }
-
-      toast.error(`${errorIcon} ${errorMessage}`, { position: "top-right" });
-    } finally {
-      // 5. Cleanup: Always stop the loading indicator
-      setLoading(false);
+      console.error(error);
+      alert("❌ Something went wrong while submitting!");
     }
   };
 
-  /**
-   * Prevents default form submission and triggers the login logic.
-   * @param {React.FormEvent} e - The form event.
-   */
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    handleLogin();
-  };
-
-  // --- JSX RENDER ---
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
-      {/* =============================================================================== */}
-      {/* MOBILE LAYOUT (Visible on small screens)                                        */}
-      {/* A simple, centered card layout for a focused mobile experience.                 */}
-      {/* =============================================================================== */}
-      <div className="lg:hidden min-h-screen flex items-center justify-center p-4">
-        <div className="relative bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm border border-orange-100">
-          {/* Decorative top accent */}
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-t-2xl"></div>
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl bg-white p-8 rounded-3xl shadow-2xl border border-orange-100 relative">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-t-3xl" />
 
-          {/* Header */}
-          <div className="text-center mb-8 mt-2">
-            <div className="bg-gradient-to-br from-amber-100 to-orange-100 w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
-              <Truck className="w-10 h-10 text-orange-600" strokeWidth={2.5} />
+        <h2 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
+          HYDRABAD EXPO 2025
+        </h2>
+
+        <form className="space-y-6">
+
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                placeholder="Enter your full name"
+              />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-1">
-              Chicks Placement
-            </h1>
-            <p className="text-3xl font-extrabold text-gray-800 mb-1">CRM System</p>
-            <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
-              <MapPin className="w-3 h-3" />
-              Vehicle Management & Tracking
-            </p>
           </div>
 
-          <form onSubmit={handleFormSubmit} className="space-y-5">
-            {/* Username Input */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Employee ID
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 w-5 h-5" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="Enter your Employee ID"
-                  disabled={loading}
-                />
-              </div>
+          {/* Mobile */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Mobile</label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+              <input
+                type="text"
+                maxLength={10}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                placeholder="10-digit mobile number"
+              />
             </div>
+          </div>
 
-            {/* Password Input */}
+          {/* Location */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                placeholder="Village/City"
+              />
+            </div>
+          </div>
+
+          {/* Pincode */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Pincode</label>
+            <div className="relative">
+              <Home className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+              <input
+                type="text"
+                maxLength={6}
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                placeholder="Pincode"
+              />
+            </div>
+          </div>
+
+          {/* Are you new to Poultry? */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Are you new to poultry?</label>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-xl border ${isNewToPoultry === true ? "bg-orange-500 text-white" : "border-orange-400"}`}
+                onClick={() => {
+                  setIsNewToPoultry(true);
+                  setConvertFarm(null);
+                  setShedType(null);
+                }}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-xl border ${isNewToPoultry === false ? "bg-orange-500 text-white" : "border-orange-400"}`}
+                onClick={() => {
+                  setIsNewToPoultry(false);
+                  setConvertFarm(null);
+                  setShedType(null);
+                }}
+              >
+                No
+              </button>
+            </div>
+          </div>
+
+          {/* Shed Type */}
+          {isNewToPoultry === true && (
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 w-5 h-5" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="Enter your password"
-                  disabled={loading}
-                />
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Which shed type do you have?</label>
+              <div className="flex gap-4">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors"
-                  disabled={loading}
+                  className={`px-4 py-2 rounded-xl border ${shedType === "open" ? "bg-orange-500 text-white" : "border-orange-400"}`}
+                  onClick={() => {
+                    setShedType("open");
+                    setConvertFarm(null);
+                  }}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  Open
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-xl border ${shedType === "ec" ? "bg-orange-500 text-white" : "border-orange-400"}`}
+                  onClick={() => setShedType("ec")}
+                >
+                  EC
                 </button>
               </div>
             </div>
+          )}
 
-            {/* Submit Button */}
+          {/* Convert Farm */}
+          {showConvertQuestion && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Do you want to convert your existing farm?</label>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-xl border ${convertFarm === true ? "bg-orange-500 text-white" : "border-orange-400"}`}
+                  onClick={() => setConvertFarm(true)}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-xl border ${convertFarm === false ? "bg-orange-500 text-white" : "border-orange-400"}`}
+                  onClick={() => setConvertFarm(false)}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Shed Size */}
+          {showShedSizeInput && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Specify Shed Size (L × B)</label>
+              <div className="relative">
+                <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+                <input
+                  type="text"
+                  value={shedSize}
+                  onChange={(e) => setShedSize(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                  placeholder="e.g. 200 * 40 Ft"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Submit */}
+          {showSubmitButton && (
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3.5 rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              type="button"
+              onClick={handleSubmit}
+              className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white py-4 rounded-xl font-bold shadow-lg hover:-translate-y-1 transition-all"
             >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Signing in...</span>
-                </div>
-              ) : (
-                "Sign In"
-              )}
+              {showEstimationButton ? "Submit & Get Estimation" : "Submit"}
             </button>
-          </form>
-        </div>
-      </div>
+          )}
 
-      {/* =============================================================================== */}
-      {/* DESKTOP LAYOUT (Visible on large screens)                                       */}
-      {/* A two-column layout separating branding from the login form.                    */}
-      {/* =============================================================================== */}
-      <div className="hidden lg:flex min-h-screen">
-        {/* Left Section - Branding */}
-        <div className="flex-1 bg-gradient-to-br from-amber-600 via-orange-600 to-orange-700 flex items-center justify-center relative overflow-hidden">
-          {/* Decorative Background Elements */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
-            <div className="absolute bottom-32 right-32 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-            <div className="absolute top-1/3 left-1/3 w-40 h-40 bg-yellow-200 rounded-full blur-2xl"></div>
-            <div className="absolute bottom-1/4 left-1/4 w-32 h-32 bg-white rounded-full blur-xl"></div>
-          </div>
-
-          {/* Animated decorative shapes */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-1/4 right-1/4 w-4 h-4 bg-white rounded-full opacity-40 animate-pulse"></div>
-            <div className="absolute top-3/4 right-1/3 w-3 h-3 bg-yellow-200 rounded-full opacity-50 animate-pulse" style={{animationDelay: '0.5s'}}></div>
-            <div className="absolute top-1/2 right-1/2 w-2 h-2 bg-white rounded-full opacity-30 animate-pulse" style={{animationDelay: '1s'}}></div>
-          </div>
-
-          <div className="relative text-center text-white z-10 px-12 max-w-2xl">
-            {/* Icon/Logo Section */}
-            <div className="mb-8 flex justify-center">
-              <div className="bg-white/20 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/30">
-                <Truck className="w-32 h-32 text-white drop-shadow-2xl" strokeWidth={1.5} />
-              </div>
-            </div>
-
-            <h1 className="text-6xl font-extrabold mb-3 tracking-tight drop-shadow-lg">
-              Chicks Placement
-            </h1>
-            <h2 className="text-4xl font-bold mb-6 text-yellow-100">
-              CRM System
-            </h2>
-            <div className="h-1 w-32 bg-white/50 mx-auto mb-6 rounded-full"></div>
-            <p className="text-xl opacity-95 leading-relaxed max-w-lg mx-auto mb-4">
-              Complete vehicle management solution for chicks placement operations
-            </p>
-            <div className="flex items-center justify-center gap-2 text-lg text-yellow-100">
-              <MapPin className="w-5 h-5" />
-              <span>Track • Manage • Deliver</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Section - Login Form */}
-        <div className="flex-1 bg-gradient-to-br from-gray-50 to-orange-50 flex items-center justify-center p-8">
-          <div className="bg-white p-12 rounded-3xl shadow-2xl w-full max-w-md border-2 border-orange-100 relative overflow-hidden">
-            {/* Decorative top gradient bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500"></div>
-
-            {/* Form Header */}
-            <div className="text-center mb-10">
-              <div className="bg-gradient-to-br from-amber-100 to-orange-100 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-                <User className="w-8 h-8 text-orange-600" strokeWidth={2.5} />
-              </div>
-              <h2 className="text-3xl font-extrabold text-gray-800 mb-2">
-                Welcome Back
-              </h2>
-              <p className="text-gray-600">Sign in to access your dashboard</p>
-            </div>
-
-            <form onSubmit={handleFormSubmit} className="space-y-6">
-              {/* Username Input */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">
-                  Employee ID
-                </label>
-                <div className="relative group">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-amber-500 w-5 h-5 group-focus-within:text-orange-600 transition-colors" />
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 focus:bg-white transition-all duration-200"
-                    placeholder="Enter your Employee ID"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              {/* Password Input */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">
-                  Password
-                </label>
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-amber-500 w-5 h-5 group-focus-within:text-orange-600 transition-colors" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-14 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 focus:bg-white transition-all duration-200"
-                    placeholder="Enter your password"
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors duration-200"
-                    disabled={loading}
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white py-4 rounded-xl hover:from-amber-600 hover:via-orange-600 hover:to-orange-700 disabled:opacity-70 disabled:cursor-not-allowed font-bold transition-all duration-200 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 active:translate-y-0"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center space-x-3">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Signing in...</span>
-                  </div>
-                ) : (
-                  "Sign In"
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   );
