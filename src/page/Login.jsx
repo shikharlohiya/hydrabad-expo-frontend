@@ -876,7 +876,7 @@ export default function PoultryForm() {
 
     try {
       // 1️⃣ Save form data to DB
-      await axios.post("http://localhost:3005/api/create-hydrabad-estimation", payload);
+      await axios.post("https://hyderabadexpo-api.abisibg.com/api/create-hydrabad-estimation", payload);
       console.log("✔ Data saved to DB!");
 
       // 2️⃣ Generate estimation PDF if needed
@@ -889,7 +889,7 @@ export default function PoultryForm() {
         }
 
         const estimationURL =
-          `http://localhost:3005/api/equipment-estimation/generate-quotation` +
+          ` https://hyderabadexpo-api.abisibg.com/api/equipment-estimation/generate-quotation` +
           `?length=${length}&width=${width}` +
           `&customer_name=${encodeURIComponent(name)}` +
           `&customer_number=${phone}`;
